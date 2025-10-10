@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=Montserrat:wght@400;500;600&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+@layer base {
+  body {
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  .font-title { 
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+  }
+  
+  .font-text { 
+    font-family: 'Inter', sans-serif;
+  }
+  
+  .font-link { 
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+  }
+}
