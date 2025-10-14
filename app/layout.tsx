@@ -1,4 +1,3 @@
-import { ClerkProvider } from '@clerk/nextjs';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import './globals.css';
@@ -13,12 +12,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
       <html lang="fr">
         <body className="font-text">
           {children}
         </body>
       </html>
-    </ClerkProvider>
   );
 }
