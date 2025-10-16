@@ -9,39 +9,11 @@ export default function RegisterPage() {
   // Retourne les champs spécifiques selon le rôle
   const renderRoleFields = () => {
     switch (role) {
-      case "Administrateur":
-      case "Comptable":
-        return (
-          <>
-            <label htmlFor="certification" className="block mb-1 font-title font-medium text-dark">
-              Certification / CV
-            </label>
-            <input
-              id="certification"
-              name="certification"
-              type="file"
-              accept=".pdf,.doc,.docx"
-              className="w-full mb-4"
-            />
-
-            <label htmlFor="identity" className="block mb-1 font-title font-medium text-dark">
-              Pièce d'identité
-            </label>
-            <input
-              id="identity"
-              name="identity"
-              type="file"
-              accept=".pdf,.jpg,.png"
-              className="w-full mb-4"
-            />
-          </>
-        );
-
       case "Enseignant":
         return (
           <>
             <label htmlFor="filiere" className="block mb-1 font-title font-medium text-dark">
-              Filière
+              Classe/Filière
             </label>
             <input
               id="filiere"
@@ -61,28 +33,6 @@ export default function RegisterPage() {
               placeholder="Ex: Algebra"
               className="w-full p-2 mb-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-bluvy"
             />
-
-            <label htmlFor="tauxHoraire" className="block mb-1 font-title font-medium text-dark">
-              Taux horaire
-            </label>
-            <input
-              id="tauxHoraire"
-              name="tauxHoraire"
-              type="number"
-              placeholder="Ex: 1500"
-              className="w-full p-2 mb-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-bluvy"
-            />
-
-            <label htmlFor="cv" className="block mb-1 font-title font-medium text-dark">
-              CV / Certification
-            </label>
-            <input
-              id="cv"
-              name="cv"
-              type="file"
-              accept=".pdf,.doc,.docx"
-              className="w-full mb-4"
-            />
           </>
         );
 
@@ -90,7 +40,7 @@ export default function RegisterPage() {
         return (
           <>
             <label htmlFor="filiere" className="block mb-1 font-title font-medium text-dark">
-              Filière
+              Classe/Filière
             </label>
             <input
               id="filiere"
@@ -98,28 +48,6 @@ export default function RegisterPage() {
               type="text"
               placeholder="Ex: Informatique"
               className="w-full p-2 mb-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-bluvy"
-            />
-
-            <label htmlFor="matricule" className="block mb-1 font-title font-medium text-dark">
-              Numéro matricule
-            </label>
-            <input
-              id="matricule"
-              name="matricule"
-              type="text"
-              placeholder="Ex: ETD-1023"
-              className="w-full p-2 mb-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-bluvy"
-            />
-
-            <label htmlFor="photo" className="block mb-1 font-title font-medium text-dark">
-              Photo d’identité
-            </label>
-            <input
-              id="photo"
-              name="photo"
-              type="file"
-              accept=".jpg,.png"
-              className="w-full mb-4"
             />
           </>
         );
@@ -188,7 +116,6 @@ export default function RegisterPage() {
             >
               <option value="">-- Choisir un rôle --</option>
               <option value="Administrateur">Administrateur</option>
-              <option value="Comptable">Comptable</option>
               <option value="Enseignant">Enseignant</option>
               <option value="Etudiant">Étudiant</option>
               <option value="Parent">Parent</option>
@@ -244,7 +171,7 @@ export default function RegisterPage() {
             />
 
             {/* Bouton inscription */}
-            <button className="w-full bg-lien font-link text-white p-2 rounded-md font-semibold hover:bg-principal mb-4">
+            <button className="mt-4 w-full bg-lien font-link text-white p-2 rounded-md font-semibold hover:bg-principal mb-4">
               S'inscrire
             </button>
 

@@ -83,7 +83,7 @@ export default function NotFound() {
           </Link>
 
           <Link
-            href="/login"
+            href="/auth/login"
             className="group relative inline-flex items-center gap-3 bg-bluvy text-white font-bold text-base sm:text-lg py-2 px-5 sm:px-10 rounded-xl transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:bg-principal overflow-hidden"
           >
             <FaLock className="text-xl transition-transform duration-300 group-hover:scale-110" />
@@ -91,8 +91,6 @@ export default function NotFound() {
           </Link>
         </div>
       </div>
-
-      
     </div>
   );
 }

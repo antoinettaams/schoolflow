@@ -9,13 +9,13 @@
   --color-tertiary: #DC7374;
   --color-bluvy: #016399;
   --color-dark: #000000;
-  --color-lien: #0055e1;
+  --color-link: #0055e1;
 
   --color-primary: var(--color-principal);
   --color-neutral: var(--color-second);
   --color-accent: var(--color-bluvy);
   --color-foreground: var(--color-dark);
-  --color-lien: var(--color-lien);
+  --color-lien: var(--color-link);
 }
 
 /* ✍️ Polices personnalisées */
@@ -121,4 +121,11 @@
 .animate-antenna-1 { animation: antenna-1 2s ease-in-out infinite; }
 .animate-antenna-2 { animation: antenna-2 2s ease-in-out infinite 0.5s; }
 .animate-fade-in { animation: fade-in 1s ease-out; }
+
+a, Link {
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: none;
+}
 
