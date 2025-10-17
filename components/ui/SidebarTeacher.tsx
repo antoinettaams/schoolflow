@@ -1,9 +1,11 @@
 "use client";
 import Link from "next/link";
 import { FaChalkboardTeacher, FaCalendarAlt, FaBookOpen, FaUserGraduate, FaFileAlt, FaClipboardList, FaComments, FaCog, FaSignOutAlt, FaTasks, FaRegChartBar } from "react-icons/fa";
+// J'ai ajouté FaRegChartBar pour les notes et FaTasks pour les devoirs.
 
 const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
 
+  // Initiales pour l'avatar (ex: Monsieur Lebrun -> M)
   const initials = teacherName.charAt(0).toUpperCase();
 
   const navItems = [
@@ -91,7 +93,7 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
         
         {/* PÉDAGOGIE */}
         <nav className="space-y-2">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+          <h3 className="font-title text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
             Pédagogie
           </h3>
           {pedagogyItems.map((item, index) => (
@@ -108,7 +110,7 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
 
         {/* COMMUNICATION & DOCUMENTS */}
         <nav className="space-y-2 pt-4 border-t border-gray-100">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+          <h3 className="font-title text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
             ADMINISTRATION
           </h3>
           {communicationItems.map((item, index) => (
@@ -123,9 +125,9 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
           ))}
         </nav>
       </div>
-
+tç
       {/* Paramètres & Profil en bas */}
-      <div className="border-t border-gray-200 p-2">
+      <div className="border-t border-gray-200 p-3">
         {/* Lien Paramètres du Compte */}
         <Link
           href="/teacher/settings"

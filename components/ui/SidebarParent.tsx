@@ -90,7 +90,7 @@ const SidebarParent = ({ parentName = "Marie Dupont" }) => {
         
         {/* SUPERVISION */}
         <nav className="space-y-2">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+          <h3 className="font-title text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
             Supervision
           </h3>
           {supervisionItems.map((item, index) => (
@@ -107,7 +107,7 @@ const SidebarParent = ({ parentName = "Marie Dupont" }) => {
 
         {/* ADMINISTRATION */}
         <nav className="space-y-2 pt-4 border-t border-gray-100">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+          <h3 className="font-title text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
             Administration
           </h3>
           {adminItems.map((item, index) => (
@@ -137,11 +137,11 @@ const SidebarParent = ({ parentName = "Marie Dupont" }) => {
         {/* Profil & Déconnexion */}
         <div className="p-3 flex items-center justify-between border-t border-gray-100 mt-2">
           {/* Informations Utilisateur */}
-          <Link href="/parent/settings/profile" className="flex items-center gap-3 hover:opacity-80 transition">
+          <Link href="/parent/settings/profile" className="font-link flex items-center gap-3 hover:opacity-80 transition">
             <div className="h-9 w-9 rounded-full bg-principal text-white flex items-center justify-center font-semibold flex-shrink-0">
               {initials}
             </div>
-            <span className="font-medium text-gray-700 truncate">{parentName}</span>
+            <span className="font-link font-medium text-gray-700 truncate">{parentName}</span>
           </Link>
 
           {/* Lien de Déconnexion */}

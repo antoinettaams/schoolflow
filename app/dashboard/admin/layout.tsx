@@ -1,9 +1,6 @@
-import SidebarParent from "@/components/ui/SidebarParent";
-
-export default function ParentLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen">
-      <SidebarParent />
       <div className="font-text flex-1 flex flex-col overflow-hidden">
         {children}
       </div>

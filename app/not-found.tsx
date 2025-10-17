@@ -1,7 +1,14 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { FaHome, FaTachometerAlt, FaLock, FaBug } from "react-icons/fa";
+import { FaTachometerAlt, FaLock, FaBug } from "react-icons/fa";
+
+const Button = ({ children, className, ...props }) => (
+    <button className={className} {...props}>
+        {children}
+    </button>
+);
+
 
 export default function NotFound() {
   const [mounted, setMounted] = useState(false);
@@ -21,15 +28,31 @@ export default function NotFound() {
       <FaBug className={`text-second ${size > 24 ? 'text-2xl' : 'text-lg'} transition-all duration-1000 hover:scale-125 hover:text-tertiary`} />
     </div>
   );
+  
+  // Tableau de bugs pour l'affichage décoratif
+  const bugs = [
+    { delay: 0.5, size: 24, position: 'top-10 left-10' },
+    { delay: 1.2, size: 30, position: 'top-1/4 right-1/4' },
+    { delay: 2.0, size: 20, position: 'bottom-1/3 left-1/3' },
+    { delay: 3.5, size: 28, position: 'bottom-20 right-20' },
+  ];
+
 
   if (!mounted) return null;
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      
+      {/* Bugs flottants en arrière-plan (décoration) */}
+      {bugs.map((bug, index) => (
+        <FloatingBug key={index} {...bug} />
+      ))}
+
       <div className="relative z-10 text-center">
-        {/* 404 */}
+        {/* 404 Glitch Effect */}
         <div className="font-title flex items-center justify-center mb-8 md:mb-12">
           <div className="relative">
+            {/* Le nombre 4-Robot-4 */}
             <div className="flex items-center justify-center text-[8rem] sm:text-[12rem] md:text-[18rem] lg:text-[22rem] leading-none font-black">
               <span className="inline-block animate-glitch-1 relative">
                 4
@@ -58,6 +81,7 @@ export default function NotFound() {
               </span>
             </div>
             
+            {/* Effet de scan à travers les chiffres */}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-second to-transparent opacity-20 animate-scan" />
           </div>
         </div>
@@ -74,20 +98,23 @@ export default function NotFound() {
 
         {/* Boutons */}
         <div className="font-link flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 mb-8">
-          <Link
-            href="/dashboard"
-            className="group relative inline-flex items-center gap-3 bg-bluvy text-white font-bold text-base sm:text-lg py-2 px-5 sm:px-10 rounded-xl transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:bg-principal overflow-hidden"
-          >
-            <FaTachometerAlt className="text-xl transition-transform duration-300 group-hover:scale-110" />
-            <span className="relative">Tableau de bord</span>
+          <Link href="/dashboard">
+            <button
+              className="group bg-lien text-white font-bold text-base sm:text-lg py-3 px-10 rounded-full !rounded-full transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:bg-principal flex items-center justify-center gap-3"
+            >
+              <FaTachometerAlt className="text-xl transition-transform duration-300 group-hover:scale-110" />
+              <span>Tableau de bord</span>
+            </button>
           </Link>
 
-          <Link
-            href="/auth/login"
-            className="group relative inline-flex items-center gap-3 bg-bluvy text-white font-bold text-base sm:text-lg py-2 px-5 sm:px-10 rounded-xl transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:bg-principal overflow-hidden"
-          >
-            <FaLock className="text-xl transition-transform duration-300 group-hover:scale-110" />
-            <span className="relative">Connexion</span>
+          <Link href="/auth/login">
+            <button
+              className="group bg-lien text-white font-bold text-base sm:text-lg py-3 px-10 rounded-full !rounded-full transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:bg-principal flex items-center justify-center gap-3"
+    
+            >
+              <FaLock className="text-xl transition-transform duration-300 group-hover:scale-110" />
+              <span>Connexion</span>
+            </button>
           </Link>
         </div>
       </div>
