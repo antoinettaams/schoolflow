@@ -1,13 +1,25 @@
+// app/dashboard/student/layout.tsx
+"use client";
+
+import React, { ReactNode } from "react";
 import SidebarStudent from "@/components/ui/SidebarStudent";
 
-export default function StudentLayout({ children }: { children: React.ReactNode }) {
+interface StudentDashboardLayoutProps {
+  children: ReactNode;
+}
+
+const StudentDashboardLayout = ({ children }: StudentDashboardLayoutProps) => {
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar fixe */}
       <SidebarStudent />
-      <div className="font-text flex-1 flex flex-col overflow-hidden">
+
+      {/* Contenu principal */}
+      <main className="flex-1 overflow-y-auto lg:ml-0">
         {children}
-      </div>
-      
+      </main>
     </div>
   );
-}
+};
+
+export default StudentDashboardLayout;

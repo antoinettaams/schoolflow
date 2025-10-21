@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { FaCalendarAlt, FaFileInvoiceDollar, FaRegChartBar, FaClipboardList, FaComments, FaGraduationCap, FaArrowRight, FaClock } from "react-icons/fa";
+import { FaCalendarAlt, FaFileInvoiceDollar, FaRegChartBar, FaClipboardList, FaGraduationCap, FaArrowRight, FaClock, FaFileAlt } from "react-icons/fa";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -21,18 +21,20 @@ const nextSchedule = {
 };
 
 const nextEvent = {
-  name: "Réunion d'information Parents",
+  name: "Réunion des Parents",
   date: "25 Octobre",
 };
 
-const latestForumMessage = {
-  subject: "Nouveau message du professeur principal",
-  sender: "Mme Dubois",
+const latestBulletin = {
+  trimester: "1er Trimestre",
+  average: "15,3 / 20",
+  mention: "Très bien",
+  link: "/parent/bulletins/1er-trimestre.pdf",
 };
 
 const ParentDashboard = ({ parentName = "Marie Dupont" }) => {
   return (
-    <div className="p-6 space-y-6 h-full bg-gray-50 overflow-y-auto">
+    <div className="p-6 space-y-6 h-full bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
 
       {/* SECTION BIENVENUE */}
       <header className="pb-4 border-b border-gray-200">
@@ -44,9 +46,8 @@ const ParentDashboard = ({ parentName = "Marie Dupont" }) => {
         </p>
       </header>
 
-      {/* GRID PRINCIPALE: Notes, Assiduité, Prochain Cours, Événement */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
+      {/* GRID HAUT: Dernière Note, Assiduité, Prochain Cours */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Dernière Note */}
         <Card className="hover:shadow-lg transition">
           <CardHeader className="flex justify-between items-center pb-2">
@@ -56,7 +57,7 @@ const ParentDashboard = ({ parentName = "Marie Dupont" }) => {
           <CardContent className="pt-2 space-y-1">
             <div className="text-3xl font-bold text-green-600">{childInfo.latestGrade.split('/')[0]}</div>
             <p className="text-xs text-gray-700">{childInfo.latestGrade.split(' en ')[1]}</p>
-            <Link href="/parent/exams" className="mt-1 inline-block">
+            <Link href="/parent/notes" className="mt-1 inline-block">
               <Button variant="link" className="font-link p-0 text-principal text-xs">
                 Voir toutes les notes <FaArrowRight className="ml-1 h-3 w-3" />
               </Button>
@@ -99,6 +100,10 @@ const ParentDashboard = ({ parentName = "Marie Dupont" }) => {
             </Link>
           </CardContent>
         </Card>
+      </div>
+
+      {/* GRID BAS: Évènement, Bulletins, Frais Scolaires */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
         {/* Évènement à Venir */}
         <Card className="hover:shadow-lg transition">
@@ -116,10 +121,24 @@ const ParentDashboard = ({ parentName = "Marie Dupont" }) => {
             </Link>
           </CardContent>
         </Card>
-      </div>
 
-      {/* GRID INFÉRIEURE: Frais & Forum */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Bulletins */}
+        <Card className="hover:shadow-lg transition">
+          <CardHeader className="flex justify-between items-center pb-2">
+            <CardTitle className="text-sm font-medium font-title">Bulletins</CardTitle>
+            <FaFileAlt className="text-principal h-5 w-5" />
+          </CardHeader>
+          <CardContent className="pt-2 space-y-1">
+            <div className="text-sm font-semibold text-gray-900">{latestBulletin.trimester}</div>
+            <p className="text-xs text-gray-700">Moyenne : {latestBulletin.average}</p>
+            <p className="text-xs text-gray-700">Mention : {latestBulletin.mention}</p>
+            <Link href={latestBulletin.link} className="mt-1 inline-block" target="_blank">
+              <Button variant="link" className="font-link p-0 text-principal text-xs">
+                Télécharger le bulletin <FaArrowRight className="ml-1 h-3 w-3" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
 
         {/* Frais Scolaires */}
         <Card className="hover:shadow-lg transition">
@@ -136,27 +155,6 @@ const ParentDashboard = ({ parentName = "Marie Dupont" }) => {
           </CardContent>
         </Card>
 
-        {/* Forum / Messagerie */}
-        <Card className="hover:shadow-lg transition">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold text-gray-800font-title ">Communication</CardTitle>
-            <CardDescription>Messages non lus</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-2 space-y-2">
-            <div className="flex items-center gap-3">
-              <FaComments className="h-6 w-6 text-principal" />
-              <div>
-                <p className="font-semibold text-gray-900">{latestForumMessage.subject}</p>
-                <p className="text-sm text-gray-600">De : {latestForumMessage.sender}</p>
-              </div>
-            </div>
-            <Link href="/parent/forum" className="mt-2 block">
-              <Button variant="outline" className="font-link w-full text-principal border-principal hover:bg-principal/10">
-                Accéder au Forum/Messagerie
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

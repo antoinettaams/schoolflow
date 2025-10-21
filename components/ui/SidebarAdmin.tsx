@@ -3,35 +3,44 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
-  FaChalkboardTeacher, 
-  FaCalendarAlt, 
+  FaTachometerAlt, 
+  FaUsers, 
   FaUserGraduate, 
-  FaFileAlt, 
-  FaClipboardList, 
-  FaComments, 
-  FaSignOutAlt, 
-  FaTasks, 
-  FaRegChartBar,
+  FaChalkboardTeacher,
+  FaCalendarAlt,
+  FaFileAlt,
+  FaClipboardList,
+  FaChartBar,
+  FaCog,
+  FaDatabase,
+  FaSignOutAlt,
   FaBars,
   FaTimes,
   FaUser,
-  FaGraduationCap,
-  FaCog,
-  FaChevronDown
+  FaChevronDown,
+  FaSchool,
+  FaBook,
+  FaChartLine,
+  FaShieldAlt,
+  FaBell,
+  FaMoneyBillWave,
+  FaCreditCard,
+  FaFileInvoiceDollar,
+  FaCalculator,
+  FaWhatsapp
 } from "react-icons/fa";
 
-const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
+const SidebarAdmin = ({ adminName = "Administrateur" }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isProfileExpanded, setIsProfileExpanded] = useState(false);
   const pathname = usePathname();
 
-  // Fermer le menu mobile quand la route change
   useEffect(() => {
     setIsMobileOpen(false);
   }, [pathname]);
 
   // Initiales pour l'avatar
-  const initials = teacherName.charAt(0).toUpperCase();
+  const initials = adminName.charAt(0).toUpperCase();
 
   // --- Fonction utilitaire pour les liens actifs ---
   const getLinkClasses = (href: string, exact = false) => {
@@ -51,74 +60,146 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
     // DASHBOARD
     {
       label: "Tableau de Bord",
-      href: "/dashboard/teacher",
-      icon: <FaChalkboardTeacher/>,
+      href: "/dashboard/admin",
+      icon: <FaTachometerAlt />,
+    },
+
+    // GESTION DES UTILISATEURS
+    {
+      label: "Élèves",
+      href: "/dashboard/admin/students",
+      icon: <FaUserGraduate />,
+      category: "UTILISATEURS",
+    },
+    {
+      label: "Professeurs",
+      href: "/dashboard/admin/teachers",
+      icon: <FaChalkboardTeacher />,
+      category: "UTILISATEURS",
+    },
+    {
+      label: "Administrateurs",
+      href: "/dashboard/admin/admins",
+      icon: <FaShieldAlt />,
+      category: "UTILISATEURS",
+    },
+    {
+      label: "Parents",
+      href: "/dashboard/admin/parents",
+      icon: <FaUsers />,
+      category: "UTILISATEURS",
     },
 
     // GESTION PÉDAGOGIQUE
     {
-      label: "Mes Classes",
-      href: "/dashboard/teacher/classes",
-      icon: <FaUserGraduate />,
+      label: "Classes & Niveaux",
+      href: "/dashboard/admin/classes",
+      icon: <FaSchool />,
       category: "PÉDAGOGIE",
     },
     {
-      label: "Emploi du Temps",
-      href: "/dashboard/teacher/schedule",
+      label: "Matières",
+      href: "/dashboard/admin/subjects",
+      icon: <FaBook />,
+      category: "PÉDAGOGIE",
+    },
+    {
+      label: "Emplois du Temps",
+      href: "/dashboard/admin/schedules",
       icon: <FaCalendarAlt />,
       category: "PÉDAGOGIE",
     },
+    // ← NOUVEAU : GROUPES WHATSAPP
     {
-      label: "Gestion des Notes",
-      href: "/dashboard/teacher/grades",
-      icon: <FaFileAlt />,
-      category: "PÉDAGOGIE",
-    },
-    {
-      label: "Dates d'Examens", 
-      href: "/dashboard/teacher/exams",
-      icon: <FaRegChartBar />, 
-      category: "PÉDAGOGIE",
-    },
-    {
-      label: "Devoirs & Exercices",
-      href: "/dashboard/teacher/homeworks",
-      icon: <FaTasks />,
-      category: "PÉDAGOGIE",
-    },
-    {
-      label: "Évènements Scolaires", 
-      href: "/dashboard/teacher/events", 
-      icon: <FaGraduationCap />, 
-      category: "PÉDAGOGIE" 
-    },
-    {
-      label: "Assiduité",
-      href: "/dashboard/teacher/attendance",
-      icon: <FaClipboardList />,
+      label: "Groupes WhatsApp",
+      href: "/dashboard/admin/whatsapp-groups",
+      icon: <FaWhatsapp />,
       category: "PÉDAGOGIE",
     },
 
-    // COMMUNICATION & DOCUMENTS
+    // NOTES & ÉVALUATIONS
     {
-      label: "Forum",
-      href: "/dashboard/teacher/forum", 
-      icon: <FaComments />,
-      category: "ADMINISTRATION",
+      label: "Système de Notes",
+      href: "/dashboard/admin/grading",
+      icon: <FaFileAlt />,
+      category: "NOTES",
+    },
+    {
+      label: "Calcul des Moyennes",
+      href: "/dashboard/admin/grades-calculation",
+      icon: <FaCalculator />,
+      category: "NOTES",
+    },
+    {
+      label: "Bulletins",
+      href: "/dashboard/admin/reports",
+      icon: <FaClipboardList />,
+      category: "NOTES",
+    },
+
+    // FINANCES & SCOLARITÉ
+    {
+      label: "Frais de Scolarité",
+      href: "/dashboard/admin/tuition",
+      icon: <FaMoneyBillWave />,
+      category: "FINANCES",
+    },
+    {
+      label: "Paiements",
+      href: "/dashboard/admin/payments",
+      icon: <FaCreditCard />,
+      category: "FINANCES",
+    },
+    {
+      label: "Facturation",
+      href: "/dashboard/admin/invoices",
+      icon: <FaFileInvoiceDollar />,
+      category: "FINANCES",
+    },
+
+    // ANALYTICS & RAPPORTS
+    {
+      label: "Statistiques",
+      href: "/dashboard/admin/analytics",
+      icon: <FaChartLine />,
+      category: "ANALYSE",
+    },
+    {
+      label: "Rapports",
+      href: "/dashboard/admin/reports",
+      icon: <FaChartBar />,
+      category: "ANALYSE",
+    },
+
+    // CONFIGURATION
+    {
+      label: "Paramètres",
+      href: "/dashboard/admin/settings",
+      icon: <FaCog />,
+      category: "SYSTÈME",
+    },
+    {
+      label: "Sauvegarde",
+      href: "/dashboard/admin/backup",
+      icon: <FaDatabase />,
+      category: "SYSTÈME",
+    },
+    {
+      label: "Notifications",
+      href: "/dashboard/admin/notifications",
+      icon: <FaBell />,
+      category: "SYSTÈME",
     },
   ];
 
   // Filtre les éléments de navigation par catégorie
   const dashboardItem = navItems.find((item) => !item.category);
+  const usersItems = navItems.filter((item) => item.category === "UTILISATEURS");
   const pedagogyItems = navItems.filter((item) => item.category === "PÉDAGOGIE");
-  const administrationItems = navItems.filter((item) => item.category === "ADMINISTRATION");
-
-  // Options du menu profil
-  const profileOptions = [
-    { label: "Profil", icon: <FaUser className="text-gray-600" />, href: "/dashboard/teacher/profile" },
-    { label: "Paramètres", icon: <FaCog className="text-gray-600" />, href: "/dashboard/teacher/settings" },
-    { label: "Déconnexion", icon: <FaSignOutAlt className="text-red-500" />, href: "/auth/logout" },
-  ];
+  const notesItems = navItems.filter((item) => item.category === "NOTES");
+  const financesItems = navItems.filter((item) => item.category === "FINANCES");
+  const analyseItems = navItems.filter((item) => item.category === "ANALYSE");
+  const systemeItems = navItems.filter((item) => item.category === "SYSTÈME");
 
   // Contenu de la sidebar
   const sidebarContent = (
@@ -135,7 +216,7 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
         </button>
       </div>
 
-      {/* Section Dashboard (Lien exact) */}
+      {/* Section Dashboard */}
       {dashboardItem && (
         <div className="p-3 border-b border-gray-200">
           <Link
@@ -151,8 +232,25 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
       {/* Menus de Navigation */}
       <div className="flex-1 overflow-y-auto border-b border-gray-200">
         
-        {/* PÉDAGOGIE */}
+        {/* UTILISATEURS */}
         <div className="p-4 space-y-2">
+          <h3 className="font-title text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            Utilisateurs
+          </h3>
+          {usersItems.map((item, index) => (
+            <Link
+              key={index}
+              href={item.href}
+              className={getLinkClasses(item.href)}
+            >
+              {React.cloneElement(item.icon, { className: getIconClasses(item.href) })}
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </div>
+
+        {/* PÉDAGOGIE */}
+        <div className="p-4 space-y-2 border-t border-gray-100">
           <h3 className="font-title text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
             Pédagogie
           </h3>
@@ -168,12 +266,63 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
           ))}
         </div>
 
-        {/* ADMINISTRATION */}
+        {/* NOTES & ÉVALUATIONS */}
         <div className="p-4 space-y-2 border-t border-gray-100">
           <h3 className="font-title text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-            Administration
+            Notes & Évaluations
           </h3>
-          {administrationItems.map((item, index) => (
+          {notesItems.map((item, index) => (
+            <Link
+              key={index}
+              href={item.href}
+              className={getLinkClasses(item.href)}
+            >
+              {React.cloneElement(item.icon, { className: getIconClasses(item.href) })}
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </div>
+
+        {/* FINANCES & SCOLARITÉ */}
+        <div className="p-4 space-y-2 border-t border-gray-100">
+          <h3 className="font-title text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            Finances & Scolarité
+          </h3>
+          {financesItems.map((item, index) => (
+            <Link
+              key={index}
+              href={item.href}
+              className={getLinkClasses(item.href)}
+            >
+              {React.cloneElement(item.icon, { className: getIconClasses(item.href) })}
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </div>
+
+        {/* ANALYSE */}
+        <div className="p-4 space-y-2 border-t border-gray-100">
+          <h3 className="font-title text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            Analyse
+          </h3>
+          {analyseItems.map((item, index) => (
+            <Link
+              key={index}
+              href={item.href}
+              className={getLinkClasses(item.href)}
+            >
+              {React.cloneElement(item.icon, { className: getIconClasses(item.href) })}
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </div>
+
+        {/* SYSTÈME */}
+        <div className="p-4 space-y-2 border-t border-gray-100">
+          <h3 className="font-title text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            Système
+          </h3>
+          {systemeItems.map((item, index) => (
             <Link
               key={index}
               href={item.href}
@@ -186,7 +335,7 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
         </div>
       </div>
 
-      {/* Section dépliante pour le profil */}
+      {/* Section accordéon pour le profil */}
       <div className="border-t border-gray-100">
         <button
           onClick={() => setIsProfileExpanded(!isProfileExpanded)}
@@ -198,8 +347,8 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
                 {initials}
               </div>
               <div className="text-left">
-                <div className="font-medium text-gray-700">{teacherName}</div>
-                <div className="text-xs text-gray-500">Professeur</div>
+                <div className="font-medium text-gray-700">{adminName}</div>
+                <div className="text-xs text-gray-500">Administrateur</div>
               </div>
             </div>
             <FaChevronDown className={`transform transition-transform ${isProfileExpanded ? 'rotate-180' : ''} text-gray-400`} />
@@ -209,7 +358,7 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
         {isProfileExpanded && (
           <div className="px-3 pb-3 space-y-1">
             <Link 
-              href="/dashboard/teacher/profile" 
+              href="/dashboard/admin/profile" 
               className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
               onClick={() => setIsProfileExpanded(false)}
             >
@@ -217,7 +366,7 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
               <span>Mon Profil</span>
             </Link>
             <Link 
-              href="/dashboard/teacher/settings" 
+              href="/dashboard/admin/settings" 
               className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
               onClick={() => setIsProfileExpanded(false)}
             >
@@ -242,7 +391,7 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
     <>
       {/* Bouton Hamburger pour mobile */}
       <button
-        id="teacher-hamburger-button"
+        id="admin-hamburger-button"
         onClick={() => setIsMobileOpen(true)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white shadow-lg border border-gray-200"
       >
@@ -261,7 +410,7 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
 
       {/* Sidebar pour mobile */}
       <div
-        id="teacher-sidebar"
+        id="admin-sidebar"
         className={`
           lg:hidden fixed top-0 left-0 h-screen w-64 bg-white border-r border-gray-200 
           transform transition-transform duration-300 ease-in-out z-50
@@ -274,4 +423,4 @@ const SidebarTeacher = ({ teacherName = "Monsieur Lebrun" }) => {
   );
 };
 
-export default SidebarTeacher;
+export default SidebarAdmin;

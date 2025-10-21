@@ -5,7 +5,7 @@ import { FaCalendarAlt, FaBookOpen, FaFileAlt, FaGraduationCap, FaClipboardList,
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-// --- Simulation des Données Actuelles (À remplacer par l'API) ---
+// --- Simulation des Données Actuelles ---
 const studentInfo = {
   name: "Antoinetta",
   className: "Terminale S1 - Classe B",
@@ -39,7 +39,7 @@ const latestBulletin = {
 
 const StudentDashboard = () => {
   return (
-    <div className="p-6 space-y-6 h-full bg-gray-50 overflow-y-auto"> 
+    <div className="p-6 space-y-6 h-full bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6"> 
       
       {/* 1. SECTION ACCUEIL ET BIENVENUE */}
       <header className="pb-4 border-b border-gray-200">
@@ -67,8 +67,8 @@ const StudentDashboard = () => {
                 <span className="text-gray-600">{course.time}</span>
               </div>
             ))}
-            <Link href="/student/schedule" passHref className="mt-3 block">
-              <Button variant="link" className="font-link p-0 h-auto text-principal text-xs">
+            <Link href="/dashboard/student/schedule" passHref className="mt-3 block">
+              <Button variant="link" className="font-link p-0 h-auto text-link text-xs">
                 Voir l'EDT Complet <FaArrowRight className="ml-1 h-3 w-3" />
               </Button>
             </Link>
@@ -85,11 +85,11 @@ const StudentDashboard = () => {
             {currentHomeworks.map((hw, index) => (
               <div key={index} className="flex justify-between text-sm">
                 <span className="font-semibold text-gray-800 truncate">{hw.task}</span>
-                <span className="text-red-500 font-medium flex-shrink-0">{hw.due}</span>
+                <span className="text-tertiary font-medium flex-shrink-0">{hw.due}</span>
               </div>
             ))}
-            <Link href="/student/homeworks" passHref className="mt-3 block">
-              <Button variant="link" className="font-link p-0 h-auto text-principal text-xs">
+            <Link href="/dashboard/student/homeworks" passHref className="mt-3 block">
+              <Button variant="link" className="font-link p-0 h-auto text-link text-xs">
                 Voir tous les devoirs <FaArrowRight className="ml-1 h-3 w-3" />
               </Button>
             </Link>
@@ -120,8 +120,8 @@ const StudentDashboard = () => {
               <p className="text-xs text-gray-700">Le {nextExams[0].date} ({nextExams[0].topic})</p>
             </div>
             <div className="col-span-2">
-              <Link href="/student/exams" passHref>
-                <Button variant="outline" className="font-link w-full text-principal border-principal hover:bg-principal/10 text-xs">
+              <Link href="/dashboard/student/exams" passHref>
+                <Button variant="outline" className="font-link w-full text-link border-principal hover:bg-principal/10 text-xs">
                   Accéder au Tableau des Examens
                 </Button>
               </Link>
@@ -142,8 +142,8 @@ const StudentDashboard = () => {
           <CardContent className="pt-4 space-y-2">
             <p className="text-gray-700 text-sm">{latestBulletin.name}</p>
             <p className="text-xl font-bold text-gray-900">{latestBulletin.average}</p>
-            <Link href="/student/grades" passHref className="mt-3 block">
-                <Button className="font-link w-full" size="sm">
+            <Link href="/dashboard/student/grades" passHref className="mt-3 block">
+                <Button className="font-link text-white w-full" size="sm">
                     Télécharger le PDF
                 </Button>
             </Link>
@@ -172,8 +172,8 @@ const StudentDashboard = () => {
                     <span className="text-gray-600">5 Novembre</span>
                 </div>
             </div>
-            <Link href="/student/events" passHref className="mt-4 block">
-              <Button variant="link" className="font-link p-0 h-auto text-principal text-xs">
+            <Link href="/dashboard/student/events" passHref className="mt-4 block">
+              <Button variant="link" className="font-link p-0 h-auto text-link text-xs">
                 Voir le calendrier complet <FaArrowRight className="ml-1 h-3 w-3" />
               </Button>
             </Link>

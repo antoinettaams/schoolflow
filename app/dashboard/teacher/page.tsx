@@ -29,7 +29,7 @@ const pendingHomeworks = 22;
 
 const TeacherDashboard = ({ teacherName = "Monsieur Lebrun" }) => {
   return (
-    <div className="p-6 space-y-6 h-full bg-gray-50 overflow-y-auto"> 
+    <div className="p-6 space-y-6 h-full bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6"> 
       
       {/* 1. SECTION ACCUEIL ET BIENVENUE */}
       <header className="pb-4 border-b border-gray-200">
