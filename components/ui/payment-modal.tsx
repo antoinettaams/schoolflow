@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { FaTimes, FaMobile, FaCreditCard, FaMoneyBillWave, FaShieldAlt, FaLock } from "react-icons/fa";
+import { FaTimes, FaMobile, FaCreditCard, FaShieldAlt, FaLock } from "react-icons/fa";
 
 interface PaymentModalProps {
   fee: any;
@@ -37,8 +37,6 @@ export default function PaymentModal({
 
   const processMomoPayment = async () => {
     setIsProcessing(true);
-    
-    // Processus Mobile Money
     setTimeout(() => {
       setIsProcessing(false);
       onStepChange("momo_pin");
@@ -47,13 +45,9 @@ export default function PaymentModal({
 
   const confirmMomoPayment = async () => {
     setIsProcessing(true);
-    
-    // Confirmation du code PIN
     setTimeout(() => {
       setIsProcessing(false);
       onStepChange("success");
-      
-      // Reçu
       setTimeout(() => {
         alert(`Paiement de ${formatFCFA(fee.amount)} réussi ! Un reçu a été envoyé à votre numéro.`);
       }, 1000);
@@ -62,12 +56,9 @@ export default function PaymentModal({
 
   const processCardPayment = async () => {
     setIsProcessing(true);
-    
-    // Paiement carte réussi
     setTimeout(() => {
       setIsProcessing(false);
       onStepChange("success");
-      
       setTimeout(() => {
         alert(`Paiement carte de ${formatFCFA(fee.amount)} réussi !`);
       }, 1000);
@@ -87,9 +78,9 @@ export default function PaymentModal({
             </div>
 
             <div className="mb-6 p-4 bg-second rounded-lg border border-bluvy">
-              <p className="font-semibold text-blue-900">{fee.description}</p>
-              <p className="text-2xl font-bold text-blue-800 mt-2">{formatFCFA(fee.amount)}</p>
-              <p className="text-sm text-blue-700 mt-1">Échéance: {fee.dueDate}</p>
+              <p className="font-semibold text-bluvy">{fee.description}</p>
+              <p className="text-2xl font-bold text-bluvy mt-2">{formatFCFA(fee.amount)}</p>
+              <p className="text-sm text-link mt-1">Échéance: {fee.dueDate}</p>
             </div>
 
             <div className="space-y-3">
@@ -101,14 +92,12 @@ export default function PaymentModal({
                     onClick={() => onPaymentMethodSelect(method.id)}
                     className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
                       selectedPaymentMethod === method.id
-                        ? "border-blue-500 bg-second"
+                        ? "border-bluvy bg-second"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`text-xl ${
-                        selectedPaymentMethod === method.id ? "text-blue-600" : "text-gray-600"
-                      }`} />
+                      <Icon className={`text-xl ${selectedPaymentMethod === method.id ? "text-principal" : "text-gray-600"}`} />
                       <div>
                         <div className="font-semibold text-gray-900">{method.name}</div>
                         <div className="text-sm text-gray-600">{method.description}</div>
@@ -138,7 +127,7 @@ export default function PaymentModal({
                 disabled={!selectedPaymentMethod}
                 className={`flex-1 px-4 py-3 rounded-lg transition-colors ${
                   selectedPaymentMethod
-                    ? "bg-blue-600 text-white hover:bg-link"
+                    ? "bg-link text-white hover:bg-bluvy"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
               >
@@ -219,7 +208,7 @@ export default function PaymentModal({
                 className={`flex-1 px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${
                   !momoData.phoneNumber || isProcessing
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-green-600 text-white hover:bg-green-700"
+                    : "bg-[#399f2d] text-white hover:bg-[#144600]"
                 }`}
               >
                 {isProcessing ? (
@@ -230,7 +219,7 @@ export default function PaymentModal({
                 ) : (
                   <>
                     <FaMobile className="w-4 h-4" />
-                    Demander le paiement
+                    Paiement
                   </>
                 )}
               </button>
@@ -242,14 +231,14 @@ export default function PaymentModal({
         return (
           <div className="p-6">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FaLock className="text-2xl text-green-600" />
+              <div className="w-16 h-16 bg-[#399f2d] rounded-full flex items-center justify-center mx-auto mb-4">
+                <FaLock className="text-2xl text-[#144600]" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Confirmez le paiement</h3>
               <p className="text-gray-600">
                 Entrez votre code PIN pour confirmer le paiement de
               </p>
-              <p className="text-2xl font-bold text-green-600 my-3">{formatFCFA(fee.amount)}</p>
+              <p className="text-2xl font-bold text-[#144600] my-3">{formatFCFA(fee.amount)}</p>
               <p className="text-sm text-gray-500">
                 Sur votre mobile: {momoData.phoneNumber}
               </p>
@@ -261,14 +250,14 @@ export default function PaymentModal({
               </label>
               <input
                 type="password"
-                maxLength={4}
+                maxLength={5}
                 value={pinCode}
                 onChange={(e) => setPinCode(e.target.value.replace(/\D/g, ''))}
-                className="w-full p-3 border border-gray-300 rounded-lg text-center text-2xl font-mono tracking-widest focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                placeholder="••••"
+                className="w-full p-3 border border-gray-300 rounded-lg text-center text-2xl font-mono tracking-widest focus:ring-2 focus:ring-[#399f2d] focus:border-[#399f2d]"
+                placeholder="•••••"
               />
               <p className="text-xs text-gray-500 mt-2 text-center">
-                Code PIN à 4 chiffres de votre Mobile Money
+                Code PIN à 5 chiffres de votre Mobile Money
               </p>
             </div>
 
@@ -286,7 +275,7 @@ export default function PaymentModal({
                 className={`flex-1 px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${
                   pinCode.length !== 4 || isProcessing
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-green-600 text-white hover:bg-green-700"
+                    : "bg-link text-white hover:bg-bluvy"
                 }`}
               >
                 {isProcessing ? (
@@ -309,13 +298,13 @@ export default function PaymentModal({
         return (
           <div className="p-6">
             <div className="flex items-center gap-3 mb-6">
-              <FaCreditCard className="text-2xl text-blue-600" />
+              <FaCreditCard className="text-2xl text-bluvy" />
               <h3 className="text-xl font-bold text-gray-900">Paiement par Carte</h3>
             </div>
 
-            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="font-semibold text-blue-900">Montant à payer</p>
-              <p className="text-2xl font-bold text-blue-800">{formatFCFA(fee.amount)}</p>
+            <div className="mb-6 p-4 bg-second rounded-lg border border-bluvy">
+              <p className="font-semibold text-bluvy">Montant à payer</p>
+              <p className="text-2xl font-bold text-bluvy">{formatFCFA(fee.amount)}</p>
             </div>
 
             <div className="space-y-4">
@@ -327,7 +316,7 @@ export default function PaymentModal({
                   type="text"
                   value={cardData.cardNumber}
                   onChange={(e) => setCardData(prev => ({...prev, cardNumber: e.target.value}))}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bluvy focus:border-bluvy"
                   placeholder="1234 5678 9012 3456"
                   maxLength={19}
                 />
@@ -342,7 +331,7 @@ export default function PaymentModal({
                     type="text"
                     value={cardData.expiryDate}
                     onChange={(e) => setCardData(prev => ({...prev, expiryDate: e.target.value}))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bluvy focus:border-bluvy"
                     placeholder="MM/AA"
                     maxLength={5}
                   />
@@ -355,7 +344,7 @@ export default function PaymentModal({
                     type="text"
                     value={cardData.cvv}
                     onChange={(e) => setCardData(prev => ({...prev, cvv: e.target.value}))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bluvy focus:border-bluvy"
                     placeholder="123"
                     maxLength={3}
                   />
@@ -370,7 +359,7 @@ export default function PaymentModal({
                   type="text"
                   value={cardData.cardHolder}
                   onChange={(e) => setCardData(prev => ({...prev, cardHolder: e.target.value}))}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bluvy focus:border-bluvy"
                   placeholder="JEAN DUPONT"
                 />
               </div>
@@ -389,7 +378,7 @@ export default function PaymentModal({
                 className={`flex-1 px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${
                   isProcessing
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-link text-white hover:bg-bluvy"
                 }`}
               >
                 {isProcessing ? (
@@ -411,24 +400,24 @@ export default function PaymentModal({
       case "success":
         return (
           <div className="p-8 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FaShieldAlt className="text-2xl text-green-600" />
+            <div className="w-16 h-16 bg-[#144600] rounded-full flex items-center justify-center mx-auto mb-4">
+              <FaShieldAlt className="text-2xl text-[#399F2D]" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Paiement réussi !</h3>
             <p className="text-gray-600 mb-4">
               Votre paiement de <strong>{formatFCFA(fee.amount)}</strong> a été traité avec succès.
             </p>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-green-800">
+            <div className="bg-[9FF696] border border-green-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-[#326F2C]">
                 <strong>Transaction ID:</strong> TX{Date.now()}
               </p>
-              <p className="text-sm text-green-800 mt-1">
+              <p className="text-sm text-[#326F2C] mt-1">
                 <strong>Date:</strong> {new Date().toLocaleDateString('fr-FR')}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="w-full px-4 py-3 bg-link text-white rounded-lg hover:bg-bluvy transition-colors"
             >
               Fermer
             </button>
@@ -441,8 +430,9 @@ export default function PaymentModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+    <div className="fixed inset-0 bg-dark bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {/* Modal scrollable */}
+      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {renderStepContent()}
       </div>
     </div>

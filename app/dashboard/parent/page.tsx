@@ -1,160 +1,358 @@
-// components/ParentDashboard.tsx
 "use client";
 
+import React, { useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FaCalendarAlt, FaFileInvoiceDollar, FaRegChartBar, FaClipboardList, FaGraduationCap, FaArrowRight, FaClock, FaFileAlt } from "react-icons/fa";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  FaCalendarAlt,
+  FaClipboardList,
+  FaGraduationCap,
+  FaRegChartBar,
+  FaFileAlt,
+  FaArrowRight,
+  FaClock
+} from "react-icons/fa";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 
-const childInfo = {
-  name: "Antoine Dupont",
-  className: "4ème B",
-  latestGrade: "17/20 en Histoire-Géographie",
-  absencesLastWeek: 1,
-  nextInvoiceDue: "30 Novembre",
-};
+// Composant Header avec vérification de rôle
+const HeaderSection = ({ 
+  parentName, 
+  childName, 
+  className 
+}: { 
+  parentName: string; 
+  childName: string; 
+  className: string; 
+}) => (
+  <header className="pb-4 border-b border-gray-200">
+    <h1 className="font-title text-3xl font-extrabold tracking-tight text-gray-900">
+      Bonjour, {parentName}! 👋
+    </h1>
+    <p className="text-gray-500 mt-1">
+      Supervision de votre enfant : <span className="font-semibold">{childName} ({className})</span>.
+    </p>
+  </header>
+);
 
-const nextSchedule = {
-  subject: "Anglais",
-  time: "Demain, 14:00",
-  location: "Salle B103"
-};
+// Carte de statistiques avec composants shadcn
+const StatCard = ({ 
+  title, 
+  icon, 
+  value, 
+  description, 
+  link, 
+  linkText,
+  progress 
+}: { 
+  title: string; 
+  icon: React.ReactNode; 
+  value: string | number; 
+  description?: string; 
+  link?: string; 
+  linkText?: string;
+  progress?: number;
+}) => (
+  <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-principal">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      {icon}
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">{value}</div>
+      {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+      {progress !== undefined && (
+        <Progress value={progress} className="mt-2 h-2" />
+      )}
+      {link && linkText && (
+        <Link href={link} className="mt-3 inline-block">
+          <Button variant="link" className="p-0 h-auto text-principal text-xs font-medium">
+            {linkText} <FaArrowRight className="ml-1 h-3 w-3" />
+          </Button>
+        </Link>
+      )}
+    </CardContent>
+  </Card>
+);
 
-const nextEvent = {
-  name: "Réunion des Parents",
-  date: "25 Octobre",
-};
-
-const latestBulletin = {
-  trimester: "1er Trimestre",
-  average: "15,3 / 20",
-  mention: "Très bien",
-  link: "/parent/bulletins/1er-trimestre.pdf",
-};
-
-const ParentDashboard = ({ parentName = "Marie Dupont" }) => {
-  return (
-    <div className="p-6 space-y-6 h-full bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
-
-      {/* SECTION BIENVENUE */}
-      <header className="pb-4 border-b border-gray-200">
-        <h1 className="font-title text-3xl font-extrabold tracking-tight text-gray-900">
-          Bonjour, {parentName}! 👋
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Supervision de votre enfant : <span className="font-semibold">{childInfo.name} ({childInfo.className})</span>.
-        </p>
-      </header>
-
-      {/* GRID HAUT: Dernière Note, Assiduité, Prochain Cours */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Dernière Note */}
-        <Card className="hover:shadow-lg transition">
-          <CardHeader className="flex justify-between items-center pb-2">
-            <CardTitle className="font-title text-sm font-medium">Dernière Note</CardTitle>
-            <FaRegChartBar className="text-principal h-5 w-5" />
-          </CardHeader>
-          <CardContent className="pt-2 space-y-1">
-            <div className="text-3xl font-bold text-green-600">{childInfo.latestGrade.split('/')[0]}</div>
-            <p className="text-xs text-gray-700">{childInfo.latestGrade.split(' en ')[1]}</p>
-            <Link href="/parent/notes" className="mt-1 inline-block">
-              <Button variant="link" className="font-link p-0 text-principal text-xs">
-                Voir toutes les notes <FaArrowRight className="ml-1 h-3 w-3" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* Assiduité */}
-        <Card className="hover:shadow-lg transition">
-          <CardHeader className="flex justify-between items-center pb-2">
-            <CardTitle className="font-title text-sm font-medium">Assiduité (7 jours)</CardTitle>
-            <FaClipboardList className="text-principal h-5 w-5" />
-          </CardHeader>
-          <CardContent className="pt-2 space-y-1">
-            <div className="text-3xl font-bold text-red-600">{childInfo.absencesLastWeek}</div>
-            <p className="text-xs text-gray-700">{childInfo.absencesLastWeek <= 1 ? "Absence signalée" : "Absences signalées"}</p>
-            <Link href="/parent/attendance" className="mt-1 inline-block">
-              <Button variant="link" className="font-link p-0 text-principal text-xs">
-                Détails complets <FaArrowRight className="ml-1 h-3 w-3" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* Prochain Cours */}
-        <Card className="hover:shadow-lg transition">
-          <CardHeader className="flex justify-between items-center pb-2">
-            <CardTitle className="text-sm font-medium font-title">Prochain Cours</CardTitle>
-            <FaCalendarAlt className="text-principal h-5 w-5" />
-          </CardHeader>
-          <CardContent className="pt-2 space-y-1">
-            <div className="text-xl font-bold text-gray-900">{nextSchedule.subject}</div>
-            <p className="text-xs text-gray-700 flex items-center gap-1">
-              <FaClock className="h-3 w-3" /> {nextSchedule.time} à {nextSchedule.location}
-            </p>
-            <Link href="/parent/schedules" className="mt-1 inline-block">
-              <Button variant="link" className="font-link p-0 text-principal text-xs">
-                Voir l'EDT complet <FaArrowRight className="ml-1 h-3 w-3" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+// Carte d'info avec composants shadcn
+const InfoCard = ({ 
+  title, 
+  icon, 
+  content, 
+  link, 
+  linkText, 
+  button,
+  badge 
+}: { 
+  title: string; 
+  icon?: React.ReactNode; 
+  content: React.ReactNode; 
+  link?: string; 
+  linkText?: string; 
+  button?: React.ReactNode;
+  badge?: string;
+}) => (
+  <Card className="hover:shadow-lg transition-all duration-300">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      <div className="flex items-center gap-2">
+        {badge && <Badge variant="secondary" className="text-xs">{badge}</Badge>}
+        {icon}
       </div>
+    </CardHeader>
+    <CardContent className="space-y-3">
+      {content}
+      <div className="flex items-center justify-between">
+        {link && linkText && (
+          <Link href={link}>
+            <Button variant="link" className="p-0 h-auto text-principal text-xs font-medium">
+              {linkText} <FaArrowRight className="ml-1 h-3 w-3" />
+            </Button>
+          </Link>
+        )}
+        {button && button}
+      </div>
+    </CardContent>
+  </Card>
+);
 
-      {/* GRID BAS: Évènement, Bulletins, Frais Scolaires */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+const ParentDashboard = () => {
+  const { user, isLoaded, isSignedIn } = useUser();
+  const router = useRouter();
 
-        {/* Évènement à Venir */}
-        <Card className="hover:shadow-lg transition">
-          <CardHeader className="flex justify-between items-center pb-2">
-            <CardTitle className="text-sm font-medium font-title">Évènement à Venir</CardTitle>
-            <FaGraduationCap className="text-principal h-5 w-5" />
-          </CardHeader>
-          <CardContent className="pt-2 space-y-1">
-            <div className="text-xl font-bold text-gray-900">{nextEvent.name}</div>
-            <p className="text-xs text-gray-700">Date : {nextEvent.date}</p>
-            <Link href="/parent/events" className="mt-1 inline-block">
-              <Button variant="link" className="font-link p-0 text-principal text-xs">
-                Calendrier complet <FaArrowRight className="ml-1 h-3 w-3" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+  // Vérification du rôle parent
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      const userRole = user?.publicMetadata?.role;
+      console.log("Rôle utilisateur:", userRole);
+      
+      if (userRole !== "Parent") {
+        console.log("❌ Accès refusé - Rôle incorrect");
+        router.push("/unauthorized");
+      }
+    }
+  }, [isLoaded, isSignedIn, user, router]);
 
-        {/* Bulletins */}
-        <Card className="hover:shadow-lg transition">
-          <CardHeader className="flex justify-between items-center pb-2">
-            <CardTitle className="text-sm font-medium font-title">Bulletins</CardTitle>
-            <FaFileAlt className="text-principal h-5 w-5" />
-          </CardHeader>
-          <CardContent className="pt-2 space-y-1">
-            <div className="text-sm font-semibold text-gray-900">{latestBulletin.trimester}</div>
-            <p className="text-xs text-gray-700">Moyenne : {latestBulletin.average}</p>
-            <p className="text-xs text-gray-700">Mention : {latestBulletin.mention}</p>
-            <Link href={latestBulletin.link} className="mt-1 inline-block" target="_blank">
-              <Button variant="link" className="font-link p-0 text-principal text-xs">
-                Télécharger le bulletin <FaArrowRight className="ml-1 h-3 w-3" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+  // Données simulées avec mise à jour en temps réel
+  const childInfo = {
+    name: "Antoine Dupont",
+    className: "4ème B",
+    latestGrade: "17/20 en Histoire-Géographie",
+    absencesLastWeek: 1,
+    nextInvoiceDue: "30 Novembre",
+    attendanceRate: 92,
+    overallAverage: 15.3
+  };
 
-        {/* Frais Scolaires */}
-        <Card className="hover:shadow-lg transition">
+  const nextSchedule = {
+    subject: "Anglais",
+    time: "Demain, 14:00",
+    location: "Salle B103"
+  };
+
+  const nextEvent = {
+    name: "Réunion des Parents",
+    date: "25 Octobre",
+    type: "important"
+  };
+
+  const latestBulletin = {
+    trimester: "1er Trimestre",
+    average: "15,3 / 20",
+    mention: "Très bien",
+    link: "/parent/bulletins/1er-trimestre.pdf",
+  };
+
+  const financialInfo = {
+    amountDue: "50000 FCFA",
+    dueDate: "30 Novembre",
+    status: "en_retard"
+  };
+
+  // Loading state
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-lg">Chargement de vos informations...</div>
+      </div>
+    );
+  }
+
+  // Non connecté
+  if (!isSignedIn) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-lg">Redirection vers la connexion...</div>
+      </div>
+    );
+  }
+
+  // Vérification finale du rôle
+  const userRole = user?.publicMetadata?.role;
+  if (userRole !== "Parent") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
+          <p className="text-gray-600 mb-4">
+            Vous n'avez pas les permissions de parent.
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Retour à l'accueil
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const parentName = user ? `${user.firstName} ${user.lastName}` : "Parent";
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="p-6 space-y-6 h-full overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
+        <HeaderSection 
+          parentName={parentName} 
+          childName={childInfo.name} 
+          className={childInfo.className} 
+        />
+
+        {/* Grid Haut - Statistiques principales */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <StatCard 
+            title="Dernière Note" 
+            icon={<FaRegChartBar className="text-principal h-5 w-5" />} 
+            value={childInfo.latestGrade.split('/')[0]} 
+            description={childInfo.latestGrade.split(' en ')[1]} 
+            link="/parent/notes" 
+            linkText="Voir toutes les notes"
+            progress={85} // 17/20 = 85%
+          />
+          <StatCard 
+            title="Taux de Présence" 
+            icon={<FaClipboardList className="text-principal h-5 w-5" />} 
+            value={`${childInfo.attendanceRate}%`} 
+            description={`${childInfo.absencesLastWeek} absence(s) cette semaine`} 
+            link="/parent/attendance" 
+            linkText="Détails complets"
+            progress={childInfo.attendanceRate}
+          />
+          <StatCard 
+            title="Prochain Cours" 
+            icon={<FaCalendarAlt className="text-principal h-5 w-5" />} 
+            value={nextSchedule.subject} 
+            description={`${nextSchedule.time} • ${nextSchedule.location}`} 
+            link="/parent/schedules" 
+            linkText="Voir l'EDT complet"
+          />
+        </div>
+
+        {/* Grid Bas - Informations détaillées */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <InfoCard 
+            title="Évènement à Venir" 
+            icon={<FaGraduationCap className="text-principal h-5 w-5" />}
+            badge="Important"
+            content={
+              <div className="space-y-2">
+                <div className="text-lg font-semibold text-gray-900">{nextEvent.name}</div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <FaClock className="h-3 w-3" />
+                  <span>Date : {nextEvent.date}</span>
+                </div>
+              </div>
+            }
+            link="/parent/events"
+            linkText="Calendrier complet"
+          />
+          <InfoCard 
+            title="Bulletin Scolaire" 
+            icon={<FaFileAlt className="text-principal h-5 w-5" />}
+            badge="Nouveau"
+            content={
+              <div className="space-y-2">
+                <div className="text-sm font-semibold text-gray-900">{latestBulletin.trimester}</div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Moyenne générale</span>
+                  <span className="text-lg font-bold text-green-600">{latestBulletin.average}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Mention</span>
+                  <Badge variant="outline" className="bg-green-50 text-green-700">
+                    {latestBulletin.mention}
+                  </Badge>
+                </div>
+              </div>
+            }
+            link={latestBulletin.link}
+            linkText="Télécharger le bulletin"
+          />
+          <InfoCard 
+            title="Frais Scolaires" 
+            content={
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Montant dû</span>
+                  <div className="text-2xl font-bold text-red-600">{financialInfo.amountDue}</div>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Échéance</span>
+                  <span className={`font-medium ${
+                    financialInfo.status === 'en_retard' ? 'text-red-600' : 'text-gray-600'
+                  }`}>
+                    {financialInfo.dueDate}
+                  </span>
+                </div>
+                {financialInfo.status === 'en_retard' && (
+                  <Badge variant="destructive" className="w-full justify-center">
+                    Paiement en retard
+                  </Badge>
+                )}
+              </div>
+            }
+            button={
+              <Link href="/parent/finance">
+                <Button className="w-full bg-red-600 hover:bg-red-700">
+                  Payer Maintenant
+                </Button>
+              </Link>
+            }
+          />
+        </div>
+
+        {/* Section notifications en temps réel */}
+        <Card className="mt-6">
           <CardHeader>
-            <CardTitle className="font-title text-lg font-bold text-gray-800">Frais Scolaires</CardTitle>
-            <CardDescription>Facture en attente ou prochaine échéance</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <FaClipboardList className="text-principal" />
+              Notifications Récentes
+            </CardTitle>
           </CardHeader>
-          <CardContent className="pt-2 space-y-2">
-            <div className="text-3xl font-bold text-red-500">50000 FCFA</div>
-            <p className="text-sm text-gray-700">Échéance : {childInfo.nextInvoiceDue}</p>
-            <Link href="/parent/finance" className="mt-2 block">
-              <Button className="w-full font-link bg-red-500 hover:bg-red-600">Payer Maintenant</Button>
-            </Link>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Nouvelle note ajoutée en Mathématiques</p>
+                  <p className="text-xs text-muted-foreground">Il y a 2 heures</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Absence justifiée avec succès</p>
+                  <p className="text-xs text-muted-foreground">Il y a 1 jour</p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
-
       </div>
     </div>
   );

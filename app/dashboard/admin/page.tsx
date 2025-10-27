@@ -1,5 +1,8 @@
 "use client";
 import React from "react";
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import Link from "next/link";
 import { 
   FaChalkboardTeacher, 
@@ -13,10 +16,67 @@ import {
   FaBell,
   FaCalendarAlt,
   FaFileAlt,
-  FaClipboardList
+  FaClipboardList,
+  FaUser,
+  FaCog
 } from "react-icons/fa";
 
 const AdminDashboard = () => {
+  const { user, isLoaded, isSignedIn } = useUser();
+  const router = useRouter();
+
+  // Vérification du rôle administrateur
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      const userRole = user?.publicMetadata?.role;
+      console.log("Rôle utilisateur:", userRole);
+      
+      if (userRole !== "Administrateur") {
+        console.log("❌ Accès refusé - Rôle incorrect");
+        router.push("/unauthorized");
+      }
+    }
+  }, [isLoaded, isSignedIn, user, router]);
+
+  // Loading state
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-lg">Chargement de vos informations...</div>
+      </div>
+    );
+  }
+
+  // Non connecté
+  if (!isSignedIn) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-lg">Redirection vers la connexion...</div>
+      </div>
+    );
+  }
+
+  // Vérification finale du rôle
+  const userRole = user?.publicMetadata?.role;
+  if (userRole !== "Administrateur") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
+          <p className="text-gray-600 mb-4">
+            Vous n'avez pas les permissions d'administrateur.
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Retour à l'accueil
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Statistiques simulées
   const stats = {
     totalStudents: 450,
@@ -27,13 +87,13 @@ const AdminDashboard = () => {
     pendingTasks: 3
   };
 
-  // Cartes d'ajout rapide - 2 en haut, 2 en bas
+  // Cartes d'ajout rapide - Maintenant 6 cartes
   const quickAddCards = [
     {
       title: "Ajouter un Professeur",
       description: "Créer un nouveau compte professeur",
       icon: <FaChalkboardTeacher className="text-2xl text-blue-600" />,
-      href: "/dashboard/admin/teachers/create",
+      href: "/auth/signup",
       color: "bg-blue-50 border-blue-200",
       buttonColor: "bg-blue-600 hover:bg-blue-700"
     },
@@ -41,7 +101,7 @@ const AdminDashboard = () => {
       title: "Ajouter un Parent", 
       description: "Créer un nouveau compte parent",
       icon: <FaUsers className="text-2xl text-green-600" />,
-      href: "/dashboard/admin/parents/create",
+      href: "/auth/signup",
       color: "bg-green-50 border-green-200",
       buttonColor: "bg-green-600 hover:bg-green-700"
     },
@@ -49,17 +109,33 @@ const AdminDashboard = () => {
       title: "Ajouter un Élève",
       description: "Inscrire un nouvel élève",
       icon: <FaUserGraduate className="text-2xl text-purple-600" />,
-      href: "/dashboard/admin/students/create", 
+      href: "/auth/signup", 
       color: "bg-purple-50 border-purple-200",
       buttonColor: "bg-purple-600 hover:bg-purple-700"
     },
     {
-      title: "Ajouter un Admin",
-      description: "Créer un nouveau compte administrateur",
+      title: "Ajouter un Censeur",
+      description: "Créer un nouveau compte pour un censeur",
       icon: <FaShieldAlt className="text-2xl text-red-600" />,
-      href: "/dashboard/admin/admins/create",
+      href: "/auth/signup",
       color: "bg-red-50 border-red-200",
       buttonColor: "bg-red-600 hover:bg-red-700"
+    },
+    {
+      title: "Ajouter un Comptable",
+      description: "Créer un nouveau compte comptable",
+      icon: <FaUsers className="text-2xl text-indigo-600" />,
+      href: "/auth/signup",
+      color: "bg-indigo-50 border-indigo-200",
+      buttonColor: "bg-indigo-600 hover:bg-indigo-700",
+    },
+    {
+      title: "Ajouter un Secrétaire",
+      description: "Créer un nouveau compte secrétaire",
+      icon: <FaUsers className="text-2xl text-amber-600" />,
+      href: "/auth/signup",
+      color: "bg-amber-50 border-amber-200",
+      buttonColor: "bg-amber-600 hover:bg-amber-700",
     }
   ];
 
@@ -152,14 +228,24 @@ const AdminDashboard = () => {
         <div className="p-6">
           <div className="max-w-7xl mx-auto">
             
-            {/* En-tête fixe */}
+            {/* En-tête fixe avec info utilisateur */}
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6 sticky top-0 z-10">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Tableau de Bord Administrateur</h1>
+                  <h1 className="text-3xl font-bold text-gray-900">
+                    Tableau de Bord Administrateur
+                  </h1>
                   <p className="text-gray-600 mt-2">
-                    Gérez l'ensemble de votre établissement scolaire
+                    Bienvenue, {user.firstName} {user.lastName} 👋
                   </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                      ✅ Administrateur
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {user.primaryEmailAddress?.emailAddress}
+                    </span>
+                  </div>
                 </div>
                 <div className="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg">
                   {new Date().toLocaleDateString('fr-FR', { 
@@ -204,9 +290,43 @@ const AdminDashboard = () => {
                 ))}
               </div>
             </div>
-             <div className="mb-8">
+
+            {/* DEUXIÈME LIGNE - 2 cartes d'ajout */}
+            <div className="mb-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {quickAddCards.slice(2, 4).map((card, index) => (
+                  <div 
+                    key={index}
+                    className={`${card.color} border-2 rounded-xl p-6 flex flex-col h-full transition-all hover:shadow-lg hover:border-gray-300`}
+                  >
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="p-3 bg-white rounded-lg shadow-sm">
+                        {card.icon}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 text-lg">{card.title}</h3>
+                        <p className="text-gray-600 text-sm">{card.description}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-auto">
+                      <Link
+                        href={card.href}
+                        className={`${card.buttonColor} text-white font-semibold py-3 px-4 rounded-lg w-full flex items-center justify-center gap-2 transition-colors hover:shadow-md`}
+                      >
+                        <FaPlus />
+                        <span>Ajouter maintenant</span>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* TROISIÈME LIGNE - 2 dernières cartes d'ajout */}
+            <div className="mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {quickAddCards.slice(4, 6).map((card, index) => (
                   <div 
                     key={index}
                     className={`${card.color} border-2 rounded-xl p-6 flex flex-col h-full transition-all hover:shadow-lg hover:border-gray-300`}
@@ -301,70 +421,11 @@ const AdminDashboard = () => {
 
               </div>
 
-              {/* Colonne de droite - Contenu fixe */}
+              {/* Colonne de droite - Nouveau contenu remplaçant les sections supprimées */}
               <div className="space-y-6">
                 
-                {/* Alertes urgentes */}
-                <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-                  <h3 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
-                    <FaBell className="text-red-600" />
-                    Alertes Urgentes
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <div className="text-sm text-red-800">
-                        <span className="font-medium">{stats.pendingTasks} tâches critiques</span> nécessitent votre attention
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <div className="text-sm text-red-800">
-                        <span className="font-medium">{stats.activePayments} paiements</span> en attente de validation
-                      </div>
-                    </div>
-                  </div>
-                  <button className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-                    Voir les alertes
-                  </button>
-                </div>
-
-                {/* Performance système */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Performance du Système</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>Utilisation stockage</span>
-                        <span className="font-semibold">65%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: '65%' }}></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>Utilisateurs actifs</span>
-                        <span className="font-semibold">89%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-600 h-2 rounded-full" style={{ width: '89%' }}></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>Taux de satisfaction</span>
-                        <span className="font-semibold">92%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-purple-600 h-2 rounded-full" style={{ width: '92%' }}></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Support rapide */}
-                <div className="bg-blue-50 border border-blue-200 rounded-xl  py-11 px-10">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl py-8 px-4">
                   <h3 className="font-semibold text-blue-900 mb-2">Support & Aide</h3>
                   <p className="text-blue-800 text-sm mb-4">
                     Besoin d'aide pour gérer votre établissement ?
@@ -374,6 +435,36 @@ const AdminDashboard = () => {
                   </button>
                 </div>
 
+                {/* Activité récente */}
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="font-semibold text-gray-900 mb-4">Activité Récente</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">5 nouveaux élèves</span> inscrits aujourd'hui
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">3 professeurs</span> ont mis à jour leur profil
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">12 paiements</span> traités cette semaine
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">8 bulletins</span> générés aujourd'hui
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

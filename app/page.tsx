@@ -10,7 +10,7 @@ export default function Home() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowIntro(false);
-      router.push("/auth/login"); // Redirection après l'intro
+      router.push("/auth/signin/"); // Redirection après l'intro
     }, 3000); // durée de l'intro
     return () => clearTimeout(timer);
   }, [router]);
