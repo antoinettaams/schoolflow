@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState,} from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, MoreHorizontal, UserPlus, Download, Euro, BookOpen } from "lucide-react";
+import { Search, MoreHorizontal, UserPlus, Download, Euro, Settings } from "lucide-react";
 
 interface Inscription {
   id: string;
@@ -19,7 +19,7 @@ interface Inscription {
   email: string;
   telephone: string;
   dateInscription: string;
-  status: "en_attente" | "approuve" | "rejete";
+  statut: "en_attente" | "approuve" | "rejete";
   fraisInscription: number;
   filiere: string;
   vague: string;
@@ -40,15 +40,17 @@ const VAGUES = [
   "Vague 3 - 2024"
 ];
 
-const FRAIS_INSCRIPTION = 15000; // 15,000 FCFA
-
 export default function InscriptionsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFiliere, setSelectedFiliere] = useState<string>("toutes");
   const [selectedVague, setSelectedVague] = useState<string>("toutes");
-  const [selectedStatus, setSelectedStatus] = useState<string>("toutes");
+  const [selectedStatut, setSelectedStatut] = useState<string>("toutes");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
   
+  // Frais d'inscription universel configurable par la secrétaire
+  const [fraisInscription, setFraisInscription] = useState<number>(15000);
+
   const [nouvelleInscription, setNouvelleInscription] = useState({
     nom: "",
     prenom: "",
@@ -67,8 +69,8 @@ export default function InscriptionsPage() {
       email: "marie.dupont@email.com",
       telephone: "01 23 45 67 89",
       dateInscription: "2024-01-15",
-      status: "en_attente",
-      fraisInscription: FRAIS_INSCRIPTION,
+      statut: "en_attente",
+      fraisInscription: 15000,
       filiere: "Développement Web Fullstack",
       vague: "Vague 1 - 2024"
     },
@@ -79,29 +81,25 @@ export default function InscriptionsPage() {
       email: "luc.martin@email.com",
       telephone: "01 34 56 78 90",
       dateInscription: "2024-01-10",
-      status: "approuve",
-      fraisInscription: FRAIS_INSCRIPTION,
+      statut: "approuve",
+      fraisInscription: 15000,
       filiere: "Design Graphique & UI/UX",
       vague: "Vague 1 - 2024"
     },
   ]);
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      en_attente: "warning",
-      approuve: "success", 
-      rejete: "destructive"
+  const getStatutBadge = (statut: string) => {
+    const config = {
+      en_attente: { variant: "secondary" as const, text: "En attente" },
+      approuve: { variant: "default" as const, text: "Approuvé" },
+      rejete: { variant: "destructive" as const, text: "Rejeté" }
     };
     
-    const labels = {
-      en_attente: "En attente",
-      approuve: "Approuvé",
-      rejete: "Rejeté"
-    };
-
+    const { variant, text } = config[statut as keyof typeof config];
+    
     return (
-      <Badge variant={variants[status as keyof typeof variants] as any}>
-        {labels[status as keyof typeof labels]}
+      <Badge variant={variant}>
+        {text}
       </Badge>
     );
   };
@@ -114,8 +112,8 @@ export default function InscriptionsPage() {
       email: nouvelleInscription.email,
       telephone: nouvelleInscription.telephone,
       dateInscription: new Date().toISOString().split('T')[0],
-      status: "en_attente",
-      fraisInscription: FRAIS_INSCRIPTION,
+      statut: "en_attente",
+      fraisInscription: fraisInscription,
       filiere: nouvelleInscription.filiere,
       vague: nouvelleInscription.vague
     };
@@ -135,6 +133,10 @@ export default function InscriptionsPage() {
     });
   };
 
+  const handleUpdateFrais = (nouveauFrais: number) => {
+    setFraisInscription(nouveauFrais);
+  };
+
   // Filtrage des inscriptions
   const filteredInscriptions = inscriptions.filter(inscription => {
     const matchesSearch = 
@@ -144,19 +146,28 @@ export default function InscriptionsPage() {
     
     const matchesFiliere = selectedFiliere === "toutes" || inscription.filiere === selectedFiliere;
     const matchesVague = selectedVague === "toutes" || inscription.vague === selectedVague;
-    const matchesStatus = selectedStatus === "toutes" || inscription.status === selectedStatus;
+    const matchesStatut = selectedStatut === "toutes" || inscription.statut === selectedStatut;
 
-    return matchesSearch && matchesFiliere && matchesVague && matchesStatus;
+    return matchesSearch && matchesFiliere && matchesVague && matchesStatut;
   });
+
+  // Statistiques calculées
+  const totalFraisCollectes = inscriptions
+    .filter(i => i.statut === "approuve")
+    .reduce((sum, i) => sum + i.fraisInscription, 0);
+
+  const totalFraisEnAttente = inscriptions
+    .filter(i => i.statut === "en_attente")
+    .reduce((sum, i) => sum + i.fraisInscription, 0);
 
   return (
     <div className="p-6 space-y-6 max-h-screen overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
-      {/* Header avec frais */}
+      {/* Header avec configuration des frais */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestion des Inscriptions</h1>
           <p className="text-gray-600 mt-2">
-            Gérez les demandes d'inscription des apprenants
+            Gérez les demandes d&apos;inscription des apprenants
           </p>
         </div>
         
@@ -164,17 +175,72 @@ export default function InscriptionsPage() {
           <Card className="bg-orange-50 border-orange-200">
             <CardContent className="p-3">
               <div className="flex items-center gap-2">
-                <Euro className="w-4 h-4 text-orange-600" />
                 <span className="text-sm font-semibold text-orange-800">
-                  Frais d'inscription: {FRAIS_INSCRIPTION.toLocaleString('fr-FR')} FCFA
+                  Inscription: {fraisInscription.toLocaleString('fr-FR')} FCFA
                 </span>
               </div>
             </CardContent>
           </Card>
 
+          {/* Bouton de configuration des frais */}
+          <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Settings className="w-4 h-4 mr-2" />
+                Configurer les Frais
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md bg-white">
+              <DialogHeader>
+                <DialogTitle>Configuration des Frais d&apos;Inscription</DialogTitle>
+                <DialogDescription>
+                  Définissez le montant universel des frais d&apos;inscription
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="frais" className="text-sm font-medium text-gray-700">
+                          Frais d&apos;Inscription Universel (FCFA)
+                        </Label>
+                        <p className="text-sm text-gray-600 mb-2">
+                          Ce montant s&apos;applique à toutes les filières
+                        </p>
+                        <Input
+                          id="frais"
+                          type="number"
+                          placeholder="15000"
+                          value={fraisInscription}
+                          onChange={(e) => handleUpdateFrais(parseInt(e.target.value) || 0)}
+                          className="text-lg font-semibold"
+                        />
+                      </div>
+                      
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <div className="text-sm font-medium text-blue-900">Nouveau montant:</div>
+                        <div className="text-2xl font-bold text-blue-900 mt-1">
+                          {fraisInscription.toLocaleString('fr-FR')} FCFA
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsConfigDialogOpen(false)}>
+                  Fermer
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-principal hover:bg-principal/90">
+              <Button className="bg-blue-600 hover:bg-blue-700">
                 <UserPlus className="w-4 h-4 mr-2" />
                 Nouvelle Inscription
               </Button>
@@ -193,14 +259,14 @@ export default function InscriptionsPage() {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-semibold text-blue-900">Frais d'Inscription</h4>
+                        <h4 className="font-semibold text-blue-900">Frais d&apos;Inscription Universel</h4>
                         <p className="text-blue-700 text-sm">
-                          Montant fixe pour toutes les inscriptions
+                          Applicable à toutes les filières
                         </p>
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-blue-900">
-                          {FRAIS_INSCRIPTION.toLocaleString('fr-FR')} FCFA
+                          {fraisInscription.toLocaleString('fr-FR')} FCFA
                         </div>
                         <div className="text-sm text-blue-600">TTC</div>
                       </div>
@@ -307,17 +373,17 @@ export default function InscriptionsPage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-gray-600">Frais d'inscription:</span>
-                      <span className="font-semibold">{FRAIS_INSCRIPTION.toLocaleString('fr-FR')} FCFA</span>
+                      <span className="text-gray-600">Frais d&apos;inscription:</span>
+                      <span className="font-semibold">{fraisInscription.toLocaleString('fr-FR')} FCFA</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b">
                       <span className="text-gray-600">Statut:</span>
-                      <Badge variant="warning">En attente de paiement</Badge>
+                      <Badge variant="secondary">En attente de paiement</Badge>
                     </div>
                     <div className="flex justify-between items-center py-2">
                       <span className="text-lg font-semibold">Total à payer:</span>
-                      <span className="text-lg font-bold text-principal">
-                        {FRAIS_INSCRIPTION.toLocaleString('fr-FR')} FCFA
+                      <span className="text-lg font-bold text-blue-600">
+                        {fraisInscription.toLocaleString('fr-FR')} FCFA
                       </span>
                     </div>
                   </CardContent>
@@ -331,10 +397,10 @@ export default function InscriptionsPage() {
                 <Button 
                   onClick={handleNouvelleInscription}
                   disabled={!nouvelleInscription.nom || !nouvelleInscription.prenom || !nouvelleInscription.email || !nouvelleInscription.telephone || !nouvelleInscription.filiere || !nouvelleInscription.vague}
-                  className="bg-principal hover:bg-principal/90"
+                  className="bg-blue-600 hover:bg-blue-700"
                 >
                   <UserPlus className="w-4 h-4 mr-2" />
-                  Créer l'inscription
+                  Créer l&apos;inscription
                 </Button>
               </div>
             </DialogContent>
@@ -362,7 +428,7 @@ export default function InscriptionsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {inscriptions.filter(i => i.status === "en_attente").length}
+              {inscriptions.filter(i => i.statut === "en_attente").length}
             </div>
             <p className="text-xs text-gray-600">En attente de validation</p>
           </CardContent>
@@ -375,12 +441,9 @@ export default function InscriptionsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {inscriptions
-                .filter(i => i.status === "approuve")
-                .reduce((sum, i) => sum + i.fraisInscription, 0)
-                .toLocaleString('fr-FR')} FCFA
+              {totalFraisCollectes.toLocaleString('fr-FR')} FCFA
             </div>
-            <p className="text-xs text-gray-600">Total perçu</p>
+            <div className="text-xs text-gray-600">Total perçu</div>
           </CardContent>
         </Card>
 
@@ -391,10 +454,7 @@ export default function InscriptionsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {inscriptions
-                .filter(i => i.status === "en_attente")
-                .reduce((sum, i) => sum + i.fraisInscription, 0)
-                .toLocaleString('fr-FR')} FCFA
+              {totalFraisEnAttente.toLocaleString('fr-FR')} FCFA
             </div>
             <p className="text-xs text-gray-600">À percevoir</p>
           </CardContent>
@@ -449,7 +509,7 @@ export default function InscriptionsPage() {
               </SelectContent>
             </Select>
 
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <Select value={selectedStatut} onValueChange={setSelectedStatut}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Tous les statuts" />
               </SelectTrigger>
@@ -514,7 +574,7 @@ export default function InscriptionsPage() {
                       {inscription.fraisInscription.toLocaleString('fr-FR')} FCFA
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(inscription.status)}
+                      {getStatutBadge(inscription.statut)}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -526,10 +586,14 @@ export default function InscriptionsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem>Voir détails</DropdownMenuItem>
                           <DropdownMenuItem>Modifier</DropdownMenuItem>
-                          <DropdownMenuItem>Approuver</DropdownMenuItem>
-                          <DropdownMenuItem>Marquer comme payé</DropdownMenuItem>
+                          <DropdownMenuItem>
+                            Approuver l&apos;inscription
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            Marquer comme payé
+                          </DropdownMenuItem>
                           <DropdownMenuItem className="text-red-600">
-                            Rejeter
+                            Rejeter l&apos;inscription
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

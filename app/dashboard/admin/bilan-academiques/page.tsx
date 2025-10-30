@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  Search, Filter, ChevronDown, Download, Eye, 
+  Search, Filter, Download, Eye, 
   BarChart3, TrendingUp, Award, Users, BookOpen,
   Star, Target, AlertCircle, CheckCircle, XCircle
 } from 'lucide-react';
@@ -17,9 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface Student {
   id: string;
@@ -64,6 +62,7 @@ interface Stats {
 }
 
 export default function NotesPage() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
   const [vagues, setVagues] = useState<Vague[]>([]);
@@ -225,23 +224,23 @@ export default function NotesPage() {
 
   // Fonctions utilitaires
   const getStatusBadge = (statut: Student['statut']) => {
-    const config = {
-      excellent: { variant: "default" as const, text: 'Excellent', icon: Award },
-      tres_bien: { variant: "success" as const, text: 'Très bien', icon: CheckCircle },
-      bien: { variant: "secondary" as const, text: 'Bien', icon: Target },
-      moyen: { variant: "outline" as const, text: 'Moyen', icon: Star },
-      insuffisant: { variant: "destructive" as const, text: 'Insuffisant', icon: AlertCircle },
-      echec: { variant: "destructive" as const, text: 'Échec', icon: XCircle }
-    };
-    
-    const { variant, text, icon: Icon } = config[statut];
-    return (
-      <Badge variant={variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
-        {text}
-      </Badge>
-    );
+  const config = {
+    excellent: { variant: "default" as const, text: 'Excellent', icon: Award },
+    tres_bien: { variant: "default" as const, text: 'Très bien', icon: CheckCircle }, // Changé de "success" à "default"
+    bien: { variant: "secondary" as const, text: 'Bien', icon: Target },
+    moyen: { variant: "outline" as const, text: 'Moyen', icon: Star },
+    insuffisant: { variant: "destructive" as const, text: 'Insuffisant', icon: AlertCircle },
+    echec: { variant: "destructive" as const, text: 'Échec', icon: XCircle }
   };
+  
+  const { variant, text, icon: Icon } = config[statut];
+  return (
+    <Badge variant={variant} className="flex items-center gap-1">
+      <Icon className="h-3 w-3" />
+      {text}
+    </Badge>
+  );
+};
 
   const getRangBadge = (rang: number) => {
     if (rang === 1) return '🥇';
@@ -263,6 +262,7 @@ export default function NotesPage() {
     return 'text-red-600';
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getPresenceColor = (presence: number) => {
     if (presence >= 90) return 'bg-green-600';
     if (presence >= 80) return 'bg-yellow-600';

@@ -10,10 +10,22 @@ import {
   LogOut,
   AlertCircle,
   Calendar,
-  Clock,
   CheckCircle,
   Shield,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
+
+interface ActivityItem {
+  id: number;
+  type: string;
+  description: string;
+  timestamp: Date;
+  icon: React.ReactNode;
+}
 
 const AdminProfilePage = () => {
   const { user, isLoaded } = useUser();
@@ -22,11 +34,11 @@ const AdminProfilePage = () => {
   const [showImageModal, setShowImageModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [userActivity, setUserActivity] = useState<any[]>([]);
+  const [userActivity, setUserActivity] = useState<ActivityItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 🔥 Activité simulée
-  const getUserActivity = () => [
+  const getUserActivity = (): ActivityItem[] => [
     {
       id: 1,
       type: "login",
@@ -80,7 +92,7 @@ const AdminProfilePage = () => {
       alert("✅ Photo de profil mise à jour avec succès !");
       setShowImageOptions(false);
 
-      // Ajouter dans le journal d’activité
+      // Ajouter dans le journal d&apos;activité
       setUserActivity((prev) => [
         {
           id: Date.now(),
@@ -113,7 +125,7 @@ const AdminProfilePage = () => {
     }
   };
 
-  // ✅ Télécharger l’image
+  // ✅ Télécharger l&apos;image
   const handleDownloadImage = () => {
     const link = document.createElement("a");
     link.href = user?.imageUrl || "";
@@ -140,9 +152,10 @@ const AdminProfilePage = () => {
   const profileImage =
     user.imageUrl || "https://placehold.co/150x150/3b82f6/ffffff?text=Admin";
   const createdAt = user.createdAt ? new Date(user.createdAt) : new Date();
+  const userRole = (user.publicMetadata?.role as string) || "Administrateur";
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       <input
         type="file"
         ref={fileInputRef}
@@ -154,20 +167,21 @@ const AdminProfilePage = () => {
       <div className="h-screen overflow-y-auto">
         <div className="max-w-6xl mx-auto p-6 space-y-6">
           {/* ✅ Carte de profil */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 relative">
+          <Card className="rounded-2xl shadow-xl overflow-hidden border border-gray-100 relative">
             {/* Bannière */}
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-40 w-full relative">
               <div className="absolute left-8 bottom-0 translate-y-1/2">
                 <div className="relative">
-                  <img
+                  <Image
                     src={profileImage}
                     alt="Photo de profil"
                     className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-2xl cursor-pointer"
                     onClick={() => setShowImageOptions(true)}
                   />
-                  <button
+                  <Button
                     onClick={() => setShowImageOptions(true)}
                     disabled={isUploading}
+                    size="icon"
                     className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full border-2 border-white shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-110 disabled:opacity-50"
                   >
                     {isUploading ? (
@@ -175,12 +189,12 @@ const AdminProfilePage = () => {
                     ) : (
                       <Camera className="w-4 h-4" />
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
 
-            {/* Menu des options d’image */}
+            {/* Menu des options d&apos;image */}
             {showImageOptions && (
               <>
                 <div className="absolute left-8 top-48 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
@@ -235,7 +249,7 @@ const AdminProfilePage = () => {
 
             {/* Image Modal */}
             {showImageModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto">
                 <div className="bg-white rounded-xl p-4 max-w-lg w-full relative">
                   <button
                     onClick={() => setShowImageModal(false)}
@@ -243,41 +257,43 @@ const AdminProfilePage = () => {
                   >
                     ✕
                   </button>
-                  <img
-                    src={user.imageUrl}
+                  <Image
+                    src={user.imageUrl || profileImage}
                     alt="Photo de profil"
-                    className="w-full h-auto rounded-xl object-cover"
+                    className="w-full h-[70vh] rounded-xl object-cover"
                   />
-                  <div className="flex justify-end gap-3 p-4 border-t border-gray-200 mt-4">
-                    <button
+                  <div className="flex justify-end gap-3 p-4">
+                    <Button
+                      variant="outline"
                       onClick={() => setShowImageModal(false)}
-                      className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
                     >
                       Fermer
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={handleDownloadImage}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      className="bg-blue-600 hover:bg-blue-700"
                     >
                       Télécharger
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Nom et rôle */}
-            <div className="pt-16 pb-6 px-8 border-b border-gray-100">
-              <h2 className="text-2xl font-extrabold text-gray-900 mb-1">
+            <CardHeader className="pt-16 pb-6 border-b border-gray-100">
+              <CardTitle className="text-2xl font-extrabold text-gray-900">
                 {user.firstName} {user.lastName}
-              </h2>
-              <p className="text-blue-600 font-medium">
-                {(user.publicMetadata as any)?.role || "Administrateur"}
-              </p>
-            </div>
+              </CardTitle>
+              <CardDescription>
+                <Badge variant="secondary" className="text-blue-600 bg-white font-medium">
+                  {userRole}
+                </Badge>
+              </CardDescription>
+            </CardHeader>
 
             {/* Informations personnelles */}
-            <div className="p-6">
+            <CardContent className="p-6">
               <h3 className="text-xl font-bold text-gray-700 mb-6 flex items-center gap-3">
                 <User className="w-6 h-6 text-blue-600" />
                 Informations Personnelles
@@ -292,10 +308,10 @@ const AdminProfilePage = () => {
                 />
                 <Info label="ID Utilisateur" value={user.id} icon={User} />
               </div>
-            </div>
+            </CardContent>
 
             {/* Date création + bouton */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex flex-col gap-4">
+            <CardContent className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex flex-col gap-4">
               <p className="text-sm text-gray-500">
                 Compte créé le{" "}
                 {createdAt.toLocaleDateString("fr-FR", {
@@ -304,128 +320,125 @@ const AdminProfilePage = () => {
                   day: "numeric",
                 })}
               </p>
-              <button
+              <Button
                 onClick={handleLogout}
-                className="w-64 flex items-center justify-center gap-3 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl"
+                variant="destructive"
+                className="w-64 flex items-center justify-center gap-3 bg-red-500"
               >
                 <LogOut className="w-6 h-6" />
                 Se déconnecter
-              </button>
-            </div>
-          </div>
+              </Button>
+            </CardContent>
+          </Card>
 
           {/* Section sécurité */}
-          <Section
-            title="Sécurité et Compte"
-            icon={<Shield className="w-6 h-6 text-blue-600" />}
-          >
-            <button
-              onClick={() => window.open("https://accounts.clerk.com/user", "_blank")}
-              className="text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-            >
-              <p className="font-semibold text-gray-900">Gérer la sécurité</p>
-              <p className="text-sm text-gray-600">Mot de passe, 2FA, sessions</p>
-            </button>
-          </Section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <Shield className="w-6 h-6 text-blue-600" />
+                Sécurité et Compte
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                onClick={() => window.open("https://accounts.clerk.com/user", "_blank")}
+                className="text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                <div>
+                  <p className="font-semibold text-gray-900">Gérer la sécurité</p>
+                  <p className="text-sm text-gray-600">Mot de passe, 2FA, sessions</p>
+                </div>
+              </Button>
+            </CardContent>
+          </Card>
 
           {/* Activité */}
-          <Section
-            title="Activité Récente"
-            icon={<Calendar className="w-6 h-6 text-blue-600" />}
-          >
-            <div className="space-y-3">
-              {userActivity.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-                >
-                  {a.icon}
-                  <div>
-                    <p className="text-sm font-medium">{a.description}</p>
-                    <p className="text-xs text-gray-500">
-                      {a.timestamp.toLocaleDateString("fr-FR")} à{" "}
-                      {a.timestamp.toLocaleTimeString("fr-FR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <Calendar className="w-6 h-6 text-blue-600" />
+                Activité Récente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {userActivity.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    {activity.icon}
+                    <div>
+                      <p className="text-sm font-medium">{activity.description}</p>
+                      <p className="text-xs text-gray-500">
+                        {activity.timestamp.toLocaleDateString("fr-FR")} à{" "}
+                        {activity.timestamp.toLocaleTimeString("fr-FR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </Section>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {isLogoutModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
+      {/* Modal de déconnexion */}
+      <Dialog open={isLogoutModalOpen} onOpenChange={setIsLogoutModalOpen}>
+        <DialogContent className="max-w-sm bg-white">
+          <DialogHeader>
             <div className="flex justify-center mb-4">
               <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center">
                 <AlertCircle className="w-6 h-6 text-red-600" />
               </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+            <DialogTitle className="text-center text-lg font-semibold text-gray-900">
               Confirmer la déconnexion
-            </h3>
-            <p className="text-gray-600 text-sm text-center mb-6">
+            </DialogTitle>
+            <DialogDescription className="text-center text-gray-600 text-sm">
               Êtes-vous sûr de vouloir vous déconnecter ?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={handleCancelLogout}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleConfirmLogout}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                Se déconnecter
-              </button>
-            </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-4">
+            <Button
+              variant="outline"
+              onClick={handleCancelLogout}
+              className="flex-1"
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmLogout}
+              className="flex-1"
+            >
+              Se déconnecter
+            </Button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 // ✅ Composants utilitaires
-const Info = ({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: any;
+interface InfoProps {
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
-}) => (
+}
+
+const Info = ({ icon: Icon, label, value }: InfoProps) => (
   <div className="flex items-center p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
     <Icon className="w-5 h-5 text-blue-600 mr-4" />
     <div>
       <p className="text-xs font-medium text-gray-500 uppercase">{label}</p>
       <p className="text-gray-800 font-semibold mt-1">{value}</p>
     </div>
-  </div>
-);
-
-const Section = ({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: JSX.Element;
-  children: React.ReactNode;
-}) => (
-  <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-    <h3 className="text-xl font-bold text-gray-700 mb-4 flex items-center gap-3">
-      {icon}
-      {title}
-    </h3>
-    {children}
   </div>
 );
 

@@ -4,7 +4,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   CalendarDays, AlertCircle, Users, Sun, ClipboardList, MapPin, 
-  Filter, Search, ChevronDown, Plus, Edit, Trash2, X, Save 
+  Filter, Search, ChevronDown, Plus, Edit, Trash2, X, Save,
+  LucideIcon
 } from 'lucide-react';
 
 // Interfaces
@@ -53,7 +54,7 @@ export default function CensorEventsPage() {
     } else {
       // Données par défaut
       const defaultEvents: SchoolEvent[] = [
-        { id: '1', date: "24 Octobre", day: "MER", title: "Réunion Parents-Professeurs", type: "Réunion", location: "Gymnase de l'école", icon: "Users", color: "bg-blue-500", badge: "Important", month: "Octobre", time: "18:00 - 20:00" },
+        { id: '1', date: "24 Octobre", day: "MER", title: "Réunion Parents-Professeurs", type: "Réunion", location: "Gymnase de l&apos;école", icon: "Users", color: "bg-blue-500", badge: "Important", month: "Octobre", time: "18:00 - 20:00" },
         { id: '2', date: "27 Octobre", day: "SAM", title: "Voyage Scolaire à Rome", type: "Voyage", location: "Départ à 8h00", icon: "Sun", color: "bg-indigo-500", badge: "Optionnel", month: "Octobre", time: "08:00 - 20:00" },
         { id: '3', date: "01 Novembre", day: "JEU", title: "Toussaint - Jour Férié", type: "Congé", location: "École Fermée", icon: "AlertCircle", color: "bg-green-500", badge: "Congé", month: "Novembre", time: "Toute la journée" },
       ];
@@ -161,7 +162,7 @@ export default function CensorEventsPage() {
     // Générer les métadonnées automatiques
     const dateParts = formData.date.split(' ');
     const month = dateParts[1] || 'Mois';
-    const dayAbbrev = getDayAbbreviation(formData.date);
+    const dayAbbrev = getDayAbbreviation();
 
     const eventData: SchoolEvent = {
       id: editingEvent?.id || Date.now().toString(),
@@ -194,13 +195,13 @@ export default function CensorEventsPage() {
   };
 
   // Fonctions utilitaires
-  const getDayAbbreviation = (dateStr: string) => {
+  const getDayAbbreviation = () => {
     const days = ['DIM', 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM'];
     return days[Math.floor(Math.random() * days.length)]; // Simplifié pour l'exemple
   };
 
   const getIconByType = (type: string) => {
-    const icons: { [key: string]: string } = {
+    const icons: Record<string, string> = {
       'Réunion': 'Users',
       'Voyage': 'Sun',
       'Congé': 'AlertCircle',
@@ -214,7 +215,7 @@ export default function CensorEventsPage() {
   };
 
   const getColorByType = (type: string) => {
-    const colors: { [key: string]: string } = {
+    const colors: Record<string, string> = {
       'Réunion': 'bg-blue-500',
       'Voyage': 'bg-indigo-500',
       'Congé': 'bg-green-500',
@@ -227,8 +228,8 @@ export default function CensorEventsPage() {
     return colors[type] || 'bg-gray-500';
   };
 
-  const getIconComponent = (iconName: string) => {
-    const icons: { [key: string]: any } = {
+  const getIconComponent = (iconName: string): LucideIcon => {
+    const icons: Record<string, LucideIcon> = {
       'Users': Users,
       'Sun': Sun,
       'AlertCircle': AlertCircle,
@@ -312,7 +313,7 @@ export default function CensorEventsPage() {
                     type="text"
                     value={customType}
                     onChange={(e) => setCustomType(e.target.value)}
-                    placeholder="Nouveau type d'événement"
+                    placeholder="Nouveau type d&apos;événement"
                     className="flex-1 px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   <button
@@ -328,7 +329,7 @@ export default function CensorEventsPage() {
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Les nouveaux types seront disponibles dans les filtres et lors de la création d'événements.
+                  Les nouveaux types seront disponibles dans les filtres et lors de la création d&apos;événements.
                 </p>
               </div>
             </div>
@@ -448,7 +449,7 @@ export default function CensorEventsPage() {
         </div>
       </div>
 
-      {/* Modal d'ajout/modification */}
+      {/* Modal d&apos;ajout/modification */}
       {isDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -456,7 +457,7 @@ export default function CensorEventsPage() {
             <div className="bg-white p-6 border-b border-gray-200 sticky top-0 z-10">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold">
-                  {editingEvent ? 'Modifier l\'événement' : 'Nouvel événement'}
+                  {editingEvent ? 'Modifier l&apos;événement' : 'Nouvel événement'}
                 </h2>
                 <button 
                   onClick={() => setIsDialogOpen(false)} 
@@ -477,7 +478,7 @@ export default function CensorEventsPage() {
                     value={formData.title}
                     onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Titre de l'événement"
+                    placeholder="Titre de l&apos;événement"
                   />
                 </div>
 
@@ -514,7 +515,7 @@ export default function CensorEventsPage() {
                     value={formData.location}
                     onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Lieu de l'événement"
+                    placeholder="Lieu de l&apos;événement"
                   />
                 </div>
 
@@ -563,7 +564,7 @@ export default function CensorEventsPage() {
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Description de l'événement (optionnel)"
+                  placeholder="Description de l&apos;événement (optionnel)"
                 />
               </div>
             </div>

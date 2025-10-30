@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
-import { Search, Filter, Plus, Edit, Trash2, Clock, MapPin, User, Calendar } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Clock, MapPin, User, Calendar } from 'lucide-react'
 
 // Interfaces
 interface ScheduleSlot {
@@ -29,7 +29,23 @@ interface Schedule {
   };
 }
 
-interface Teacher {
+interface Vague {
+  id: string;
+  name: string;
+}
+
+interface Module {
+  id: string;
+  name: string;
+}
+
+interface Filiere {
+  id: string;
+  name: string;
+  modules?: Module[];
+}
+
+interface Formateur {
   id: string;
   name: string;
   email: string;
@@ -47,9 +63,9 @@ export default function EmploiDuTempsPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [schedules, setSchedules] = useState<Schedule[]>([])
-  const [vagues, setVagues] = useState<any[]>([])
-  const [filieres, setFilieres] = useState<any[]>([])
-  const [formateurs, setFormateurs] = useState<any[]>([])
+  const [vagues, setVagues] = useState<Vague[]>([])
+  const [filieres, setFilieres] = useState<Filiere[]>([])
+  const [formateurs, setFormateurs] = useState<Formateur[]>([])
   const [filteredSchedules, setFilteredSchedules] = useState<Schedule[]>([])
   const [selectedVague, setSelectedVague] = useState<string>('all')
   const [selectedFiliere, setSelectedFiliere] = useState<string>('all')
@@ -92,8 +108,8 @@ export default function EmploiDuTempsPage() {
     if (searchTerm) {
       filtered = filtered.filter(schedule => {
         const filiere = filieres.find(f => f.id === schedule.filiereId)
-        const module = filiere?.modules?.find((m: any) => m.id === schedule.moduleId)
-        const moduleName = module?.name || ''
+        const moduleItem = filiere?.modules?.find(m => m.id === schedule.moduleId)
+        const moduleName = moduleItem?.name || ''
         
         return moduleName.toLowerCase().includes(searchTerm.toLowerCase())
       })
@@ -102,12 +118,12 @@ export default function EmploiDuTempsPage() {
     // Tri alphabétique par nom de module
     filtered.sort((a, b) => {
       const filiereA = filieres.find(f => f.id === a.filiereId)
-      const moduleA = filiereA?.modules?.find((m: any) => m.id === a.moduleId)
+      const moduleItemA = filiereA?.modules?.find(m => m.id === a.moduleId)
       const filiereB = filieres.find(f => f.id === b.filiereId)
-      const moduleB = filiereB?.modules?.find((m: any) => m.id === b.moduleId)
+      const moduleItemB = filiereB?.modules?.find(m => m.id === b.moduleId)
       
-      const nameA = moduleA?.name || ''
-      const nameB = moduleB?.name || ''
+      const nameA = moduleItemA?.name || ''
+      const nameB = moduleItemB?.name || ''
       
       return nameA.localeCompare(nameB)
     })
@@ -120,29 +136,29 @@ export default function EmploiDuTempsPage() {
       // Charger les emplois du temps
       const savedSchedules = localStorage.getItem('schoolflow_assignations')
       if (savedSchedules) {
-        const schedulesData = JSON.parse(savedSchedules)
+        const schedulesData = JSON.parse(savedSchedules) as Schedule[]
         setSchedules(schedulesData)
       }
 
       // Charger les vagues
       const savedVagues = localStorage.getItem('schoolflow_vagues')
       if (savedVagues) {
-        const vaguesData = JSON.parse(savedVagues)
+        const vaguesData = JSON.parse(savedVagues) as Vague[]
         setVagues(vaguesData)
       }
 
       // Charger les filières
       const savedFilieres = localStorage.getItem('schoolflow_filieres')
       if (savedFilieres) {
-        const filieresData = JSON.parse(savedFilieres)
+        const filieresData = JSON.parse(savedFilieres) as Filiere[]
         setFilieres(filieresData)
       }
 
       // Charger les formateurs
       const savedUsers = localStorage.getItem('schoolflow_users')
       if (savedUsers) {
-        const users = JSON.parse(savedUsers)
-        const teachers = users.filter((user: any) => 
+        const users = JSON.parse(savedUsers) as Formateur[]
+        const teachers = users.filter(user => 
           user.role === 'Enseignant' && user.statut !== 'inactif'
         )
         setFormateurs(teachers)
@@ -171,7 +187,7 @@ export default function EmploiDuTempsPage() {
 
   const getModuleName = (filiereId: string, moduleId: string) => {
     const filiere = filieres.find(f => f.id === filiereId)
-    return filiere?.modules?.find((m: any) => m.id === moduleId)?.name || 'Inconnu'
+    return filiere?.modules?.find(m => m.id === moduleId)?.name || 'Inconnu'
   }
 
   const getDayLabel = (day: string) => {
@@ -201,7 +217,7 @@ export default function EmploiDuTempsPage() {
     router.push('/dashboard/censor/planning')
   }
 
-  const handleSaveSchedule = (scheduleData: any) => {
+  const handleSaveSchedule = (scheduleData: Schedule) => {
     if (editingSchedule) {
       // Modification
       setSchedules(prev => 
@@ -479,11 +495,11 @@ function EditScheduleModal({
   schedule: Schedule
   isOpen: boolean
   onClose: () => void
-  onSave: (schedule: any) => void
-  vagues: any[]
-  filieres: any[]
-  formateurs: any[]
-  joursSemaine: any[]
+  onSave: (schedule: Schedule) => void
+  vagues: Vague[]
+  filieres: Filiere[]
+  formateurs: Formateur[]
+  joursSemaine: { id: string; label: string }[]
 }) {
   const [formData, setFormData] = useState({
     vagueId: schedule.vagueId,
@@ -496,7 +512,7 @@ function EditScheduleModal({
 
   const getModuleName = (filiereId: string, moduleId: string) => {
     const filiere = filieres.find(f => f.id === filiereId)
-    return filiere?.modules?.find((m: any) => m.id === moduleId)?.name || 'Inconnu'
+    return filiere?.modules?.find(m => m.id === moduleId)?.name || 'Inconnu'
   }
 
   const getDayLabel = (day: string) => {
@@ -504,7 +520,7 @@ function EditScheduleModal({
   }
 
   const handleSave = () => {
-    const updatedSchedule = {
+    const updatedSchedule: Schedule = {
       ...schedule,
       ...formData,
       schedule: {
@@ -524,7 +540,7 @@ function EditScheduleModal({
         <div className="bg-white p-6 border-b border-gray-200 sticky top-0 z-10">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">
-              Modifier l'emploi du temps - {getModuleName(schedule.filiereId, schedule.moduleId)}
+              Modifier l&apos;emploi du temps - {getModuleName(schedule.filiereId, schedule.moduleId)}
             </h2>
             <button 
               onClick={onClose} 
@@ -539,7 +555,7 @@ function EditScheduleModal({
         <div className="p-6 space-y-6">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <p className="text-yellow-800 text-sm">
-              <strong>Note :</strong> Pour créer un nouvel emploi du temps, utilisez la page "Planning" dans le dashboard.
+              <strong>Note :</strong> Pour créer un nouvel emploi du temps, utilisez la page &ldquo;Planning&ldquo; dans le dashboard.
               Cette interface permet uniquement de modifier les emplois existants.
             </p>
           </div>
@@ -652,7 +668,7 @@ function EditScheduleModal({
                 ))}
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-blue-800 text-sm">
-                    Pour modifier les créneaux horaires, veuillez utiliser la page "Planning" dans le dashboard.
+                    Pour modifier les créneaux horaires, veuillez utiliser la page &ldquo;Planning&ldquo; dans le dashboard.
                   </p>
                 </div>
               </div>

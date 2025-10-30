@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  Search, Calendar, Clock, Users, BookOpen,
-  AlertTriangle, CheckCircle, XCircle, Building,
+  Search, Calendar, Clock, Users,
+  AlertTriangle, CheckCircle, XCircle, 
   Download, Eye, FileText, Filter, ChevronDown,
   BarChart3, UserCheck, School
 } from 'lucide-react';
@@ -12,7 +12,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -269,14 +268,14 @@ export default function AbsencesPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement des données d'absences...</p>
+          <p className="text-gray-600">Chargement des données d&apos;absences...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-y-auto">
       <ScrollArea className="h-screen">
         <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
           
@@ -677,7 +676,7 @@ export default function AbsencesPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="h-5 w-5 text-orange-600" />
-                    <CardTitle className="text-lg">Types d'Absences</CardTitle>
+                    <CardTitle className="text-lg">Types d&apos;Absences</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>

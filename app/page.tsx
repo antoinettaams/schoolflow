@@ -10,8 +10,8 @@ export default function Home() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowIntro(false);
-      router.push("/auth/signin/"); // Redirection après l'intro
-    }, 3000); // durée de l'intro
+      router.push("/auth/signin/"); 
+    }, 3000); 
     return () => clearTimeout(timer);
   }, [router]);
 
@@ -32,25 +32,15 @@ export default function Home() {
               transition={{ duration: 2, ease: "easeOut" }}
               className="flex flex-col items-center"
             >
-              <motion.svg
-                className="h-16 w-16 text-tertiary mb-4"
-                fill="currentColor"
-                viewBox="0 0 24 24"
+              <motion.img
+                src="/images/logo.png"
+                alt="SchoolFlow Logo"
+                className="h-48 w-48 mb-4"
+                loading="eager"
                 initial={{ y: 20 }}
                 animate={{ y: [20, -10, 0] }}
                 transition={{ duration: 2, ease: "easeOut" }}
-              >
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5v-2l-10 5-10-5v2z" />
-              </motion.svg>
-
-              <motion.h1
-                className="text-4xl md:text-5xl font-title font-bold text-white"
-                initial={{ y: 20 }}
-                animate={{ y: [20, -10, 0] }}
-                transition={{ duration: 2, ease: "easeOut" }}
-              >
-                SchoolFlow
-              </motion.h1>
+              />
             </motion.div>
           </motion.div>
         )}

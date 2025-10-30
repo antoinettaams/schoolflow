@@ -8,10 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Download, DollarSign, CreditCard, Wallet, TrendingUpIcon, FileText, BarChart3, Users, BookOpen, Clock, TrendingUp, TrendingDown, Minus, Eye, Calendar, School, UserCheck } from 'lucide-react';
+import { Download, DollarSign, CreditCard, Wallet, TrendingUpIcon, FileText, BarChart3, Users, BookOpen,TrendingUp, TrendingDown, Minus, Eye, Calendar, School, UserCheck } from 'lucide-react';
+
+type TimeRange = 'week' | 'month' | 'quarter' | 'year';
 
 export default function RapportsPage() {
-  const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
+  const [timeRange, setTimeRange] = useState<TimeRange>('month');
   const [selectedWave, setSelectedWave] = useState('WAVE-2024-01');
   const [selectedFiliere, setSelectedFiliere] = useState('all');
 
@@ -53,7 +55,7 @@ export default function RapportsPage() {
 
   const financialKpiData = [
     { 
-      title: "Chiffre d'Affaires", 
+      title: "Chiffre d&apos;Affaires", 
       value: "285K €", 
       change: "+15%", 
       trend: "up" as const, 
@@ -86,7 +88,6 @@ export default function RapportsPage() {
     }
   ];
 
-
   const wavePerformanceData = [
     { period: 'Semaine 1', 'WAVE-2024-01': 12.5, 'WAVE-2024-02': 11.8, 'WAVE-2023-04': 13.2 },
     { period: 'Semaine 2', 'WAVE-2024-01': 13.2, 'WAVE-2024-02': 12.4, 'WAVE-2023-04': 13.8 },
@@ -105,29 +106,11 @@ export default function RapportsPage() {
     { module: 'Cloud Computing', completion: 75, average: 13.1, progression: '+1%', formateur: 'M. Kane' },
   ];
 
-  const attendanceData = [
-    { week: 'Sem 1', présences: 88, absences: 12, retards: 8 },
-    { week: 'Sem 2', présences: 92, absences: 8, retards: 6 },
-    { week: 'Sem 3', présences: 85, absences: 15, retards: 10 },
-    { week: 'Sem 4', présences: 94, absences: 6, retards: 5 },
-    { week: 'Sem 5', présences: 90, absences: 10, retards: 7 },
-    { week: 'Sem 6', présences: 93, absences: 7, retards: 4 },
-  ];
-
   const certificationData = [
     { status: 'Certifiés', value: 65, color: '#00C49F' },
     { status: 'En cours', value: 25, color: '#0088FE' },
     { status: 'En échec', value: 8, color: '#FF8042' },
     { status: 'Abandon', value: 2, color: '#FF0000' },
-  ];
-
-  const wavesData = [
-    { wave: 'WAVE-2024-01', apprenants: 42, completion: 88, moyenne: 15.3, certifiés: 38, durée: '6 mois', statut: 'En cours' },
-    { wave: 'WAVE-2024-02', apprenants: 38, completion: 82, moyenne: 14.9, certifiés: 31, durée: '5 mois', statut: 'En cours' },
-    { wave: 'WAVE-2023-04', apprenants: 45, completion: 79, moyenne: 14.5, certifiés: 35, durée: '6 mois', statut: 'Terminée' },
-    { wave: 'WAVE-2023-03', apprenants: 36, completion: 85, moyenne: 14.8, certifiés: 30, durée: '6 mois', statut: 'Terminée' },
-    { wave: 'WAVE-2023-02', apprenants: 40, completion: 81, moyenne: 14.2, certifiés: 32, durée: '5 mois', statut: 'Terminée' },
-    { wave: 'WAVE-2023-01', apprenants: 35, completion: 87, moyenne: 15.1, certifiés: 30, durée: '6 mois', statut: 'Terminée' },
   ];
 
   const classReportData = [
@@ -269,7 +252,7 @@ export default function RapportsPage() {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
+              <Select value={timeRange} onValueChange={(value: TimeRange) => setTimeRange(value)}>
                 <SelectTrigger className="w-full sm:w-[160px] bg-white">
                   <Calendar className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Période" />
@@ -484,7 +467,7 @@ export default function RapportsPage() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name}\n${(percent * 100).toFixed(0)}%`}
+                        label={({ label, percentage }) => `${label}\n${percentage}%`}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
@@ -517,7 +500,7 @@ export default function RapportsPage() {
                     Rapport de Classe par Filière
                   </CardTitle>
                   <CardDescription className="text-gray-600">
-                    Analyse détaillée de l'avancement et performance des filières
+                    Analyse détaillée de l&apos;avancement et performance des filières
                   </CardDescription>
                 </div>
                 <Select value={selectedFiliere} onValueChange={setSelectedFiliere}>

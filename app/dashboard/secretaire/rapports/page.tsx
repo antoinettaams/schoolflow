@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Filter, Download, FileText, Calendar, Eye, MoreHorizontal, BarChart3, Plus } from "lucide-react";
+import { Search, Download, FileText, Calendar, Eye, MoreHorizontal, BarChart3, Plus } from "lucide-react";
 
 interface Rapport {
   id: string;
@@ -97,27 +97,27 @@ export default function RapportsPage() {
     },
   ]);
 
-  const getTypeBadge = (type: string) => {
-    const types = {
-      vague: { label: "Par Vague", variant: "default" as const },
-      mensuel: { label: "Mensuel", variant: "secondary" as const },
-      annuel: { label: "Annuel", variant: "outline" as const },
-      special: { label: "Spécial", variant: "success" as const }
-    };
-    
-    const config = types[type as keyof typeof types];
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+const getTypeBadge = (type: string) => {
+  const types = {
+    vague: { label: "Par Vague", variant: "default" as const },
+    mensuel: { label: "Mensuel", variant: "secondary" as const },
+    annuel: { label: "Annuel", variant: "outline" as const },
+    special: { label: "Spécial", variant: "destructive" as const } // "success" → "destructive"
   };
+  
+  const config = types[type as keyof typeof types];
+  return <Badge variant={config.variant}>{config.label}</Badge>;
+};
 
   const getStatutBadge = (statut: string) => {
     const config = {
-      generé: { label: "Généré", variant: "success" as const },
-      en_cours: { label: "En cours", variant: "warning" as const },
-      erreur: { label: "Erreur", variant: "destructive" as const }
-    };
-    
-    const { label, variant } = config[statut as keyof typeof config];
-    return <Badge variant={variant}>{label}</Badge>;
+  generé: { label: "Généré", variant: "default" as const },
+  en_cours: { label: "En cours", variant: "outline" as const },
+  erreur: { label: "Erreur", variant: "destructive" as const }
+};
+
+const { label, variant } = config[statut as keyof typeof config];
+return <Badge variant={variant}>{label}</Badge>;
   };
 
   // Filtrage des rapports
@@ -181,7 +181,7 @@ export default function RapportsPage() {
     <div className="p-6 overflow-y-auto space-y-6 lg:pl-5 pt-20 lg:pt-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Rapports d'Activité</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Rapports d&apos;Activité</h1>
           <p className="text-gray-600 mt-2">
             Consultez et générez les rapports du centre de formation
           </p>
@@ -302,7 +302,7 @@ export default function RapportsPage() {
                         className="rounded border-gray-300"
                       />
                       <Label htmlFor="inscriptions" className="text-sm">
-                        Nombre d'inscriptions
+                        Nombre d&apos;inscriptions
                       </Label>
                     </div>
 

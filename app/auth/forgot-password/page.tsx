@@ -4,21 +4,54 @@ import { useState } from "react";
 import { useSignIn } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
+// Définition du type pour les erreurs Clerk
+interface ClerkError {
+  errors: Array<{
+    code: string;
+    message: string;
+    longMessage?: string;
+  }>;
+}
+
+// Type guard pour vérifier si une erreur est de type ClerkError
+function isClerkError(error: unknown): error is ClerkError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'errors' in error &&
+    Array.isArray((error as ClerkError).errors)
+  );
+}
+
+// Fonction utilitaire pour extraire le message d'erreur
+function getErrorMessage(error: unknown): string {
+  if (isClerkError(error)) {
+    return error.errors[0]?.message || "Une erreur est survenue";
+  }
+  
+  if (error instanceof Error) {
+    return error.message;
+  }
+  
+  return "Une erreur inconnue est survenue";
+}
+
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const { isLoaded, signIn } = useSignIn();
 
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState<string>("");
+  const [code, setCode] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
   const [stage, setStage] = useState<"request" | "reset">("request");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [message, setMessage] = useState<string>("");
+  const [error, setError] = useState<string>("");
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!isLoaded || !signIn) return;
+    
     setLoading(true);
     setError("");
     setMessage("");
@@ -31,9 +64,9 @@ export default function ForgotPasswordPage() {
 
       setMessage("📩 Un code de réinitialisation a été envoyé à votre email.");
       setStage("reset");
-    } catch (err: any) {
-      console.error(err);
-      setError("Erreur : vérifiez l’adresse e-mail.");
+    } catch (err) {
+      console.error("Erreur lors de l'envoi du code:", err);
+      setError(`Erreur : ${getErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -41,7 +74,8 @@ export default function ForgotPasswordPage() {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!isLoaded || !signIn) return;
+    
     setLoading(true);
     setError("");
     setMessage("");
@@ -59,9 +93,9 @@ export default function ForgotPasswordPage() {
       } else {
         setError("Erreur : code invalide ou expiré.");
       }
-    } catch (err: any) {
-      console.error(err);
-      setError("Erreur lors de la réinitialisation du mot de passe.");
+    } catch (err) {
+      console.error("Erreur lors de la réinitialisation:", err);
+      setError(`Erreur lors de la réinitialisation : ${getErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -92,7 +126,7 @@ export default function ForgotPasswordPage() {
                 className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 placeholder="exemple@email.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                 required
               />
             </div>
@@ -100,7 +134,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Envoi en cours..." : "Envoyer le code"}
             </button>
@@ -120,7 +154,7 @@ export default function ForgotPasswordPage() {
                 className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 placeholder="Entrez le code reçu"
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCode(e.target.value)}
                 required
               />
             </div>
@@ -135,7 +169,7 @@ export default function ForgotPasswordPage() {
                 className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 placeholder="Entrez le nouveau mot de passe"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 required
               />
             </div>
@@ -143,7 +177,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Réinitialisation..." : "Réinitialiser le mot de passe"}
             </button>

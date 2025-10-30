@@ -77,7 +77,7 @@ const allGradeTypes: GradeType[] = ['Interrogation', 'Devoir Surveillé', 'Compo
 
 const StudentGradesDetail: React.FC<{ studentId: string; studentName: string }> = ({ studentId, studentName }) => {
   const [grades, setGrades] = useState<Grade[]>(initialGrades);
-  const [gradeFilters, setGradeFilters] = useState({
+  const [gradeFilters] = useState({
     session: initialSessions[0] || '',
     className: teacherData.classes[0] || '',
     type: '' as GradeType | '',
@@ -253,7 +253,7 @@ const GradeModal: React.FC<{
             <input
               type="number"
               value={newGrade.coefficient}
-              onChange={(e) => setだけでNewGrade((prev) => ({ ...prev, coefficient: parseInt(e.target.value) }))}
+              onChange={(e) => setNewGrade((prev) => ({ ...prev, coefficient: parseInt(e.target.value) }))}
               placeholder="Ex: 1"
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
@@ -317,16 +317,6 @@ const TeacherDashboardPage = () => {
   });
 
   const [showAddGrade, setShowAddGrade] = useState(false);
-  const [newGrade, setNewGrade] = useState<Omit<Grade, 'id'>>({
-    studentId: initialStudents.length > 0 ? initialStudents[0].id : '',
-    subject: '',
-    type: allGradeTypes[0],
-    score: 0,
-    maxScore: 20,
-    coefficient: 1,
-    session: initialSessions[0] || '',
-    date: new Date().toISOString().substring(0, 10),
-  });
 
   const [newStudentConfig, setNewStudentConfig] = useState({
     name: '',
@@ -404,15 +394,6 @@ const TeacherDashboardPage = () => {
     return students.filter((s) => s.classId === gradeFilters.className && s.session === gradeFilters.session);
   }, [students, gradeFilters.className, gradeFilters.session]);
 
-  const getStudentGrades = useCallback(
-    (studentId: string) => {
-      return grades
-        .filter((g) => g.studentId === studentId && g.session === gradeFilters.session)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    },
-    [grades, gradeFilters.session]
-  );
-
   const uniqueSubjects = useMemo(() => {
     const classGrades = grades.filter((g) => filteredStudentsForGrades.some((s) => s.id === g.studentId) && g.session === gradeFilters.session);
     return Array.from(new Set(classGrades.map((g) => g.subject))).sort();
@@ -453,7 +434,7 @@ const TeacherDashboardPage = () => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 500));
       alert('Moyennes sauvegardées avec succès !');
-    } catch (error) {
+    } catch {
       alert('Erreur lors de la sauvegarde des moyennes.');
     }
   };
@@ -461,15 +442,6 @@ const TeacherDashboardPage = () => {
   const handleAddGrade = (grade: Omit<Grade, 'id'>) => {
     setGrades((prev) => [...prev, { ...grade, id: Date.now() }]);
     alert('Note ajoutée avec succès !');
-  };
-
-  const scrollToBottom = () => {
-    if (contentRef.current) {
-      contentRef.current.scrollTo({
-        top: contentRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
-    }
   };
 
   return (
@@ -523,7 +495,7 @@ const TeacherDashboardPage = () => {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nom de l'élève</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nom de l&apos;élève</label>
                   <input
                     type="text"
                     value={newStudentConfig.name}

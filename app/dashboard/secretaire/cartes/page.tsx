@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Search, Filter, Download, Printer, MoreHorizontal, CreditCard, User, Mail, Upload, Camera } from "lucide-react";
+import { Search, Download, Printer, MoreHorizontal, CreditCard, Mail } from "lucide-react";
 
 interface CarteEtudiante {
   id: string;
@@ -128,16 +128,16 @@ export default function CartesPage() {
   };
 
   const getStatutBadge = (statut: string) => {
-    const config = {
-      active: { label: "Active", variant: "success" as const },
-      inactive: { label: "Inactive", variant: "secondary" as const },
-      en_attente: { label: "En attente", variant: "warning" as const },
-      expiree: { label: "Expirée", variant: "destructive" as const }
-    };
-    
-    const { label, variant } = config[statut as keyof typeof config];
-    return <Badge variant={variant}>{label}</Badge>;
+  const config = {
+    active: { label: "Active", variant: "default" as const },
+    inactive: { label: "Inactive", variant: "secondary" as const },
+    en_attente: { label: "En attente", variant: "outline" as const },
+    expiree: { label: "Expirée", variant: "destructive" as const }
   };
+  
+  const { label, variant } = config[statut as keyof typeof config] || config.inactive;
+  return <Badge variant={variant}>{label}</Badge>;
+};
 
   // Élèves éligibles pour une carte (paiement payé)
   const elevesEligibles = eleves.filter(eleve => eleve.statutPaiement === "paye");
@@ -156,7 +156,7 @@ export default function CartesPage() {
     return matchesSearch && matchesFiliere && matchesVague && matchesStatut;
   });
 
-  const genererNumeroCarte = (eleveId: string) => {
+  const genererNumeroCarte = () => {
     const prefixe = "CF"; // Centre de Formation
     const annee = new Date().getFullYear();
     const sequence = (cartes.length + 1).toString().padStart(3, '0');
@@ -173,7 +173,7 @@ export default function CartesPage() {
       email: eleve.email,
       filiere: eleve.filiere,
       vague: eleve.vague,
-      numeroCarte: genererNumeroCarte(eleve.id),
+      numeroCarte: genererNumeroCarte(),
       dateExpiration: nouvelleCarte.dateExpiration,
       statut: "active",
       dateCreation: new Date().toISOString().split('T')[0],
@@ -202,9 +202,9 @@ export default function CartesPage() {
     <div className="p-6 space-y-6 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Cartes d'Apprenant</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Cartes d&apos;Apprenant</h1>
           <p className="text-gray-600 mt-2">
-            Gérez les cartes d'identification des apprenants
+            Gérez les cartes d&apos;identification des apprenants
           </p>
         </div>
         <div className="flex gap-3">
@@ -224,7 +224,7 @@ export default function CartesPage() {
               <DialogHeader>
                 <DialogTitle>Générer une nouvelle carte</DialogTitle>
                 <DialogDescription>
-                  Créez une carte d'identification pour un apprenant
+                  Créez une carte d&apos;identification pour un apprenant
                 </DialogDescription>
               </DialogHeader>
 
@@ -254,7 +254,7 @@ export default function CartesPage() {
 
                 {/* Date d'expiration */}
                 <div className="space-y-2">
-                  <Label htmlFor="dateExpiration">Date d'expiration *</Label>
+                  <Label htmlFor="dateExpiration">Date d&apos;expiration *</Label>
                   <Input
                     id="dateExpiration"
                     type="date"
@@ -269,13 +269,13 @@ export default function CartesPage() {
                   <CardHeader>
                     <CardTitle className="text-lg">Options de la carte</CardTitle>
                     <CardDescription>
-                      Personnalisez les éléments de la carte d'identification
+                      Personnalisez les éléments de la carte d&apos;identification
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label htmlFor="includePhoto">Photo d'identité</Label>
+                        <Label htmlFor="includePhoto">Photo d&apos;identité</Label>
                         <p className="text-sm text-gray-500">
                           Inclure la photo sur la carte
                         </p>
@@ -313,7 +313,7 @@ export default function CartesPage() {
                   
                   <div className="space-y-2">
                     <Label htmlFor="restrictions" className="text-sm">
-                      Restrictions d'accès
+                      Restrictions d&apos;accès
                     </Label>
                     <Textarea
                       id="restrictions"
@@ -352,7 +352,7 @@ export default function CartesPage() {
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span className="font-medium">Numéro:</span>
-                              <span className="font-mono">{genererNumeroCarte(nouvelleCarte.eleveId)}</span>
+                              <span className="font-mono">{genererNumeroCarte()}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="font-medium">Nom:</span>
@@ -538,7 +538,7 @@ export default function CartesPage() {
         <CardHeader>
           <CardTitle>Liste des Cartes</CardTitle>
           <CardDescription>
-            {filteredCartes.length} carte(s) d'apprenant(s) trouvée(s)
+            {filteredCartes.length} carte(s) d&apos;apprenant(s) trouvée(s)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -550,7 +550,7 @@ export default function CartesPage() {
                   <TableHead>Numéro de carte</TableHead>
                   <TableHead>Filière</TableHead>
                   <TableHead>Vague</TableHead>
-                  <TableHead>Date d'expiration</TableHead>
+                  <TableHead>Date d&apos;expiration</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>

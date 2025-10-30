@@ -2,8 +2,6 @@
 
 import React from "react";
 import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import Link from "next/link";
 import { 
   FaMoneyBillWave, 
@@ -17,28 +15,14 @@ import {
   FaExclamationTriangle,
   FaPlus
 } from "react-icons/fa";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
 const ComptableDashboard = () => {
   const { user, isLoaded, isSignedIn } = useUser();
-  const router = useRouter();
 
-  // Vérification du rôle comptable
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      const userRole = user?.publicMetadata?.role;
-      console.log("Rôle utilisateur:", userRole);
-      
-      if (userRole !== "Comptable") {
-        console.log("❌ Accès refusé - Rôle incorrect");
-        router.push("/unauthorized");
-      }
-    }
-  }, [isLoaded, isSignedIn, user, router]);
-
+  
   // Loading state
   if (!isLoaded) {
     return (
@@ -53,27 +37,6 @@ const ComptableDashboard = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-lg">Redirection vers la connexion...</div>
-      </div>
-    );
-  }
-
-  // Vérification finale du rôle
-  const userRole = user?.publicMetadata?.role;
-  if (userRole !== "Comptable") {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
-          <p className="text-gray-600 mb-4">
-            Vous n'avez pas les permissions de comptable.
-          </p>
-          <button
-            onClick={() => router.push("/")}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Retour à l'accueil
-          </button>
-        </div>
       </div>
     );
   }
@@ -97,7 +60,7 @@ const ComptableDashboard = () => {
       title: "Nouvelle Facture",
       description: "Créer une nouvelle facture",
       icon: <FaFileInvoiceDollar className="text-2xl text-blue-600" />,
-      href: "/dashboard/comptable/invoices",
+      href: "/dashboard/comptable/facturation",
       color: "bg-blue-50 border-blue-200",
       buttonColor: "bg-blue-600 hover:bg-blue-700"
     },
@@ -105,7 +68,7 @@ const ComptableDashboard = () => {
       title: "Enregistrer Paiement", 
       description: "Enregistrer un nouveau paiement",
       icon: <FaCreditCard className="text-2xl text-green-600" />,
-      href: "/dashboard/comptable/payments",
+      href: "/dashboard/comptable/paiements",
       color: "bg-green-50 border-green-200",
       buttonColor: "bg-green-600 hover:bg-green-700"
     }
@@ -194,7 +157,7 @@ const ComptableDashboard = () => {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-gray-600">Chiffre d'Affaires</p>
+                            <p className="text-sm font-medium text-gray-600">Chiffre d&apos;Affaires</p>
                             <p className="text-2xl font-bold text-gray-900">
                               {formatCurrency(comptableData.monthlyRevenue)}
                             </p>

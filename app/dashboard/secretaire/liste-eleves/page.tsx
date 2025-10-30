@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, Mail, Phone, MoreHorizontal, Euro } from "lucide-react";
+import { Search, Mail, Phone, MoreHorizontal, Euro } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Eleve {
   id: string;
@@ -74,17 +75,34 @@ export default function ListeElevesPage() {
     return `${prenom[0]}${nom[0]}`.toUpperCase();
   };
 
-  const getStatutPaiementBadge = (statut: string) => {
-    const config = {
-      paye: { label: "Payé", variant: "success" as const },
-      en_retard: { label: "En retard", variant: "destructive" as const },
-      en_attente: { label: "En attente", variant: "warning" as const }
-    };
-    
-    const { label, variant } = config[statut as keyof typeof config];
-    return <Badge variant={variant}>{label}</Badge>;
+const getStatutPaiementBadge = (statut: string) => {
+  const config = {
+    paye: { 
+      label: "Payé", 
+      variant: "default" as const,
+      className: "bg-green-100 text-green-800 border-green-200" 
+    },
+    en_retard: { 
+      label: "En retard", 
+      variant: "destructive" as const,
+      className: "" 
+    },
+    en_attente: { 
+      label: "En attente", 
+      variant: "outline" as const,
+      className: "bg-yellow-100 text-yellow-800 border-yellow-200" 
+    }
   };
+  
+  const { label, variant, className } = config[statut as keyof typeof config];
+  return (
+    <Badge variant={variant} className={cn(className)}>
+      {label}
+    </Badge>
+  );
+};
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleAjouterEleve = () => {
     router.push("/dashboard/secretaire/inscriptions");
   };
@@ -241,7 +259,7 @@ export default function ListeElevesPage() {
                   <TableHead>Contact</TableHead>
                   <TableHead>Filière</TableHead>
                   <TableHead>Vague</TableHead>
-                  <TableHead>Date d'inscription</TableHead>
+                  <TableHead>Date d&apos;inscription</TableHead>
                   <TableHead>Montant</TableHead>
                   <TableHead>Statut Paiement</TableHead>
                   <TableHead className="text-right">Actions</TableHead>

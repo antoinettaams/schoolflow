@@ -11,12 +11,22 @@ import {
   LogOut,
   AlertCircle,
   Calendar,
-  Clock,
   CheckCircle,
   Shield,
   Users,
   BookOpen,
+  LucideIcon,
 } from "lucide-react";
+import Image from "next/image";
+
+// Interface pour les activités utilisateur
+interface UserActivity {
+  id: number;
+  type: string;
+  description: string;
+  timestamp: Date;
+  icon: React.ReactNode; // ✅ Correction : utiliser React.ReactNode au lieu de JSX.Element
+}
 
 const CenseurProfilePage = () => {
   const { user, isLoaded } = useUser();
@@ -25,11 +35,11 @@ const CenseurProfilePage = () => {
   const [showImageModal, setShowImageModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [userActivity, setUserActivity] = useState<any[]>([]);
+  const [userActivity, setUserActivity] = useState<UserActivity[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 🔥 Activité simulée pour censeur
-  const getUserActivity = () => [
+  const getUserActivity = (): UserActivity[] => [
     {
       id: 1,
       type: "login",
@@ -65,7 +75,7 @@ const CenseurProfilePage = () => {
   }, []);
 
   // ✅ Upload photo
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -104,7 +114,7 @@ const CenseurProfilePage = () => {
   };
 
   // ✅ Supprimer la photo
-  const handleDeleteImage = async () => {
+  const handleDeleteImage = async (): Promise<void> => {
     if (!confirm("Supprimer votre photo de profil ?")) return;
     try {
       await user?.setProfileImage({ file: null });
@@ -117,7 +127,7 @@ const CenseurProfilePage = () => {
   };
 
   // ✅ Télécharger l'image
-  const handleDownloadImage = () => {
+  const handleDownloadImage = (): void => {
     const link = document.createElement("a");
     link.href = user?.imageUrl || "";
     link.download = `photo-profil-${user?.firstName}-${user?.lastName}.jpg`;
@@ -125,9 +135,9 @@ const CenseurProfilePage = () => {
   };
 
   // ✅ Déconnexion
-  const handleLogout = () => setIsLogoutModalOpen(true);
-  const handleConfirmLogout = async () => await signOut({ redirectUrl: "/auth/signin" });
-  const handleCancelLogout = () => setIsLogoutModalOpen(false);
+  const handleLogout = (): void => setIsLogoutModalOpen(true);
+  const handleConfirmLogout = async (): Promise<void> => await signOut({ redirectUrl: "/auth/signin" });
+  const handleCancelLogout = (): void => setIsLogoutModalOpen(false);
 
   if (!isLoaded || !user) {
     return (
@@ -161,9 +171,11 @@ const CenseurProfilePage = () => {
             <div className="bg-gradient-to-r from-purple-500 to-indigo-600 h-40 w-full relative">
               <div className="absolute left-8 bottom-0 translate-y-1/2">
                 <div className="relative">
-                  <img
+                  <Image
                     src={profileImage}
                     alt="Photo de profil"
+                    width={128}
+                    height={128}
                     className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-2xl cursor-pointer"
                     onClick={() => setShowImageOptions(true)}
                   />
@@ -245,9 +257,11 @@ const CenseurProfilePage = () => {
                   >
                     ✕
                   </button>
-                  <img
+                  <Image
                     src={user.imageUrl}
                     alt="Photo de profil"
+                    width={500}
+                    height={500}
                     className="w-full h-auto rounded-xl object-cover"
                   />
                   <div className="flex justify-end gap-3 p-4 border-t border-gray-200 mt-4">
@@ -335,17 +349,17 @@ const CenseurProfilePage = () => {
             icon={<Calendar className="w-6 h-6 text-purple-600" />}
           >
             <div className="space-y-3">
-              {userActivity.map((a) => (
+              {userActivity.map((activity) => (
                 <div
-                  key={a.id}
+                  key={activity.id}
                   className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
                 >
-                  {a.icon}
+                  {activity.icon}
                   <div>
-                    <p className="text-sm font-medium">{a.description}</p>
+                    <p className="text-sm font-medium">{activity.description}</p>
                     <p className="text-xs text-gray-500">
-                      {a.timestamp.toLocaleDateString("fr-FR")} à{" "}
-                      {a.timestamp.toLocaleTimeString("fr-FR", {
+                      {activity.timestamp.toLocaleDateString("fr-FR")} à{" "}
+                      {activity.timestamp.toLocaleTimeString("fr-FR", {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
@@ -394,17 +408,14 @@ const CenseurProfilePage = () => {
 };
 
 // ✅ Composants utilitaires
-const Info = ({
-  icon: Icon,
-  label,
-  value,
-  color = "blue",
-}: {
-  icon: any;
+interface InfoProps {
+  icon: LucideIcon;
   label: string;
   value: string;
   color?: string;
-}) => (
+}
+
+const Info = ({ icon: Icon, label, value, color = "blue" }: InfoProps) => (
   <div className="flex items-center p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
     <Icon className={`w-5 h-5 text-${color}-600 mr-4`} />
     <div>
@@ -414,15 +425,13 @@ const Info = ({
   </div>
 );
 
-const Section = ({
-  title,
-  icon,
-  children,
-}: {
+interface SectionProps {
   title: string;
-  icon: JSX.Element;
+  icon: React.ReactNode; // ✅ Correction : utiliser React.ReactNode au lieu de JSX.Element
   children: React.ReactNode;
-}) => (
+}
+
+const Section = ({ title, icon, children }: SectionProps) => (
   <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
     <h3 className="text-xl font-bold text-gray-700 mb-4 flex items-center gap-3">
       {icon}
@@ -431,5 +440,4 @@ const Section = ({
     {children}
   </div>
 );
-
 export default CenseurProfilePage;

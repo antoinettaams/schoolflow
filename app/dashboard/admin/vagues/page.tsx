@@ -1,509 +1,319 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import React, { useState, useEffect } from "react";
 import { 
-  FaPlus, FaSave, FaCalendarAlt, FaChalkboardTeacher, 
-  FaClock, FaMapMarkerAlt, FaFilter, FaTrash, FaTimes 
-} from 'react-icons/fa';
+  Plus, 
+  Edit, 
+  Trash2, 
+  Calendar, 
+  Play, 
+  Pause, 
+  Check, 
+  List, 
+  Users, 
+  Eye,
+  X
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Interfaces
-interface ScheduleSlot {
-  id: string;
-  day: string;
-  startTime: string;
-  endTime: string;
-  classroom: string;
-}
-
-interface Assignment {
-  id: string;
-  vagueId: string;
-  filiereId: string;
-  moduleId: string;
-  teacherId: string;
-  schedule: {
-    slots: ScheduleSlot[];
-    period: {
-      startDate: string;
-      endDate: string;
-    };
-  };
-}
-
-interface Teacher {
+interface Vague {
   id: string;
   name: string;
-  email: string;
-  role: string;
-  teacherNumber?: string;
-  statut?: string;
-  prenom?: string;
-  nom?: string;
-  specialite?: string;
-  clerkUserId?: string;
+  startDate: string;
+  endDate: string;
+  status: "active" | "upcoming" | "completed";
+  description?: string;
+  filieres: string[];
+  totalEtudiants: number;
+  totalFormateurs: number;
 }
 
-// Composant de Chargement
-const LoadingSpinner = () => (
-  <div className="p-6 flex items-center justify-center min-h-screen">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-      <p className="text-gray-600">Chargement du planning...</p>
-    </div>
-  </div>
-);
-
-// Composant En-tête
-const PageHeader = () => (
-  <div className="flex justify-between items-center mb-6">
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900">Planning & Assignations</h1>
-      <p className="text-gray-600 text-sm">
-        Gérez les cours, les horaires et les formateurs.
-      </p>
-    </div>
-  </div>
-);
-
-// Composant Filtres
-interface FilterSectionProps {
-  vagues: any[];
-  filieres: any[];
-  selectedVague: string;
-  selectedFiliere: string;
-  onVagueChange: (vagueId: string) => void;
-  onFiliereChange: (filiereId: string) => void;
-  onShowAssignmentForm: () => void;
+interface VagueFormData {
+  name: string;
+  startDate: string;
+  endDate: string;
+  description: string;
 }
 
-const FilterSection: React.FC<FilterSectionProps> = ({
-  vagues,
-  filieres,
-  selectedVague,
-  selectedFiliere,
-  onVagueChange,
-  onFiliereChange,
-  onShowAssignmentForm
-}) => {
-  const filieresDisponibles = filieres.filter(filiere => {
-    const filiereNonAssignee = !filiere.vagues || filiere.vagues.length === 0;
-    const filiereDejaDansCetteVague = filiere.vagues && filiere.vagues.includes(selectedVague);
-    return filiereNonAssignee || filiereDejaDansCetteVague;
+// Composant Badge de Statut
+const StatusBadge: React.FC<{ status: Vague["status"] }> = ({ status }) => {
+  const statusConfig = {
+    active: {
+      text: "En cours",
+      variant: "default" as const,
+      icon: <Play className="h-3 w-3" />,
+    },
+    upcoming: {
+      text: "À venir",
+      variant: "secondary" as const,
+      icon: <Pause className="h-3 w-3" />,
+    },
+    completed: {
+      text: "Terminée",
+      variant: "outline" as const,
+      icon: <Check className="h-3 w-3" />,
+    },
+  };
+
+  const config = statusConfig[status];
+
+  return (
+    <Badge variant={config.variant} className="flex items-center gap-1">
+      {config.icon}
+      {config.text}
+    </Badge>
+  );
+};
+
+// Composant Carte de Vague
+const VagueCard: React.FC<{
+  vague: Vague;
+  onEdit: (vague: Vague) => void;
+  onDelete: (id: string) => void;
+  onViewDetails: (vague: Vague) => void;
+}> = ({ vague, onEdit, onDelete, onViewDetails }) => {
+  return (
+    <Card className="hover:shadow-md transition-shadow h-full flex flex-col">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-lg">{vague.name}</CardTitle>
+          <StatusBadge status={vague.status} />
+        </div>
+        <CardDescription className="line-clamp-2">{vague.description}</CardDescription>
+      </CardHeader>
+      
+      <CardContent className="pb-3 flex-grow">
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span>Du {new Date(vague.startDate).toLocaleDateString("fr-FR")}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span>Au {new Date(vague.endDate).toLocaleDateString("fr-FR")}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <List className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span>{vague.filieres.length} filière(s)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span>{vague.totalEtudiants} étudiant(s)</span>
+          </div>
+        </div>
+      </CardContent>
+      
+      <CardFooter className="flex gap-2 pt-3">
+        <Button variant="outline" size="sm" className="flex-1" onClick={() => onViewDetails(vague)}>
+          <Eye className="h-4 w-4 mr-1" />
+          Détails
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => onEdit(vague)}>
+          <Edit className="h-4 w-4" />
+        </Button>
+        <Button variant="destructive" size="sm" onClick={() => onDelete(vague.id)}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+// Composant Formulaire de Vague
+const VagueForm: React.FC<{
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (data: VagueFormData) => void;
+  initialData?: VagueFormData;
+  title: string;
+}> = ({ open, onOpenChange, onSubmit, initialData, title }) => {
+  const [formData, setFormData] = useState<VagueFormData>({
+    name: "",
+    startDate: "",
+    endDate: "",
+    description: "",
   });
 
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    } else {
+      setFormData({
+        name: "",
+        startDate: "",
+        endDate: "",
+        description: "",
+      });
+    }
+  }, [initialData, open]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+    onOpenChange(false);
+  };
+
+  const handleCancel = () => {
+    setFormData({
+      name: "",
+      startDate: "",
+      endDate: "",
+      description: "",
+    });
+    onOpenChange(false);
+  };
+
+  const getStatus = (startDate: string, endDate: string): Vague["status"] => {
+    const today = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (today < start) return "upcoming";
+    if (today > end) return "completed";
+    return "active";
+  };
+
+  if (!open) return null;
+
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
-      <div className="flex items-center gap-2 mb-4">
-        <FaFilter className="text-blue-600" />
-        <h2 className="text-lg font-semibold">Filtrage & Sélection</h2>
-      </div>
+    <Card className="mb-6 border-l-4 border-l-primary">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle>{title}</CardTitle>
+          <Button variant="ghost" size="sm" onClick={handleCancel}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <CardDescription>
+          Créez une nouvelle vague de formation avec ses dates et description.
+        </CardDescription>
+      </CardHeader>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label className="text-sm font-medium text-gray-700">Vague *</label>
-          <select
-            value={selectedVague}
-            onChange={(e) => onVagueChange(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">Sélectionnez une vague</option>
-            {vagues.map(v => (
-              <option key={v.id} value={v.id}>{v.name}</option>
-            ))}
-          </select>
-        </div>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nom de la vague *</Label>
+              <Input
+                id="name"
+                placeholder="Ex: Vague Janvier-Juin 2024"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="startDate">Date de début *</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={formData.startDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="endDate">Date de fin *</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={formData.endDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                required
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              placeholder="Description optionnelle de la vague..."
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              rows={3}
+            />
+          </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-700">Filière *</label>
-          <select
-            value={selectedFiliere}
-            onChange={(e) => onFiliereChange(e.target.value)}
-            disabled={!selectedVague}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-          >
-            <option value="">Sélectionnez une filière</option>
-            {filieresDisponibles.map(f => (
-              <option key={f.id} value={f.id}>{f.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {selectedVague && selectedFiliere && (
-        <div className="flex justify-end">
-          <button
-            onClick={onShowAssignmentForm}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-          >
-            <FaPlus /> Nouvelle assignation
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Composant Liste des Assignations
-interface AssignmentListProps {
-  assignations: Assignment[];
-  vagues: any[];
-  filieres: any[];
-  formateurs: Teacher[];
-  onDeleteAssignment: (id: string) => void;
-}
-
-const AssignmentList: React.FC<AssignmentListProps> = ({
-  assignations,
-  vagues,
-  filieres,
-  formateurs,
-  onDeleteAssignment
-}) => {
-  const joursSemaine = [
-    { id: 'monday', label: 'Lundi' },
-    { id: 'tuesday', label: 'Mardi' },
-    { id: 'wednesday', label: 'Mercredi' },
-    { id: 'thursday', label: 'Jeudi' },
-    { id: 'friday', label: 'Vendredi' },
-    { id: 'saturday', label: 'Samedi' }
-  ];
-
-  const getDayLabel = (dayId: string) => {
-    return joursSemaine.find(j => j.id === dayId)?.label || dayId;
-  };
-
-  const getTeacherDisplayName = (teacher: Teacher) => {
-    if (teacher.prenom && teacher.nom) {
-      return `${teacher.prenom} ${teacher.nom}`;
-    }
-    return teacher.name;
-  };
-
-  return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border">
-      <h2 className="text-lg font-semibold mb-4">Assignations existantes</h2>
-      {assignations.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">Aucune assignation pour l'instant.</p>
-      ) : (
-        <div className="space-y-4">
-          {assignations.map(a => {
-            const vague = vagues.find(v => v.id === a.vagueId);
-            const filiere = filieres.find(f => f.id === a.filiereId);
-            const module = filiere?.modules.find((m: any) => m.id === a.moduleId);
-            const teacher = formateurs.find(f => f.id === a.teacherId);
-
-            return (
-              <div key={a.id} className="border p-4 rounded-lg">
-                <div className="flex justify-between mb-3">
-                  <div>
-                    <p className="font-semibold text-lg">{module?.name || 'Module inconnu'}</p>
-                    <p className="text-sm text-gray-500">
-                      {filiere?.name || 'Filière inconnue'} - {vague?.name || 'Vague inconnue'}
-                    </p>
-                    <p className="text-sm text-gray-700 mt-1">
-                      <FaChalkboardTeacher className="inline mr-1" />
-                      {teacher ? getTeacherDisplayName(teacher) : `Formateur ID: ${a.teacherId}`}
-                    </p>
-                  </div>
-                  <button 
-                    onClick={() => onDeleteAssignment(a.id)} 
-                    className="text-red-500 hover:text-red-700 self-start"
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
-                
-                <div className="border-t pt-3">
-                  <h4 className="font-medium text-gray-900 mb-2">Créneaux horaires :</h4>
-                  <div className="space-y-1">
-                    {a.schedule.slots.map((slot) => (
-                      <div key={slot.id} className="flex items-center gap-3 text-sm bg-gray-50 p-2 rounded">
-                        <span className="font-medium min-w-[60px]">{getDayLabel(slot.day)}</span>
-                        <span>{slot.startTime} - {slot.endTime}</span>
-                        {slot.classroom && (
-                          <span className="text-gray-500">
-                            <FaMapMarkerAlt className="inline mr-1" /> {slot.classroom}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Période: {a.schedule.period.startDate} à {a.schedule.period.endDate}
+          {/* Aperçu */}
+          {(formData.name || formData.startDate || formData.endDate) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Aperçu de la vague</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-1">
+                {formData.name && <p><strong>Nom:</strong> {formData.name}</p>}
+                {formData.startDate && (
+                  <p><strong>Début:</strong> {new Date(formData.startDate).toLocaleDateString("fr-FR")}</p>
+                )}
+                {formData.endDate && (
+                  <p><strong>Fin:</strong> {new Date(formData.endDate).toLocaleDateString("fr-FR")}</p>
+                )}
+                {formData.startDate && formData.endDate && (
+                  <p>
+                    <strong>Statut:</strong>{" "}
+                    <StatusBadge status={getStatus(formData.startDate, formData.endDate)} />
                   </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={handleCancel}>
+              Annuler
+            </Button>
+            <Button type="submit">
+              {initialData ? "Modifier" : "Créer"} la vague
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 
-// Composant Modal d'Assignation
-interface AssignmentModalProps {
-  show: boolean;
-  onClose: () => void;
-  modulesDisponibles: any[];
-  formateursDisponibles: Teacher[];
-  selectedModule: string;
-  selectedTeacher: string;
-  newAssignment: any;
-  currentSlot: any;
-  onModuleChange: (moduleId: string) => void;
-  onTeacherChange: (teacherId: string) => void;
-  onPeriodChange: (field: string, value: string) => void;
-  onSlotChange: (field: string, value: string) => void;
-  onAddSlot: () => void;
-  onDeleteSlot: (slotId: string) => void;
-  onSaveAssignment: () => void;
-  moduleDejaAssigne: (moduleId: string) => boolean;
-}
-
-const AssignmentModal: React.FC<AssignmentModalProps> = ({
-  show,
-  onClose,
-  modulesDisponibles,
-  formateursDisponibles,
-  selectedModule,
-  selectedTeacher,
-  newAssignment,
-  currentSlot,
-  onModuleChange,
-  onTeacherChange,
-  onPeriodChange,
-  onSlotChange,
-  onAddSlot,
-  onDeleteSlot,
-  onSaveAssignment,
-  moduleDejaAssigne
-}) => {
-  const joursSemaine = [
-    { id: 'monday', label: 'Lundi' },
-    { id: 'tuesday', label: 'Mardi' },
-    { id: 'wednesday', label: 'Mercredi' },
-    { id: 'thursday', label: 'Jeudi' },
-    { id: 'friday', label: 'Vendredi' },
-    { id: 'saturday', label: 'Samedi' }
-  ];
-
-  const getDayLabel = (dayId: string) => {
-    return joursSemaine.find(j => j.id === dayId)?.label || dayId;
-  };
-
-  const getTeacherDisplayName = (teacher: Teacher) => {
-    if (teacher.prenom && teacher.nom) {
-      return `${teacher.prenom} ${teacher.nom}`;
-    }
-    return teacher.name;
-  };
-
-  if (!show) return null;
+// Composant de confirmation de suppression personnalisé
+const DeleteConfirmation: React.FC<{
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}> = ({ open, onOpenChange, onConfirm }) => {
+  if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl border w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
-        {/* En-tête fixe */}
-        <div className="bg-white p-6 border-b border-gray-200 sticky top-0 z-10">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Nouvelle assignation</h2>
-            <button 
-              onClick={onClose} 
-              className="text-gray-500 hover:text-gray-700 text-xl"
-            >
-              <FaTimes />
-            </button>
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-background p-6 rounded-lg border shadow-lg max-w-md w-full mx-auto">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold">Êtes-vous sûr ?</h2>
+            <p className="text-sm text-muted-foreground">
+              Cette action supprimera définitivement la vague et toutes ses données associées.
+              Cette action ne peut pas être annulée.
+            </p>
           </div>
-        </div>
-
-        {/* Contenu avec défilement */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {/* Sélection module et formateur */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Module *</label>
-              <select
-                value={selectedModule}
-                onChange={(e) => onModuleChange(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Choisissez un module</option>
-                {modulesDisponibles.map(module => (
-                  <option 
-                    key={module.id} 
-                    value={module.id}
-                    disabled={moduleDejaAssigne(module.id)}
-                  >
-                    {module.name} {moduleDejaAssigne(module.id) && '(Déjà assigné)'}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Formateur *</label>
-              <select
-                value={selectedTeacher}
-                onChange={(e) => onTeacherChange(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Choisissez un formateur</option>
-                {formateursDisponibles.map(f => (
-                  <option key={f.id} value={f.id}>
-                    {getTeacherDisplayName(f)} {f.teacherNumber ? `(${f.teacherNumber})` : ''}
-                  </option>
-                ))}
-              </select>
-              {formateursDisponibles.length === 0 && (
-                <p className="text-xs text-red-600 mt-1">
-                  ⚠️ Aucun formateur disponible. Créez d'abord des comptes formateurs.
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Période du module */}
-          <div className="bg-gray-50 p-4 rounded-lg mb-6">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <FaCalendarAlt /> Période du module
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Début du module *
-                </label>
-                <input
-                  type="date"
-                  value={newAssignment.period.startDate}
-                  onChange={(e) => onPeriodChange('startDate', e.target.value)}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Fin du module *
-                </label>
-                <input
-                  type="date"
-                  value={newAssignment.period.endDate}
-                  onChange={(e) => onPeriodChange('endDate', e.target.value)}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Créneaux horaires */}
-          <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <FaClock /> Créneaux horaires
-            </h3>
-
-            {/* Formulaire d'ajout de créneau */}
-            <div className="bg-blue-50 p-3 rounded-lg mb-3">
-              <h4 className="font-medium text-gray-900 mb-2 text-sm">Ajouter un créneau</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Jour</label>
-                  <select
-                    value={currentSlot.day}
-                    onChange={(e) => onSlotChange('day', e.target.value)}
-                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                  >
-                    {joursSemaine.map(jour => (
-                      <option key={jour.id} value={jour.id}>{jour.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Début</label>
-                  <input
-                    type="time"
-                    value={currentSlot.startTime}
-                    onChange={(e) => onSlotChange('startTime', e.target.value)}
-                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Fin</label>
-                  <input
-                    type="time"
-                    value={currentSlot.endTime}
-                    onChange={(e) => onSlotChange('endTime', e.target.value)}
-                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Salle</label>
-                  <input
-                    type="text"
-                    placeholder="Salle"
-                    value={currentSlot.classroom}
-                    onChange={(e) => onSlotChange('classroom', e.target.value)}
-                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              <button
-                onClick={onAddSlot}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition-colors"
-              >
-                <FaPlus className="inline mr-1" /> Ajouter créneau
-              </button>
-            </div>
-
-            {/* Liste des créneaux ajoutés */}
-            {newAssignment.slots.length > 0 ? (
-              <div className="space-y-2">
-                <h4 className="font-medium text-gray-900 mb-2 text-sm">
-                  Créneaux programmés ({newAssignment.slots.length})
-                </h4>
-                {newAssignment.slots.map((slot: ScheduleSlot) => (
-                  <div key={slot.id} className="flex items-center justify-between p-2 bg-white rounded border text-sm">
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium">{getDayLabel(slot.day)}</span>
-                      <span className="text-gray-600">{slot.startTime} - {slot.endTime}</span>
-                      {slot.classroom && (
-                        <span className="text-gray-500">
-                          <FaMapMarkerAlt className="inline mr-1" /> {slot.classroom}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => onDeleteSlot(slot.id)}
-                      className="text-red-600 hover:text-red-800 ml-2"
-                    >
-                      <FaTrash size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-3 text-gray-500 text-sm">
-                <p>Aucun créneau horaire ajouté</p>
-                <p className="text-xs">Ajoutez au moins un créneau pour ce module</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Boutons fixes en bas */}
-        <div className="bg-white p-4 border-t border-gray-200 sticky bottom-0">
-          <div className="flex gap-2 justify-end">
-            <button 
-              onClick={onClose} 
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50"
+          
+          <div className="flex justify-end gap-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
             >
               Annuler
-            </button>
-            <button
-              onClick={onSaveAssignment}
-              disabled={newAssignment.slots.length === 0}
-              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={onConfirm}
             >
-              <FaSave size={14} /> Enregistrer
-            </button>
+              Supprimer
+            </Button>
           </div>
         </div>
       </div>
@@ -512,318 +322,300 @@ const AssignmentModal: React.FC<AssignmentModalProps> = ({
 };
 
 // Composant Principal
-export default function PlanningAssignationsPage() {
-  const { user } = useUser();
-  const [assignations, setAssignations] = useState<Assignment[]>([]);
-  const [vagues, setVagues] = useState<any[]>([]);
-  const [filieres, setFilieres] = useState<any[]>([]);
-  const [formateurs, setFormateurs] = useState<Teacher[]>([]);
-  const [selectedVague, setSelectedVague] = useState<string>('');
-  const [selectedFiliere, setSelectedFiliere] = useState<string>('');
-  const [selectedModule, setSelectedModule] = useState<string>('');
-  const [selectedTeacher, setSelectedTeacher] = useState<string>('');
-  const [showAssignmentForm, setShowAssignmentForm] = useState(false);
-  const [newAssignment, setNewAssignment] = useState({
-    slots: [] as ScheduleSlot[],
-    period: { startDate: '', endDate: '' }
-  });
-  const [currentSlot, setCurrentSlot] = useState({
-    day: 'monday',
-    startTime: '09:00',
-    endTime: '12:30',
-    classroom: ''
-  });
-  const [isLoading, setIsLoading] = useState(true);
+export default function VaguesPageDirecteur() {
+  const [vagues, setVagues] = useState<Vague[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedVague, setSelectedVague] = useState<Vague | null>(null);
+  const [vagueToDelete, setVagueToDelete] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  // Chargement des données
+  // Charger depuis localStorage
   useEffect(() => {
-    const loadData = async () => {
+    const savedVagues = localStorage.getItem("schoolflow_vagues_directeur");
+    if (savedVagues) {
       try {
-        console.log('🔍 CHARGEMENT DES DONNÉES AVEC CLERK...');
-        
-        // Charger les données depuis localStorage
-        const savedVagues = localStorage.getItem('schoolflow_vagues');
-        const savedFilieres = localStorage.getItem('schoolflow_filieres');
-        const savedAssignations = localStorage.getItem('schoolflow_assignations');
-        
-        if (savedVagues) {
-          const vaguesData = JSON.parse(savedVagues);
-          console.log('📅 Vagues chargées:', vaguesData);
-          setVagues(vaguesData);
-        }
-        
-        if (savedFilieres) {
-          const filieresData = JSON.parse(savedFilieres);
-          console.log('🎓 Filières chargées:', filieresData);
-          setFilieres(filieresData);
-        }
-        
-        if (savedAssignations) {
-          const assignationsData = JSON.parse(savedAssignations);
-          console.log('📋 Assignations existantes:', assignationsData);
-          setAssignations(assignationsData);
-        }
-
-        // Charger les formateurs depuis Clerk
-        await loadTeachersFromClerk();
-        
+        setVagues(JSON.parse(savedVagues));
       } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
-      } finally {
-        setIsLoading(false);
+        console.error("Erreur lors du chargement des vagues:", error);
+        setVagues([]);
       }
+    } else {
+      // Données exemple
+      setVagues([
+        {
+          id: "1",
+          name: "Vague Janvier 2024",
+          startDate: "2024-01-01",
+          endDate: "2024-06-30",
+          status: "active",
+          description: "Session de formation principale",
+          filieres: ["Informatique", "Commerce"],
+          totalEtudiants: 150,
+          totalFormateurs: 12,
+        },
+        {
+          id: "2",
+          name: "Vague Juillet 2024",
+          startDate: "2024-07-01",
+          endDate: "2024-12-31",
+          status: "upcoming",
+          description: "Session de formation estivale",
+          filieres: ["Design", "Marketing"],
+          totalEtudiants: 80,
+          totalFormateurs: 8,
+        },
+        {
+          id: "3",
+          name: "Vague 2023",
+          startDate: "2023-01-01",
+          endDate: "2023-12-31",
+          status: "completed",
+          description: "Session de formation de l&apos;année dernière",
+          filieres: ["Informatique", "Commerce", "Design"],
+          totalEtudiants: 200,
+          totalFormateurs: 15,
+        },
+      ]);
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // Sauvegarder dans localStorage
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem("schoolflow_vagues_directeur", JSON.stringify(vagues));
+    }
+  }, [vagues, isLoaded]);
+
+  const getVagueStatus = (startDate: string, endDate: string): Vague["status"] => {
+    const today = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (today < start) return "upcoming";
+    if (today > end) return "completed";
+    return "active";
+  };
+
+  const ajouterVague = (data: VagueFormData) => {
+    const status = getVagueStatus(data.startDate, data.endDate);
+    const vague: Vague = {
+      id: Date.now().toString(),
+      name: data.name,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      status: status,
+      description: data.description,
+      filieres: [],
+      totalEtudiants: 0,
+      totalFormateurs: 0,
     };
 
-    loadData();
-  }, [user]);
-
-  // Fonction pour charger les enseignants depuis Clerk
-  const loadTeachersFromClerk = async () => {
-    try {
-      console.log('👥 Chargement des formateurs depuis Clerk...');
-      
-      // Dans une vraie application, vous feriez un appel API vers Clerk
-      // Pour l'exemple, nous allons combiner les données localStorage + Clerk
-      
-      const savedUsers = localStorage.getItem('schoolflow_users');
-      let localTeachers: Teacher[] = [];
-      
-      if (savedUsers) {
-        const users = JSON.parse(savedUsers);
-        localTeachers = users.filter((user: any) => 
-          user.role === 'Enseignant' && user.statut !== 'inactif'
-        );
-        console.log('📚 Enseignants du localStorage:', localTeachers);
-      }
-
-      // Si vous avez des utilisateurs Clerk, vous pouvez les récupérer ici
-      // Pour l'instant, nous utilisons les données locales
-      setFormateurs(localTeachers);
-      
-    } catch (error) {
-      console.error('Erreur lors du chargement des formateurs Clerk:', error);
-    }
+    setVagues((prev) => [...prev, vague]);
+    setShowAddForm(false);
   };
 
-  // Sauvegarde des assignations
-  useEffect(() => {
-    if (!isLoading) {
-      try {
-        localStorage.setItem('schoolflow_assignations', JSON.stringify(assignations));
-        console.log('💾 Assignations sauvegardées:', assignations);
-      } catch (error) {
-        console.error('Erreur lors de la sauvegarde des assignations:', error);
-      }
-    }
-  }, [assignations, isLoading]);
+  const modifierVague = (data: VagueFormData) => {
+    if (!selectedVague) return;
 
-  const modulesDisponibles = selectedFiliere 
-    ? filieres.find(f => f.id === selectedFiliere)?.modules || []
-    : [];
-
-  const formateursDisponibles = formateurs.filter(f => 
-    f.role === 'Enseignant' && (f.statut !== 'inactif')
-  );
-
-  const getTeacherDisplayName = (teacher: Teacher) => {
-    if (teacher.prenom && teacher.nom) {
-      return `${teacher.prenom} ${teacher.nom}`;
-    }
-    return teacher.name;
-  };
-
-  const moduleDejaAssigne = (moduleId: string) => {
-    return assignations.some(assignment => 
-      assignment.vagueId === selectedVague && 
-      assignment.filiereId === selectedFiliere &&
-      assignment.moduleId === moduleId
-    );
-  };
-
-  const verifierConflitHoraires = (teacherId: string, slots: ScheduleSlot[]) => {
-    return assignations.some(assignment => 
-      assignment.teacherId === teacherId &&
-      assignment.schedule.slots.some(existingSlot => 
-        slots.some(newSlot => 
-          newSlot.day === existingSlot.day &&
-          newSlot.startTime === existingSlot.startTime &&
-          newSlot.endTime === newSlot.endTime
-        )
+    const status = getVagueStatus(data.startDate, data.endDate);
+    setVagues((prev) =>
+      prev.map((v) =>
+        v.id === selectedVague.id
+          ? {
+              ...v,
+              ...data,
+              status: status,
+            }
+          : v
       )
     );
+    setShowEditForm(false);
+    setSelectedVague(null);
   };
 
-  const ajouterCreneau = () => {
-    if (!currentSlot.day || !currentSlot.startTime || !currentSlot.endTime) {
-      alert("Veuillez remplir tous les champs du créneau horaire");
-      return;
-    }
-
-    const nouveauCreneau: ScheduleSlot = {
-      id: Date.now().toString(),
-      ...currentSlot
-    };
-
-    setNewAssignment(prev => ({
-      ...prev,
-      slots: [...prev.slots, nouveauCreneau]
-    }));
-
-    setCurrentSlot({
-      day: 'monday',
-      startTime: '09:00',
-      endTime: '12:30',
-      classroom: ''
-    });
+  const supprimerVague = (id: string) => {
+    setVagues((prev) => prev.filter((v) => v.id !== id));
+    setShowDeleteDialog(false);
+    setVagueToDelete(null);
   };
 
-  const supprimerCreneau = (slotId: string) => {
-    setNewAssignment(prev => ({
-      ...prev,
-      slots: prev.slots.filter(slot => slot.id !== slotId)
-    }));
-  };
+  const filteredVagues = vagues.filter((vague) =>
+    filterStatus === "all" ? true : vague.status === filterStatus
+  );
 
-  const ajouterAssignation = () => {
-    console.log('🔄 Tentative d\'ajout d\'assignation:');
-    console.log('Vague:', selectedVague);
-    console.log('Filière:', selectedFiliere);
-    console.log('Module:', selectedModule);
-    console.log('Formateur:', selectedTeacher);
-
-    if (!selectedVague || !selectedFiliere || !selectedModule || !selectedTeacher) {
-      alert("Veuillez remplir tous les champs requis.");
-      return;
-    }
-
-    if (!newAssignment.period.startDate || !newAssignment.period.endDate) {
-      alert("Veuillez définir la période.");
-      return;
-    }
-
-    if (newAssignment.slots.length === 0) {
-      alert("Veuillez ajouter au moins un créneau horaire.");
-      return;
-    }
-
-    if (verifierConflitHoraires(selectedTeacher, newAssignment.slots)) {
-      alert("⚠️ Ce formateur a déjà un cours à ces horaires !");
-      return;
-    }
-
-    const assignment: Assignment = {
-      id: Date.now().toString(),
-      vagueId: selectedVague,
-      filiereId: selectedFiliere,
-      moduleId: selectedModule,
-      teacherId: selectedTeacher,
-      schedule: newAssignment
-    };
-
-    console.log('✅ Nouvelle assignation créée:', assignment);
-
-    setAssignations(prev => [...prev, assignment]);
-
-    // Réinitialiser le formulaire
-    setSelectedModule('');
-    setSelectedTeacher('');
-    setNewAssignment({
-      slots: [],
-      period: { startDate: '', endDate: '' }
-    });
-    setCurrentSlot({
-      day: 'monday',
-      startTime: '09:00',
-      endTime: '12:30',
-      classroom: ''
-    });
-
-    setShowAssignmentForm(false);
-    alert("✅ Assignation ajoutée !");
-  };
-
-  const supprimerAssignation = (id: string) => {
-    if (confirm("Supprimer cette assignation ?")) {
-      setAssignations(prev => prev.filter(a => a.id !== id));
-    }
-  };
-
-  // Handlers pour les props des composants
-  const handleVagueChange = (vagueId: string) => {
-    setSelectedVague(vagueId);
-    setSelectedFiliere('');
-    setSelectedModule('');
-  };
-
-  const handleFiliereChange = (filiereId: string) => {
-    setSelectedFiliere(filiereId);
-  };
-
-  const handleModuleChange = (moduleId: string) => {
-    setSelectedModule(moduleId);
-  };
-
-  const handleTeacherChange = (teacherId: string) => {
-    setSelectedTeacher(teacherId);
-  };
-
-  const handlePeriodChange = (field: string, value: string) => {
-    setNewAssignment(prev => ({
-      ...prev,
-      period: { ...prev.period, [field]: value }
-    }));
-  };
-
-  const handleSlotChange = (field: string, value: string) => {
-    setCurrentSlot(prev => ({ ...prev, [field]: value }));
-  };
-
-  if (isLoading) {
-    return <LoadingSpinner />;
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">Chargement des vagues...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 min-h-screen bg-gray-50">
-      <PageHeader />
-      
-      {/* CONTENU PRINCIPAL AVEC DÉFILEMENT */}
-      <div className="h-[calc(100vh-180px)] overflow-y-auto">
-        <FilterSection
-          vagues={vagues}
-          filieres={filieres}
-          selectedVague={selectedVague}
-          selectedFiliere={selectedFiliere}
-          onVagueChange={handleVagueChange}
-          onFiliereChange={handleFiliereChange}
-          onShowAssignmentForm={() => setShowAssignmentForm(true)}
-        />
+    <div className="flex flex-col h-screen bg-background overflow-y-auto">
+      {/* Zone de contenu avec défilement vertical */}
+      <ScrollArea className="flex-1">
+        <div className="container mx-auto p-6 space-y-6 max-w-7xl">
+          {/* En-tête */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Gestion des Vagues</h1>
+              <p className="text-muted-foreground">
+                {vagues.length} vague(s) créée(s) - Supervision de toutes les sessions de formation
+              </p>
+            </div>
+            <Button onClick={() => setShowAddForm(true)} disabled={showAddForm || showEditForm}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvelle vague
+            </Button>
+          </div>
 
-        <AssignmentList
-          assignations={assignations}
-          vagues={vagues}
-          filieres={filieres}
-          formateurs={formateurs}
-          onDeleteAssignment={supprimerAssignation}
-        />
-      </div>
+          {/* Formulaire d'ajout */}
+          {showAddForm && (
+            <VagueForm
+              open={showAddForm}
+              onOpenChange={setShowAddForm}
+              onSubmit={ajouterVague}
+              title="Nouvelle vague de formation"
+            />
+          )}
 
-      <AssignmentModal
-        show={showAssignmentForm}
-        onClose={() => setShowAssignmentForm(false)}
-        modulesDisponibles={modulesDisponibles}
-        formateursDisponibles={formateursDisponibles}
-        selectedModule={selectedModule}
-        selectedTeacher={selectedTeacher}
-        newAssignment={newAssignment}
-        currentSlot={currentSlot}
-        onModuleChange={handleModuleChange}
-        onTeacherChange={handleTeacherChange}
-        onPeriodChange={handlePeriodChange}
-        onSlotChange={handleSlotChange}
-        onAddSlot={ajouterCreneau}
-        onDeleteSlot={supprimerCreneau}
-        onSaveAssignment={ajouterAssignation}
-        moduleDejaAssigne={moduleDejaAssigne}
+          {/* Formulaire de modification */}
+          {showEditForm && selectedVague && (
+            <VagueForm
+              open={showEditForm}
+              onOpenChange={setShowEditForm}
+              onSubmit={modifierVague}
+              initialData={{
+                name: selectedVague.name,
+                startDate: selectedVague.startDate,
+                endDate: selectedVague.endDate,
+                description: selectedVague.description || "",
+              }}
+              title="Modifier la vague"
+            />
+          )}
+
+          {/* Statistiques */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Vagues</CardTitle>
+                <List className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{vagues.length}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">En cours</CardTitle>
+                <Play className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {vagues.filter(v => v.status === "active").length}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">À venir</CardTitle>
+                <Pause className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {vagues.filter(v => v.status === "upcoming").length}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Terminées</CardTitle>
+                <Check className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {vagues.filter(v => v.status === "completed").length}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filtres et Liste */}
+          <Card>
+            <CardHeader className="flex-shrink-0">
+              <div className="flex justify-between items-center">
+                <CardTitle>Liste des vagues</CardTitle>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filtrer par statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes les vagues</SelectItem>
+                    <SelectItem value="active">En cours</SelectItem>
+                    <SelectItem value="upcoming">À venir</SelectItem>
+                    <SelectItem value="completed">Terminées</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            
+            <CardContent>
+              {filteredVagues.length === 0 ? (
+                <div className="text-center py-12">
+                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Aucune vague trouvée</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {filterStatus === "all" 
+                      ? "Créez votre première vague de formation" 
+                      : `Aucune vague ${filterStatus === "active" ? "en cours" : filterStatus === "upcoming" ? "à venir" : "terminée"}`}
+                  </p>
+                  {filterStatus === "all" && (
+                    <Button onClick={() => setShowAddForm(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Créer une vague
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredVagues.map((vague) => (
+                    <VagueCard
+                      key={vague.id}
+                      vague={vague}
+                      onEdit={(v) => {
+                        setSelectedVague(v);
+                        setShowEditForm(true);
+                      }}
+                      onDelete={(id) => {
+                        setVagueToDelete(id);
+                        setShowDeleteDialog(true);
+                      }}
+                      onViewDetails={(v) => {
+                        setSelectedVague(v);
+                        // Navigation vers la page de détails
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </ScrollArea>
+
+      {/* Dialogue de suppression personnalisé */}
+      <DeleteConfirmation
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={() => vagueToDelete && supprimerVague(vagueToDelete)}
       />
     </div>
   );

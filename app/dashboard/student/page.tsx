@@ -14,7 +14,7 @@ import {
   FaChartLine,
   FaExclamationTriangle
 } from "react-icons/fa";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -31,8 +31,8 @@ const nextCourses = [
 ];
 
 const currentHomeworks = [
-  { subject: "Anglais", task: "Rédaction d'un essai", due: "25 Oct" },
-  { subject: "Physique", task: "Série d'exercices 3", due: "28 Oct" },
+  { subject: "Anglais", task: "Rédaction d&apos;un essai", due: "25 Oct" },
+  { subject: "Physique", task: "Série d&apos;exercices 3", due: "28 Oct" },
 ];
 
 const nextExams = [
@@ -94,13 +94,13 @@ const StudentDashboard = () => {
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
           <p className="text-gray-600 mb-4">
-            Vous n'avez pas les permissions d'étudiant.
+            Vous n&apos;avez pas les permissions d&lsquo;étudiant.
           </p>
           <button
             onClick={() => router.push("/")}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
           >
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </button>
         </div>
       </div>
@@ -150,7 +150,7 @@ const StudentDashboard = () => {
               <div className="pt-2">
                 <Link href="/dashboard/student/schedule" passHref>
                   <Button variant="link" className="p-0 h-auto text-principal text-xs font-medium">
-                    Voir l'EDT Complet <FaArrowRight className="ml-1 h-3 w-3" />
+                    Voir l&apos;EDT Complet <FaArrowRight className="ml-1 h-3 w-3" />
                   </Button>
                 </Link>
               </div>
@@ -315,8 +315,8 @@ const StudentDashboard = () => {
               <div className="flex items-center gap-3 p-2 bg-blue-50 rounded-lg">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Devoir d'Anglais à rendre demain</p>
-                  <p className="text-xs text-muted-foreground">Rédaction d'un essai</p>
+                  <p className="text-sm font-medium">Devoir d&apos;Anglais à rendre demain</p>
+                  <p className="text-xs text-muted-foreground">Rédaction d&apos;un essai</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-2 bg-green-50 rounded-lg">

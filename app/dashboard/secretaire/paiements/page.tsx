@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, Download, MoreHorizontal, Euro, CheckCircle, XCircle, Clock, Plus } from "lucide-react";
+import { Search, Download, MoreHorizontal, CheckCircle, XCircle, Clock, Plus } from "lucide-react";
 
 interface Paiement {
   id: string;
@@ -130,7 +130,7 @@ export default function PaiementsPage() {
     const { label, variant, icon: Icon } = config[status as keyof typeof config];
     
     return (
-      <Badge variant={variant} className="flex items-center gap-1 w-fit">
+      <Badge variant={variant as "default" | "secondary" | "destructive" | "outline"} className="flex items-center gap-1 w-fit">
         <Icon className="w-3 h-3" />
         {label}
       </Badge>
@@ -305,7 +305,7 @@ export default function PaiementsPage() {
 
               {/* Date d'échéance */}
               <div className="space-y-2">
-                <Label htmlFor="dateEcheance">Date d'échéance *</Label>
+                <Label htmlFor="dateEcheance">Date d&apos;échéance *</Label>
                 <Input
                   id="dateEcheance"
                   type="date"
@@ -354,7 +354,7 @@ export default function PaiementsPage() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-blue-800">Statut:</span>
-                      <Badge variant="warning">En attente</Badge>
+                      <Badge variant="destructive">En attente</Badge>
                     </div>
                   </CardContent>
                 </Card>

@@ -1,17 +1,33 @@
 // app/parent/grades/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { FaFileAlt, FaSort, FaSortUp, FaSortDown, FaCalendarAlt, FaClock } from "react-icons/fa";
-import { useRouter } from "next/navigation";
+
+// --- Types ---
+interface Grade {
+  subject: string;
+  grade: number;
+  coefficient: number;
+  examType: string;
+  teacher: string;
+  date: string; // format "DD/MM/YYYY"
+}
+
+interface UpcomingExam {
+  subject: string;
+  type: string;
+  date: string; // format "DD/MM/YYYY"
+  time: string;
+  location: string;
+}
 
 export default function ParentGradesPage() {
-  const [sortField, setSortField] = useState("subject");
+  const [sortField, setSortField] = useState<keyof Grade>("subject");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const router = useRouter();
 
-  // Données des notes du premier semestre seulement
-  const gradesData = [
+  // --- Données mémoïsées ---
+  const gradesData = useMemo((): Grade[] => [
     { subject: "Mathématiques", grade: 16.5, coefficient: 4, examType: "Devoir Surveillé", teacher: "M. Martin", date: "15/09/2024" },
     { subject: "Physique", grade: 14.0, coefficient: 3, examType: "Composition", teacher: "Mme. Dubois", date: "20/09/2024" },
     { subject: "Français", grade: 15.0, coefficient: 4, examType: "Interrogation", teacher: "M. Leroy", date: "25/09/2024" },
@@ -19,40 +35,17 @@ export default function ParentGradesPage() {
     { subject: "SVT", grade: 17.0, coefficient: 3, examType: "Composition", teacher: "M. Petit", date: "05/10/2024" },
     { subject: "Anglais", grade: 16.0, coefficient: 2, examType: "Interrogation", teacher: "Mme. Johnson", date: "10/10/2024" },
     { subject: "Philosophie", grade: 12.0, coefficient: 3, examType: "Interrogation", teacher: "M. Moreau", date: "15/10/2024" },
-  ];
+  ], []);
 
-  // Examens à venir
-  const upcomingExams = [
+  const upcomingExams = useMemo((): UpcomingExam[] => [
     { subject: "Mathématiques", type: "Composition", date: "25/11/2024", time: "08:30-10:30", location: "Salle 301" },
     { subject: "Physique-Chimie", type: "Devoir Surveillé", date: "28/11/2024", time: "14:00-16:00", location: "Labo Physique" },
     { subject: "SVT", type: "Interrogation", date: "02/12/2024", time: "10:00-11:00", location: "Salle 205" },
     { subject: "Histoire-Géographie", type: "Composition", date: "05/12/2024", time: "09:00-11:00", location: "Salle 104" },
-  ];
+  ], []);
 
-  // Calcul de la moyenne générale
-  const averageGrade = gradesData.reduce((sum, grade) => sum + grade.grade, 0) / gradesData.length;
-
-  // Trier les notes
-  const sortedGrades = [...gradesData].sort((a, b) => {
-    let aValue = a[sortField as keyof typeof a];
-    let bValue = b[sortField as keyof typeof b];
-    
-    if (sortField === "grade" || sortField === "coefficient") {
-      aValue = Number(aValue);
-      bValue = Number(bValue);
-    } else {
-      aValue = String(aValue).toLowerCase();
-      bValue = String(bValue).toLowerCase();
-    }
-
-    if (sortDirection === "asc") {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
-
-  const handleSort = (field: string) => {
+  // --- Fonctions utilitaires ---
+  const handleSort = (field: keyof Grade) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -61,7 +54,7 @@ export default function ParentGradesPage() {
     }
   };
 
-  const getSortIcon = (field: string) => {
+  const getSortIcon = (field: keyof Grade) => {
     if (sortField !== field) return <FaSort className="text-gray-400" />;
     return sortDirection === "asc" ? <FaSortUp className="text-blue-600" /> : <FaSortDown className="text-blue-600" />;
   };
@@ -88,6 +81,36 @@ export default function ParentGradesPage() {
     }
   };
 
+  // --- Tri optimisé avec useMemo ---
+  const sortedGrades = useMemo(() => {
+    return [...gradesData].sort((a, b) => {
+      let aValue: string | number | Date = a[sortField];
+      let bValue: string | number | Date = b[sortField];
+
+      if (sortField === "grade" || sortField === "coefficient") {
+        aValue = Number(aValue);
+        bValue = Number(bValue);
+      } else if (sortField === "date") {
+        // Convertir la date en objet Date pour un tri correct
+        const parseDate = (str: string) => {
+          const [day, month, year] = str.split("/").map(Number);
+          return new Date(year, month - 1, day);
+        };
+        aValue = parseDate(aValue as string);
+        bValue = parseDate(bValue as string);
+      } else {
+        aValue = String(aValue).toLowerCase();
+        bValue = String(bValue).toLowerCase();
+      }
+
+      if (sortDirection === "asc") {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+  }, [gradesData, sortField, sortDirection]);
+
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       <div className="flex-1 overflow-y-auto">
@@ -96,9 +119,10 @@ export default function ParentGradesPage() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold text-gray-900">Examens & Notes</h1>
             <p className="text-gray-600 mt-1">
-                Élève : <span className="font-semibold">Jean Dupont - Terminale S</span>
-              </p>
+              Élève : <span className="font-semibold">Jean Dupont - Terminale S</span>
+            </p>
           </div>
+
           {/* Section Résultats des Examens */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
             <div className="p-6">
@@ -116,52 +140,23 @@ export default function ParentGradesPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th 
-                        className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50"
-                        onClick={() => handleSort("subject")}
-                      >
-                        <div className="flex items-center gap-2">
-                          Matière
-                          {getSortIcon("subject")}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50"
-                        onClick={() => handleSort("grade")}
-                      >
-                        <div className="flex items-center gap-2">
-                          Note
-                          {getSortIcon("grade")}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50"
-                        onClick={() => handleSort("coefficient")}
-                      >
-                        <div className="flex items-center gap-2">
-                          Coefficient
-                          {getSortIcon("coefficient")}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50"
-                        onClick={() => handleSort("examType")}
-                      >
-                        <div className="flex items-center gap-2">
-                          Type d'Examen
-                          {getSortIcon("examType")}
-                        </div>
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900">Professeur</th>
-                      <th 
-                        className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50"
-                        onClick={() => handleSort("date")}
-                      >
-                        <div className="flex items-center gap-2">
-                          Date
-                          {getSortIcon("date")}
-                        </div>
-                      </th>
+                      {(["subject", "grade", "coefficient", "examType", "teacher", "date"] as (keyof Grade)[]).map((field) => (
+                        <th
+                          key={field}
+                          className={`text-left py-3 px-4 font-semibold text-gray-900 ${field !== "teacher" ? "cursor-pointer hover:bg-gray-50" : ""}`}
+                          onClick={field !== "teacher" ? () => handleSort(field) : undefined}
+                        >
+                          <div className="flex items-center gap-2">
+                            {field === "subject" && "Matière"}
+                            {field === "grade" && "Note"}
+                            {field === "coefficient" && "Coefficient"}
+                            {field === "examType" && "Type d'Examen"}
+                            {field === "teacher" && "Professeur"}
+                            {field === "date" && "Date"}
+                            {field !== "teacher" && getSortIcon(field)}
+                          </div>
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -185,19 +180,19 @@ export default function ParentGradesPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
 
-              {sortedGrades.length === 0 && (
-                <div className="text-center py-12">
-                  <FaFileAlt className="text-5xl text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Aucun examen disponible
-                  </h3>
-                  <p className="text-gray-500">
-                    Aucun examen n'a été enregistré pour ce semestre.
-                  </p>
-                </div>
-              )}
+                {sortedGrades.length === 0 && (
+                  <div className="text-center py-12">
+                    <FaFileAlt className="text-5xl text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Aucun examen disponible
+                    </h3>
+                    <p className="text-gray-500">
+                      Aucun examen n&lsquo;a été enregistré pour ce semestre.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -227,7 +222,7 @@ export default function ParentGradesPage() {
                           {exam.type}
                         </span>
                       </div>
-                      
+
                       <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                         <div className="flex items-center gap-1">
                           <FaCalendarAlt className="text-orange-600" />
@@ -243,7 +238,7 @@ export default function ParentGradesPage() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse" title="Examen à venir"></div>
                   </div>
                 ))}
@@ -259,26 +254,20 @@ export default function ParentGradesPage() {
 
           {/* Légende des types d'examens */}
           <div className="mt-6 bg-blue-50 rounded-lg p-4 border border-blue-200">
-            <h3 className="font-semibold text-blue-900 mb-3">Légende des types d'examens :</h3>
+            <h3 className="font-semibold text-blue-900 mb-3">Légende des types d&lsquo;examens :</h3>
             <div className="flex flex-wrap gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getExamTypeColor("Composition")}`}>
-                  Composition
-                </span>
-                <span className="text-blue-800">Examen complet et formel</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getExamTypeColor("Interrogation")}`}>
-                  Interrogation
-                </span>
-                <span className="text-blue-800">Contrôle court en classe</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getExamTypeColor("Devoir Surveillé")}`}>
-                  Devoir Surveillé
-                </span>
-                <span className="text-blue-800">Examen surveillé en temps limité</span>
-              </div>
+              {["Composition", "Interrogation", "Devoir Surveillé"].map((type) => (
+                <div key={type} className="flex items-center gap-2">
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getExamTypeColor(type)}`}>
+                    {type}
+                  </span>
+                  <span className="text-blue-800">
+                    {type === "Composition" && "Examen complet et formel"}
+                    {type === "Interrogation" && "Contrôle court en classe"}
+                    {type === "Devoir Surveillé" && "Examen surveillé en temps limité"}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

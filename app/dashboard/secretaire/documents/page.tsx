@@ -14,7 +14,7 @@ interface Document {
   nom: string;
   type: "pdf" | "word" | "excel" | "image";
   taille: string;
-  dateUpload: string;
+  dateUpload: string; 
   uploadPar: string;
   categorie: "administration" | "pedagogique" | "financier" | "divers";
   statut: "public" | "prive" | "archive";
@@ -66,17 +66,17 @@ export default function DocumentsPage() {
     return colors[type as keyof typeof colors];
   };
 
-  const getCategorieBadge = (categorie: string) => {
-    const categories = {
-      administration: { label: "Administration", variant: "default" as const },
-      pedagogique: { label: "Pédagogique", variant: "secondary" as const },
-      financier: { label: "Financier", variant: "outline" as const },
-      divers: { label: "Divers", variant: "success" as const }
-    };
-    
-    const config = categories[categorie as keyof typeof categories];
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+ const getCategorieBadge = (categorie: string) => {
+  const categories = {
+    administration: { label: "Administration", variant: "default" as const },
+    pedagogique: { label: "Pédagogique", variant: "secondary" as const },
+    financier: { label: "Financier", variant: "outline" as const },
+    divers: { label: "Divers", variant: "destructive" as const } // Remplace "success" par "destructive"
   };
+  
+  const config = categories[categorie as keyof typeof categories] || categories.divers;
+  return <Badge variant={config.variant}>{config.label}</Badge>;
+};
 
   return (
     <div className="p-6 space-y-6">
@@ -84,7 +84,7 @@ export default function DocumentsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestion des Documents</h1>
           <p className="text-gray-600 mt-2">
-            Gérez tous les documents de l'établissement
+            Gérez tous les documents de l&apos;établissement
           </p>
         </div>
         <div className="flex gap-3">
@@ -192,7 +192,7 @@ export default function DocumentsPage() {
                 <TableHead>Type</TableHead>
                 <TableHead>Taille</TableHead>
                 <TableHead>Catégorie</TableHead>
-                <TableHead>Date d'upload</TableHead>
+                <TableHead>Date d&apos;upload</TableHead>
                 <TableHead>Uploadé par</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>

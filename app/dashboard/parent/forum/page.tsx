@@ -84,14 +84,14 @@ const ParentForumPage = () => {
                       Niveau : {childClass.level} • Professeur principal : {childClass.teacher}
                     </p>
                     <p className="text-sm text-gray-500">
-                      Groupe de discussion et d'annonces importantes
+                      Groupe de discussion et d&apos;annonces importantes
                     </p>
                   </div>
                 </div>
                 
                 <button
                   onClick={() => handleWhatsAppRedirect(
-                    childClass.whatsappUrl, 
+                    childClass.whatsappGroup, 
                     childClass.childName, 
                     childClass.className
                   )}
@@ -114,7 +114,7 @@ const ParentForumPage = () => {
               Aucun enfant inscrit
             </h3>
             <p className="text-gray-500">
-              Vous n'avez pas d'enfants inscrits dans l'établissement.
+              Vous n&apos;avez pas d&apos;enfants inscrits dans l&apos;établissement.
             </p>
           </div>
         )}
@@ -123,10 +123,10 @@ const ParentForumPage = () => {
         <div className="bg-blue-50 rounded-xl p-6 mt-6 border border-blue-200">
           <h3 className="font-semibold text-blue-900 mb-2">Informations importantes</h3>
           <ul className="text-blue-800 space-y-1 text-sm">
-            <li>• Ces groupes sont réservés aux parents d'élèves de la classe</li>
+            <li>• Ces groupes sont réservés aux parents d&apos;élèves de la classe</li>
             <li>• Respectez les règles de bonne conduite dans les échanges</li>
             <li>• Les annonces officielles sont également disponibles sur le portail</li>
-            <li>• En cas de problème avec le lien, contactez l'administration</li>
+            <li>• En cas de problème avec le lien, contactez l&apos;administration</li>
           </ul>
         </div>
       </div>

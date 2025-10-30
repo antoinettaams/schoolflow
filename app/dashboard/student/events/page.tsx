@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { CalendarDays, AlertCircle, Users, Sun, ClipboardList, MapPin, Filter, Search, ChevronDown } from 'lucide-react';
+import { CalendarDays, AlertCircle, Users, Sun, MapPin, Filter, Search, ChevronDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator';
 
 // --- Données simulées (événements scolaires) ---
 const allEvents = [
-    { id: 1, date: "24 Octobre", day: "MER", title: "Réunion Parents-Professeurs", type: "Réunion", location: "Gymnase de l'école", icon: Users, color: "bg-blue-500", badge: "Important", month: "Octobre", time: "18:00 - 20:00" },
+    { id: 1, date: "24 Octobre", day: "MER", title: "Réunion Parents-Professeurs", type: "Réunion", location: "Gymnase de l&apos;école", icon: Users, color: "bg-blue-500", badge: "Important", month: "Octobre", time: "18:00 - 20:00" },
     { id: 2, date: "27 Octobre", day: "SAM", title: "Voyage Scolaire à Rome", type: "Voyage", location: "Départ à 8h00", icon: Sun, color: "bg-indigo-500", badge: "Optionnel", month: "Octobre", time: "08:00 - 20:00" },
     { id: 3, date: "01 Novembre", day: "JEU", title: "Toussaint - Jour Férié", type: "Congé", location: "École Fermée", icon: AlertCircle, color: "bg-green-500", badge: "Congé", month: "Novembre", time: "Toute la journée" },
     { id: 4, date: "11 Novembre", day: "DIM", title: "Armistice 1918", type: "Congé", location: "École Fermée", icon: AlertCircle, color: "bg-green-500", badge: "Congé", month: "Novembre", time: "Toute la journée" },
@@ -191,9 +191,9 @@ const StudentEvents = () => {
                     <section className="bg-white rounded-lg p-6 border">
                         <h2 className="text-xl font-bold text-gray-800 mb-4">Informations importantes</h2>
                         <div className="space-y-2 text-sm text-gray-600">
-                            <p>• Tous les événements sont susceptibles d'être modifiés.</p>
+                            <p>• Tous les événements sont susceptibles d&apos;être modifiés.</p>
                             <p>• Consultez régulièrement cette page pour les mises à jour.</p>
-                            <p>• Contactez l'administration pour toute question.</p>
+                            <p>• Contactez l&apos;administration pour toute question.</p>
                         </div>
                     </section>
 

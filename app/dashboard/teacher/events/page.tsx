@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 const allEvents = [
     // OCTOBRE
     { id: 1, date: "22 Octobre", day: "LUN", title: "DS de Mathématiques (Algèbre)", type: "Examen", location: "Salle 302", icon: ClipboardList, color: "bg-red-500", badge: "Urgent", month: "Octobre", time: "08:30 - 10:30" },
-    { id: 2, date: "24 Octobre", day: "MER", title: "Réunion Parents-Professeurs", type: "Réunion", location: "Gymnase de l'école", icon: Users, color: "bg-blue-500", badge: "Important", month: "Octobre", time: "18:00 - 20:00" },
+    { id: 2, date: "24 Octobre", day: "MER", title: "Réunion Parents-Professeurs", type: "Réunion", location: "Gymnase de l&apos;école", icon: Users, color: "bg-blue-500", badge: "Important", month: "Octobre", time: "18:00 - 20:00" },
     { id: 3, date: "27 Octobre", day: "SAM", title: "Voyage Scolaire à Rome", type: "Voyage", location: "Départ à 8h00", icon: Sun, color: "bg-indigo-500", badge: "Optionnel", month: "Octobre", time: "08:00 - 20:00" },
     { id: 4, date: "30 Octobre", day: "MAR", title: "Interrogation Écrite (Anglais)", type: "Examen", location: "Salle 105", icon: ClipboardList, color: "bg-red-500", badge: "Urgent", month: "Octobre", time: "10:00 - 11:00" },
 
@@ -195,7 +195,7 @@ const TeacherEvents = () => {
                         <div className="space-y-2 text-sm text-gray-600">
                             <p>• Tous les événements peuvent être ajoutés, modifiés ou supprimés.</p>
                             <p>• Consultez régulièrement cette page pour vérifier les mises à jour.</p>
-                            <p>• Contactez l'administration pour toute question.</p>
+                            <p>• Contactez l&apos;administration pour toute question.</p>
                         </div>
                     </section>
 

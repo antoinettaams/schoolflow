@@ -23,7 +23,7 @@ export default function NotificationsPage() {
     {
       id: "1",
       titre: "Nouvelle inscription en attente",
-      message: "Marie Dupont a soumis une demande d'inscription nécessitant votre validation.",
+      message: "Marie Dupont a soumis une demande d&lsquo;inscription nécessitant votre validation.",
       type: "warning",
       date: "2024-01-15T10:30:00",
       lue: false,
@@ -41,7 +41,7 @@ export default function NotificationsPage() {
     {
       id: "3",
       titre: "Mise à jour du système",
-      message: "Une nouvelle version de l'application est disponible.",
+      message: "Une nouvelle version de l&lsquo;application est disponible.",
       type: "info",
       date: "2024-01-14T16:45:00",
       lue: true,
@@ -144,7 +144,7 @@ export default function NotificationsPage() {
                   Aucune notification
                 </h3>
                 <p className="mt-2 text-sm text-gray-600">
-                  Vous n'avez aucune notification pour le moment.
+                  Vous n&lsquo;avez aucune notification pour le moment.
                 </p>
               </div>
             ) : (

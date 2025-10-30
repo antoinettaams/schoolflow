@@ -10,7 +10,7 @@ const gradesSummary = [
         value: "15.3 / 20", 
         icon: FaAward, 
         color: "text-green-600", 
-        description: "Votre moyenne sur l'ensemble des matières." 
+        description: "Votre moyenne sur l&apos;ensemble des matières." 
     },
     { 
         title: "Progression (Semestre)", 
@@ -230,7 +230,7 @@ const StudentExams = () => {
                                                 onClick={() => handleSort("examType")}
                                             >
                                                 <div className="flex items-center gap-2">
-                                                    Type d'Examen
+                                                    Type d&apos;Examen
                                                     {getSortIcon("examType")}
                                                 </div>
                                             </th>
@@ -276,7 +276,7 @@ const StudentExams = () => {
                                         Aucun examen disponible
                                     </h3>
                                     <p className="text-gray-500">
-                                        Aucun examen n'a été enregistré pour ce semestre.
+                                        Aucun examen n&apos;a été enregistré pour ce semestre.
                                     </p>
                                 </div>
                             )}

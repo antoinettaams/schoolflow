@@ -1,6 +1,6 @@
 // app/dashboard/finances/student/[id]/paiement/page.tsx
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   ArrowLeft, CreditCard, DollarSign, Calendar, Save, X,
@@ -49,11 +49,8 @@ export default function NewPaymentPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    loadStudentData();
-  }, [params.id]);
-
-  const loadStudentData = () => {
+  // Déplacer loadStudentData dans un useCallback pour éviter les recréations
+  const loadStudentData = useCallback(() => {
     // Données simulées
     const mockStudent: Student = {
       id: params.id as string,
@@ -65,7 +62,11 @@ export default function NewPaymentPage() {
       montantPaye: 200000
     };
     setStudent(mockStudent);
-  };
+  }, [params.id]); // Ajouter params.id comme dépendance
+
+  useEffect(() => {
+    loadStudentData();
+  }, [loadStudentData]); // Maintenant loadStudentData est stable grâce à useCallback
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,7 +183,7 @@ export default function NewPaymentPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="scolarite">Frais de scolarité</SelectItem>
-                          <SelectItem value="inscription">Frais d'inscription</SelectItem>
+                          <SelectItem value="inscription">Frais d&apos;inscription</SelectItem>
                           <SelectItem value="autre">Autre frais</SelectItem>
                         </SelectContent>
                       </Select>

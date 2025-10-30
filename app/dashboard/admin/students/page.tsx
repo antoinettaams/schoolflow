@@ -8,20 +8,16 @@ import Link from "next/link";
 import { 
   FaUserGraduate, 
   FaSearch, 
-  FaFilter,
   FaEye,
-  FaEdit,
-  FaTrash,
   FaSort,
   FaUsers,
   FaChartLine,
-  FaBook,
-  FaExclamationTriangle,
-  FaCheckCircle,
-  FaTimesCircle,
   FaPlus,
   FaSchool,
-  FaLayerGroup
+  FaBook,
+  FaChartBar,
+  FaTrophy,
+  FaCalendarAlt
 } from "react-icons/fa";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,8 +25,17 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 
 // Types pour les données
+interface Module {
+  id: string;
+  name: string;
+  coefficient: number;
+  grade: number;
+  teacher: string;
+}
+
 interface Student {
   id: string;
   firstName: string;
@@ -47,6 +52,9 @@ interface Student {
   status: "actif" | "inactif" | "suspendu";
   createdAt: string;
   lastActivity: string;
+  modules: Module[];
+  rank: number;
+  totalStudents: number;
 }
 
 const AdminStudentsPage = () => {
@@ -61,6 +69,20 @@ const AdminStudentsPage = () => {
   const [sortField, setSortField] = useState<keyof Student>("lastName");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
+  // Modal "Voir" état
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const openModal = (student: Student) => {
+    setSelectedStudent(student);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setSelectedStudent(null);
+    setIsModalOpen(false);
+  };
+
   // Vérification du rôle admin
   useEffect(() => {
     if (isLoaded && isSignedIn) {
@@ -71,7 +93,7 @@ const AdminStudentsPage = () => {
     }
   }, [isLoaded, isSignedIn, user, router]);
 
-  // Simulation des données des élèves
+  // Simulation des données des élèves avec modules détaillés
   useEffect(() => {
     const mockStudents: Student[] = [
       {
@@ -89,7 +111,16 @@ const AdminStudentsPage = () => {
         attendanceRate: 95,
         status: "actif",
         createdAt: "2024-09-01",
-        lastActivity: "2024-10-20"
+        lastActivity: "2024-10-20",
+        modules: [
+          { id: "m1", name: "Programmation Java", coefficient: 4, grade: 16.5, teacher: "Dr. Koné" },
+          { id: "m2", name: "Base de données", coefficient: 3, grade: 14.0, teacher: "Prof. Traoré" },
+          { id: "m3", name: "Réseaux", coefficient: 3, grade: 15.8, teacher: "Dr. Diarra" },
+          { id: "m4", name: "Mathématiques", coefficient: 2, grade: 13.2, teacher: "Prof. Sylla" },
+          { id: "m5", name: "Anglais technique", coefficient: 1, grade: 17.5, teacher: "Mme. Bamba" }
+        ],
+        rank: 2,
+        totalStudents: 45
       },
       {
         id: "2",
@@ -106,7 +137,15 @@ const AdminStudentsPage = () => {
         attendanceRate: 88,
         status: "actif",
         createdAt: "2024-09-01",
-        lastActivity: "2024-10-19"
+        lastActivity: "2024-10-19",
+        modules: [
+          { id: "m1", name: "Algèbre avancée", coefficient: 4, grade: 13.5, teacher: "Dr. Konaté" },
+          { id: "m2", name: "Analyse", coefficient: 4, grade: 11.0, teacher: "Prof. Keita" },
+          { id: "m3", name: "Probabilités", coefficient: 3, grade: 14.2, teacher: "Dr. Coulibaly" },
+          { id: "m4", name: "Statistiques", coefficient: 3, grade: 12.5, teacher: "Prof. Diallo" }
+        ],
+        rank: 15,
+        totalStudents: 30
       },
       {
         id: "3",
@@ -123,7 +162,16 @@ const AdminStudentsPage = () => {
         attendanceRate: 92,
         status: "actif",
         createdAt: "2024-09-15",
-        lastActivity: "2024-10-21"
+        lastActivity: "2024-10-21",
+        modules: [
+          { id: "m1", name: "Intelligence Artificielle", coefficient: 5, grade: 17.2, teacher: "Dr. Traoré" },
+          { id: "m2", name: "Machine Learning", coefficient: 4, grade: 16.8, teacher: "Prof. Koné" },
+          { id: "m3", name: "Big Data", coefficient: 3, grade: 15.0, teacher: "Dr. Sy" },
+          { id: "m4", name: "Cloud Computing", coefficient: 3, grade: 17.5, teacher: "Prof. Bamba" },
+          { id: "m5", name: "Sécurité", coefficient: 2, grade: 16.0, teacher: "Dr. Diakité" }
+        ],
+        rank: 1,
+        totalStudents: 25
       },
       {
         id: "4",
@@ -140,7 +188,15 @@ const AdminStudentsPage = () => {
         attendanceRate: 75,
         status: "inactif",
         createdAt: "2024-09-01",
-        lastActivity: "2024-10-15"
+        lastActivity: "2024-10-15",
+        modules: [
+          { id: "m1", name: "Algèbre avancée", coefficient: 4, grade: 8.5, teacher: "Dr. Konaté" },
+          { id: "m2", name: "Analyse", coefficient: 4, grade: 7.0, teacher: "Prof. Keita" },
+          { id: "m3", name: "Probabilités", coefficient: 3, grade: 12.0, teacher: "Dr. Coulibaly" },
+          { id: "m4", name: "Statistiques", coefficient: 3, grade: 11.5, teacher: "Prof. Diallo" }
+        ],
+        rank: 28,
+        totalStudents: 30
       },
       {
         id: "5",
@@ -157,14 +213,23 @@ const AdminStudentsPage = () => {
         attendanceRate: 98,
         status: "suspendu",
         createdAt: "2024-09-01",
-        lastActivity: "2024-10-18"
+        lastActivity: "2024-10-18",
+        modules: [
+          { id: "m1", name: "Programmation Java", coefficient: 4, grade: 15.0, teacher: "Dr. Koné" },
+          { id: "m2", name: "Base de données", coefficient: 3, grade: 13.5, teacher: "Prof. Traoré" },
+          { id: "m3", name: "Réseaux", coefficient: 3, grade: 12.8, teacher: "Dr. Diarra" },
+          { id: "m4", name: "Mathématiques", coefficient: 2, grade: 16.0, teacher: "Prof. Sylla" },
+          { id: "m5", name: "Anglais technique", coefficient: 1, grade: 14.5, teacher: "Mme. Bamba" }
+        ],
+        rank: 12,
+        totalStudents: 45
       }
     ];
 
     setStudents(mockStudents);
   }, []);
 
-  // Filtrage et tri des données
+  // Filtrage et tri
   const filteredStudents = students
     .filter(student => {
       const matchesSearch = 
@@ -183,12 +248,12 @@ const AdminStudentsPage = () => {
       const aValue = a[sortField];
       const bValue = b[sortField];
       
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
+      if (typeof aValue === "string" && typeof bValue === "string") {
         return sortDirection === "asc" 
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue);
       }
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
+      if (typeof aValue === "number" && typeof bValue === "number") {
         return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
       }
       return 0;
@@ -228,7 +293,6 @@ const AdminStudentsPage = () => {
 
   const stats = getStats();
 
-  // Loading state
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -237,21 +301,26 @@ const AdminStudentsPage = () => {
     );
   }
 
-  // Vérification finale du rôle
   const userRole = user?.publicMetadata?.role;
   if (userRole !== "Administrateur") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
-          <p className="text-gray-600 mb-4">Vous n'avez pas les permissions d'administrateur.</p>
-          <button
-            onClick={() => router.push("/")}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Retour à l'accueil
-          </button>
-        </div>
+        <Card className="p-8 max-w-md text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl text-red-600">Accès Refusé</CardTitle>
+            <CardDescription className="text-gray-600">
+              Vous n&apos;avez pas les permissions d&apos;administrateur.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => router.push("/")}
+              className="bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Retour à l&apos;accueil
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -265,7 +334,7 @@ const AdminStudentsPage = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Gestion des Élèves</h1>
             <p className="text-gray-600 mt-2">
-              Vue d'ensemble complète de tous les élèves de l'établissement.
+              Vue d&apos;ensemble complète de tous les élèves de l&apos;établissement.
             </p>
           </div>
           <Link href="/auth/signup">
@@ -281,54 +350,51 @@ const AdminStudentsPage = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Élèves</CardTitle>
-              <FaUsers className="h-4 w-4 text-blue-500" />
+              <FaUsers className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.total}</div>
               <p className="text-xs text-muted-foreground">
-                {stats.active} actifs
+                Tous les élèves inscrits
               </p>
             </CardContent>
           </Card>
-
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Élèves Actifs</CardTitle>
+              <FaUserGraduate className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+              <p className="text-xs text-muted-foreground">
+                En cours de formation
+              </p>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Moyenne Générale</CardTitle>
-              <FaChartLine className="h-4 w-4 text-green-500" />
+              <FaChartLine className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {stats.averageGrade.toFixed(1)}
-              </div>
-              <p className="text-xs text-muted-foreground">/20 points</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Statuts</CardTitle>
-              <FaSchool className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600">
-                {stats.inactive + stats.suspended}
+              <div className="text-2xl font-bold text-blue-600">
+                {stats.averageGrade.toFixed(1)}/20
               </div>
               <p className="text-xs text-muted-foreground">
-                {stats.inactive} inactifs, {stats.suspended} suspendus
+                Moyenne de tous les élèves
               </p>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Vagues Actives</CardTitle>
-              <FaLayerGroup className="h-4 w-4 text-amber-500" />
+              <CardTitle className="text-sm font-medium">Taux de Présence</CardTitle>
+              <FaChartBar className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-amber-600">
-                {getUniqueVagues().length}
-              </div>
-              <p className="text-xs text-muted-foreground">Vagues avec élèves</p>
+              <div className="text-2xl font-bold text-orange-600">92%</div>
+              <p className="text-xs text-muted-foreground">
+                Moyenne de présence
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -356,9 +422,9 @@ const AdminStudentsPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Toutes les filières</SelectItem>
-                  {getUniqueValues("filiere").map(filiere => (
-                    <SelectItem key={filiere} value={filiere}>
-                      {filiere}
+                  {getUniqueValues("filiere").map((filiere, index) => (
+                    <SelectItem key={`filiere-${index}`} value={filiere as string}>
+                      {filiere as string}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -370,8 +436,8 @@ const AdminStudentsPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Toutes les vagues</SelectItem>
-                  {getUniqueVagues().map(vague => (
-                    <SelectItem key={vague} value={vague}>
+                  {getUniqueVagues().map((vague, index) => (
+                    <SelectItem key={`vague-${index}`} value={vague}>
                       {vague}
                     </SelectItem>
                   ))}
@@ -462,7 +528,7 @@ const AdminStudentsPage = () => {
                           {student.niveau} • {student.classe}
                         </div>
                         <div className="text-xs text-gray-500">
-                          Inscrit le {new Date(student.createdAt).toLocaleDateString('fr-FR')}
+                          Inscrit le {new Date(student.createdAt).toLocaleDateString("fr-FR")}
                         </div>
                       </div>
                     </TableCell>
@@ -486,7 +552,7 @@ const AdminStudentsPage = () => {
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {student.vagues.map((vague, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
+                          <Badge key={`vague-${student.id}-${index}`} variant="secondary" className="text-xs">
                             {vague}
                           </Badge>
                         ))}
@@ -494,10 +560,6 @@ const AdminStudentsPage = () => {
                     </TableCell>
                     <TableCell>
                       <Badge 
-                        variant={
-                          student.status === "actif" ? "default" : 
-                          student.status === "inactif" ? "secondary" : "destructive"
-                        }
                         className={
                           student.status === "actif" ? "bg-green-100 text-green-800" :
                           student.status === "inactif" ? "bg-gray-100 text-gray-800" :
@@ -510,14 +572,8 @@ const AdminStudentsPage = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => openModal(student)}>
                           <FaEye className="h-3 w-3" />
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <FaEdit className="h-3 w-3" />
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                          <FaTrash className="h-3 w-3" />
                         </Button>
                       </div>
                     </TableCell>
@@ -525,15 +581,247 @@ const AdminStudentsPage = () => {
                 ))}
               </TableBody>
             </Table>
-
-            {filteredStudents.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <FaUserGraduate className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>Aucun élève trouvé avec les critères sélectionnés.</p>
-              </div>
-            )}
           </CardContent>
         </Card>
+
+        {/* Modal détaillé "Voir" */}
+        {isModalOpen && selectedStudent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                {/* En-tête du modal */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                      <FaUserGraduate className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold">
+                        {selectedStudent.firstName} {selectedStudent.lastName}
+                      </h2>
+                      <p className="text-gray-600">{selectedStudent.studentNumber}</p>
+                    </div>
+                  </div>
+                  <Button variant="outline" onClick={closeModal}>
+                    Fermer
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Informations personnelles */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <FaUserGraduate className="h-4 w-4" />
+                        Informations Personnelles
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Email</label>
+                        <p className="text-sm">{selectedStudent.email}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Téléphone</label>
+                        <p className="text-sm">{selectedStudent.phone}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Statut</label>
+                        <Badge 
+                          className={
+                            selectedStudent.status === "actif" ? "bg-green-100 text-green-800" :
+                            selectedStudent.status === "inactif" ? "bg-gray-100 text-gray-800" :
+                            "bg-red-100 text-red-800"
+                          }
+                        >
+                          {selectedStudent.status === "actif" ? "Actif" : 
+                           selectedStudent.status === "inactif" ? "Inactif" : "Suspendu"}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Informations académiques */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <FaSchool className="h-4 w-4" />
+                        Informations Académiques
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Filière</label>
+                        <p className="text-sm font-medium">{selectedStudent.filiere}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Niveau</label>
+                        <p className="text-sm">{selectedStudent.niveau}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Classe</label>
+                        <p className="text-sm">{selectedStudent.classe}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Vagues</label>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {selectedStudent.vagues.map((vague, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {vague}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Performance générale */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <FaChartBar className="h-4 w-4" />
+                        Performance
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-blue-600">
+                          {selectedStudent.averageGrade.toFixed(1)}/20
+                        </div>
+                        <p className="text-sm text-gray-500">Moyenne Générale</p>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <FaTrophy className="h-4 w-4 text-yellow-500" />
+                          <span className="text-sm font-medium">Rang</span>
+                        </div>
+                        <Badge variant="outline">
+                          {selectedStudent.rank}/{selectedStudent.totalStudents}
+                        </Badge>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span>Taux de présence</span>
+                          <span>{selectedStudent.attendanceRate}%</span>
+                        </div>
+                        <Progress value={selectedStudent.attendanceRate} className="h-2" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Détail des modules */}
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FaBook className="h-4 w-4" />
+                      Détail des Modules et Notes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Module</TableHead>
+                          <TableHead>Enseignant</TableHead>
+                          <TableHead>Coefficient</TableHead>
+                          <TableHead>Note</TableHead>
+                          <TableHead>Appréciation</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedStudent.modules.map((module) => (
+                          <TableRow key={module.id}>
+                            <TableCell className="font-medium">{module.name}</TableCell>
+                            <TableCell>{module.teacher}</TableCell>
+                            <TableCell>{module.coefficient}</TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant="outline"
+                                className={
+                                  module.grade >= 15 ? "bg-green-50 text-green-700 border-green-200" :
+                                  module.grade >= 10 ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                  "bg-red-50 text-red-700 border-red-200"
+                                }
+                              >
+                                {module.grade.toFixed(1)}/20
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <span className={
+                                module.grade >= 15 ? "text-green-600 font-medium" :
+                                module.grade >= 10 ? "text-blue-600" :
+                                "text-red-600"
+                              }>
+                                {module.grade >= 15 ? "Excellent" :
+                                 module.grade >= 12 ? "Très bien" :
+                                 module.grade >= 10 ? "Satisfaisant" :
+                                 "Insuffisant"}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                {/* Informations supplémentaires */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm">
+                        <FaCalendarAlt className="h-4 w-4" />
+                        Dates Importantes
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Inscription:</span>
+                        <span className="text-sm font-medium">
+                          {new Date(selectedStudent.createdAt).toLocaleDateString("fr-FR")}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Dernière activité:</span>
+                        <span className="text-sm font-medium">
+                          {new Date(selectedStudent.lastActivity).toLocaleDateString("fr-FR")}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm">Résumé Académique</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Nombre de modules:</span>
+                          <span className="text-sm font-medium">{selectedStudent.modules.length}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Meilleure note:</span>
+                          <span className="text-sm font-medium text-green-600">
+                            {Math.max(...selectedStudent.modules.map(m => m.grade)).toFixed(1)}/20
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Note la plus basse:</span>
+                          <span className="text-sm font-medium text-red-600">
+                            {Math.min(...selectedStudent.modules.map(m => m.grade)).toFixed(1)}/20
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

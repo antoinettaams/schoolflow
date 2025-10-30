@@ -39,7 +39,7 @@ export default function StatistiquesPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Statistiques</h1>
           <p className="text-gray-600 mt-2">
-            Analysez les données et performances de l'établissement
+            Analysez les données et performances de l&lsquo;établissement
           </p>
         </div>
       </div>
@@ -177,19 +177,23 @@ export default function StatistiquesPage() {
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={dataClasses}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {dataClasses.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
+  data={dataClasses}
+  cx="50%"
+  cy="50%"
+  labelLine={false}
+  label={(props: { name?: string; percent?: number }) => {
+    const name = props.name ?? "";
+    const percent = props.percent ?? 0;
+    return `${name} ${(percent * 100).toFixed(0)}%`;
+  }}
+  outerRadius={80}
+  fill="#8884d8"
+  dataKey="value"
+>
+  {dataClasses.map((entry, index) => (
+    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+  ))}
+</Pie>
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
@@ -362,5 +366,4 @@ function Badge({ variant, children, className }: { variant: string; children: Re
       {children}
     </span>
   );
-}       
-   
+}

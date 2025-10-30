@@ -116,7 +116,7 @@ const TeacherForumPage = () => {
             <li>• Accédez à tous les groupes de vos classes</li>
             <li>• Copiez les liens pour les partager avec les parents</li>
             <li>• Annonces importantes et communications rapides</li>
-            <li>• Échanges avec les parents d'élèves</li>
+            <li>• Échanges avec les parents d&apos;élèves</li>
           </ul>
         </div>
       </div>

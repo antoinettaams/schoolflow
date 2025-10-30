@@ -17,14 +17,28 @@ import {
   FaCheckCircle,
   FaPlus
 } from "react-icons/fa";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
 const SecretaryDashboard = () => {
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
+
+  
+    // Vérification du rôle Secretaire
+    useEffect(() => {
+      if (isLoaded && isSignedIn) {
+        const userRole = user?.publicMetadata?.role;
+        console.log("Rôle utilisateur:", userRole);
+        
+        if (userRole !== "Secretaire") {
+          console.log("❌ Accès refusé - Rôle incorrect");
+          router.push("/unauthorized");
+        }
+      }
+    }, [isLoaded, isSignedIn, user, router]);
+  
 
   // Loading state
   if (!isLoaded) {
@@ -52,13 +66,13 @@ const SecretaryDashboard = () => {
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
           <p className="text-gray-600 mb-4">
-            Vous n'avez pas les permissions de secrétaire.
+            Vous n&apos;avez pas les permissions de secrétaire.
           </p>
           <button
             onClick={() => router.push("/")}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
           >
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </button>
         </div>
       </div>
@@ -89,7 +103,7 @@ const SecretaryDashboard = () => {
       title: "Nouvelle Inscription",
       description: "Inscrire un nouvel étudiant",
       icon: <FaUserGraduate className="text-2xl text-blue-600" />,
-      href: "/dashboard/secretaire/inscriptions",
+      href: "/auth/signup",
       color: "bg-blue-50 border-blue-200",
       buttonColor: "bg-blue-600 hover:bg-blue-700"
     },
@@ -233,7 +247,7 @@ const SecretaryDashboard = () => {
                         <div className="text-3xl font-bold text-orange-600">
                           {secretaryData.pendingInscriptions}
                         </div>
-                        <p className="text-xs text-gray-700">À traiter aujourd'hui</p>
+                        <p className="text-xs text-gray-700">À traiter aujourd&apos;hui</p>
                         <Link href="/dashboard/secretaire/inscriptions" passHref>
                           <Button variant="link" className="p-0 h-auto text-principal text-xs">
                             Traiter maintenant <FaArrowRight className="ml-1 h-3 w-3" />

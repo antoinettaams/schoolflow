@@ -1,11 +1,11 @@
 // app/dashboard/notes/student/[id]/page.tsx
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   ArrowLeft, BookOpen, BarChart3, Target, Award, 
-  TrendingUp, Clock, Users, FileText, Download,
-  CheckCircle, XCircle, AlertCircle,
+  TrendingUp, Users, Download,
+  CheckCircle,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,11 +58,8 @@ export default function StudentNotesDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSemestre, setSelectedSemestre] = useState<string>('S1');
 
-  useEffect(() => {
-    loadStudentData();
-  }, [params.id]);
-
-  const loadStudentData = () => {
+  // Déplacer loadStudentData dans un useCallback pour éviter les recréations
+  const loadStudentData = useCallback(() => {
     // Données simulées
     const mockStudent: Student = {
       id: params.id as string,
@@ -196,7 +193,11 @@ export default function StudentNotesDetailsPage() {
 
     setStudent(mockStudent);
     setIsLoading(false);
-  };
+  }, [params.id]); // Ajouter params.id comme dépendance
+
+  useEffect(() => {
+    loadStudentData();
+  }, [loadStudentData]); // Maintenant loadStudentData est stable grâce à useCallback
 
   // Fonctions utilitaires
   const getNoteColor = (note: number) => {
@@ -217,35 +218,37 @@ export default function StudentNotesDetailsPage() {
     return 'bg-red-100';
   };
 
-  const getStatusVariant = (statut: Matiere['statut']) => {
-    const config = {
-      valide: 'default',
-      echec: 'destructive',
-      en_cours: 'secondary'
-    };
-    return config[statut];
-  };
+  // Fonctions corrigées pour les variants Badge
 
-  const getStatusText = (statut: Matiere['statut']) => {
-    const config = {
-      valide: 'Validé',
-      echec: 'Échec',
-      en_cours: 'En cours'
-    };
-    return config[statut];
+const getStatusVariant = (statut: Matiere['statut']): "default" | "secondary" | "destructive" => {
+  const config: Record<Matiere['statut'], "default" | "secondary" | "destructive"> = {
+    valide: 'default',
+    echec: 'destructive',
+    en_cours: 'secondary'
   };
+  return config[statut];
+};
 
-  const getAppreciationVariant = (appreciation: string) => {
-    const config: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
-      'Excellent': 'default',
-      'Très bien': 'default',
-      'Bien': 'secondary',
-      'Assez bien': 'secondary',
-      'Passable': 'outline',
-      'Insuffisant': 'destructive'
-    };
-    return config[appreciation] || 'outline';
+const getStatusText = (statut: Matiere['statut']): string => {
+  const config: Record<Matiere['statut'], string> = {
+    valide: 'Validé',
+    echec: 'Échec',
+    en_cours: 'En cours'
   };
+  return config[statut];
+};
+
+const getAppreciationVariant = (appreciation: string): "default" | "secondary" | "destructive" | "outline" => {
+  const config: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    'Excellent': 'default',
+    'Très bien': 'default',
+    'Bien': 'secondary',
+    'Assez bien': 'secondary',
+    'Passable': 'outline',
+    'Insuffisant': 'destructive'
+  };
+  return config[appreciation] || 'outline';
+};
 
   const calculateMoyenneSemestre = (semestre: string) => {
     if (!student) return 0;
@@ -295,11 +298,7 @@ export default function StudentNotesDetailsPage() {
       </div>
     );
   }
-
-  const currentSemestre = student.filiereDetails.modules.find(m => m.semestre === selectedSemestre);
-  const moyenneSemestre = calculateMoyenneSemestre(selectedSemestre);
-  const creditsSemestre = calculateCreditsSemestre(selectedSemestre);
-
+  
   return (
     <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       <ScrollArea className="h-screen">

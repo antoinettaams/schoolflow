@@ -2,9 +2,9 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { 
-  Search, Filter, ChevronDown, Plus, Download, Eye, 
-  DollarSign, Users, Calendar, CreditCard, CheckCircle, 
-  XCircle, Clock, AlertCircle, BarChart3, TrendingUp 
+  Search, Filter, ChevronDown, Download, Eye, 
+  DollarSign, Users, CreditCard, CheckCircle, 
+  XCircle, Clock, AlertCircle 
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -12,12 +12,8 @@ import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface Student {
   id: string;
@@ -59,6 +55,7 @@ export default function FinancesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatut, setSelectedStatut] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Charger les données
   useEffect(() => {
@@ -236,6 +233,9 @@ export default function FinancesPage() {
     }).format(amount);
   };
 
+  // Types de statut pour les filtres
+  const statutTypes = ["Tous", "paye", "partiel", "en_retard", "non_paye"];
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -248,10 +248,10 @@ export default function FinancesPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
+    <div className="flex flex-col min-h-screen bg-background lg:pl-5 pt-20 lg:pt-6">
       
       {/* Header fixe */}
-      <header className="border-b p-4 sm:p-6 sticky top-0 z-10 shadow-sm flex-shrink-0 bg-background">
+      <header className="border-b p-4 sm:p-6 sticky top-0 z-[100] shadow-sm bg-background">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">
@@ -274,72 +274,15 @@ export default function FinancesPage() {
               />
             </div>
 
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  Filtres
-                </Button>
-              </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>Filtres</SheetTitle>
-                </SheetHeader>
-                <div className="mt-6 space-y-6">
-                  {/* Sélection Vague */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Vague</label>
-                    <Select value={selectedVague} onValueChange={setSelectedVague}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Toutes les vagues" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Toutes les vagues</SelectItem>
-                        {vagues.map(vague => (
-                          <SelectItem key={vague.id} value={vague.id}>
-                            {vague.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Filtre statut paiement */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Statut paiement</label>
-                    <Select value={selectedStatut} onValueChange={setSelectedStatut}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Tous les statuts" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tous les statuts</SelectItem>
-                        <SelectItem value="paye">Payé</SelectItem>
-                        <SelectItem value="partiel">Partiel</SelectItem>
-                        <SelectItem value="en_retard">En retard</SelectItem>
-                        <SelectItem value="non_paye">Non payé</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Statistiques rapides */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">Aperçu</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Étudiants:</span>
-                        <span className="font-medium">{filteredStudents.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Solde dû:</span>
-                        <span className="font-medium text-red-600">{formatMoney(globalStats.totalRestant)}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </SheetContent>
-            </Sheet>
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              Filtres
+              <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </Button>
 
             <Button className="flex items-center gap-2">
               <Download className="h-4 w-4" />
@@ -347,10 +290,79 @@ export default function FinancesPage() {
             </Button>
           </div>
         </div>
+
+        {/* Filtres dépliants */}
+        {showFilters && (
+          <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Filtre par vague */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-foreground">Filtrer par vague :</h4>
+                <div className="flex flex-wrap gap-2">
+                  <Badge
+                    variant={selectedVague === 'all' ? "default" : "outline"}
+                    className="cursor-pointer transition-colors"
+                    onClick={() => setSelectedVague('all')}
+                  >
+                    Toutes les vagues
+                  </Badge>
+                  {vagues.map(vague => (
+                    <Badge
+                      key={vague.id}
+                      variant={selectedVague === vague.id ? "default" : "outline"}
+                      className="cursor-pointer transition-colors"
+                      onClick={() => setSelectedVague(vague.id)}
+                    >
+                      {vague.name}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Filtre par statut de paiement */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-foreground">Statut de paiement :</h4>
+                <div className="flex flex-wrap gap-2">
+                  {statutTypes.map(statut => (
+                    <Badge
+                      key={statut}
+                      variant={selectedStatut === statut ? "default" : "outline"}
+                      className="cursor-pointer transition-colors capitalize"
+                      onClick={() => setSelectedStatut(statut)}
+                    >
+                      {statut === 'en_retard' ? 'En retard' : 
+                       statut === 'non_paye' ? 'Non payé' : 
+                       statut === 'partiel' ? 'Partiel' : 
+                       statut === 'paye' ? 'Payé' : statut}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Statistiques rapides des filtres */}
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Users className="h-4 w-4" />
+                  <span>{filteredStudents.length} étudiant(s)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <DollarSign className="h-4 w-4" />
+                  <span>{formatMoney(globalStats.totalPaye)} perçu(s)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <CreditCard className="h-4 w-4" />
+                  <span className="text-red-600">{formatMoney(globalStats.totalRestant)} dû(s)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Contenu scrollable */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-auto">
         <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
           
           {/* Cartes de statistiques */}
@@ -518,7 +530,7 @@ export default function FinancesPage() {
                           </TableCell>
                           <TableCell>
                             <Button asChild variant="ghost" size="sm">
-                              <Link href={`/dashboard/finances/student/${student.id}`}>
+                              <Link href="/dashboard/admin/finances/student/id">
                                 <Eye className="h-3 w-3" />
                                 Détails
                               </Link>
@@ -599,7 +611,7 @@ export default function FinancesPage() {
             </Card>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

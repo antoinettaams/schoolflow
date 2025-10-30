@@ -17,9 +17,11 @@ import {
   FaCalendarAlt,
   FaFileAlt,
   FaClipboardList,
-  FaUser,
-  FaCog
 } from "react-icons/fa";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const AdminDashboard = () => {
   const { user, isLoaded, isSignedIn } = useUser();
@@ -61,18 +63,22 @@ const AdminDashboard = () => {
   if (userRole !== "Administrateur") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
-          <p className="text-gray-600 mb-4">
-            Vous n'avez pas les permissions d'administrateur.
-          </p>
-          <button
-            onClick={() => router.push("/")}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Retour à l'accueil
-          </button>
-        </div>
+        <Card className="p-8 max-w-md text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl text-red-600">Accès Refusé</CardTitle>
+            <CardDescription className="text-gray-600">
+              Vous n&apos;avez pas les permissions d&apos;administrateur.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => router.push("/")}
+              className="bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Retour à l&apos;accueil
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -87,7 +93,7 @@ const AdminDashboard = () => {
     pendingTasks: 3
   };
 
-  // Cartes d'ajout rapide - Maintenant 6 cartes
+  // Cartes d'ajout rapide
   const quickAddCards = [
     {
       title: "Ajouter un Professeur",
@@ -179,7 +185,7 @@ const AdminDashboard = () => {
   const quickActions = [
     {
       title: "Statistiques Détaillées",
-      description: "Analytiques complètes de l'établissement",
+      description: "Analytiques complètes de l&apos;établissement",
       icon: <FaChartBar className="text-xl text-blue-600" />,
       href: "/dashboard/admin/analytics",
       count: "15 rapports"
@@ -214,7 +220,7 @@ const AdminDashboard = () => {
     },
     {
       title: "Notifications",
-      description: "Envoi d'alertes et communications",
+      description: "Envoi d&apos;alertes et communications",
       icon: <FaBell className="text-xl text-yellow-600" />,
       href: "/dashboard/admin/notifications",
       count: "5 non lues"
@@ -223,252 +229,275 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Barre de défilement principale */}
-      <div className="h-screen overflow-y-auto">
-        <div className="p-6">
-          <div className="max-w-7xl mx-auto">
-            
-            {/* En-tête fixe avec info utilisateur */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-6 sticky top-0 z-10">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">
-                    Tableau de Bord Administrateur
-                  </h1>
-                  <p className="text-gray-600 mt-2">
-                    Bienvenue, {user.firstName} {user.lastName} 👋
-                  </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                      ✅ Administrateur
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      {user.primaryEmailAddress?.emailAddress}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg">
-                  {new Date().toLocaleDateString('fr-FR', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* PREMIÈRE LIGNE - 2 cartes d'ajout */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Ajout Rapide d'Utilisateurs</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {quickAddCards.slice(0, 2).map((card, index) => (
-                  <div 
-                    key={index}
-                    className={`${card.color} border-2 rounded-xl p-6 flex flex-col h-full transition-all hover:shadow-lg hover:border-gray-300`}
-                  >
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="p-3 bg-white rounded-lg shadow-sm">
-                        {card.icon}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 text-lg">{card.title}</h3>
-                        <p className="text-gray-600 text-sm">{card.description}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-auto">
-                      <Link
-                        href={card.href}
-                        className={`${card.buttonColor} text-white font-semibold py-3 px-4 rounded-lg w-full flex items-center justify-center gap-2 transition-colors hover:shadow-md`}
-                      >
-                        <FaPlus />
-                        <span>Ajouter maintenant</span>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* DEUXIÈME LIGNE - 2 cartes d'ajout */}
-            <div className="mb-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {quickAddCards.slice(2, 4).map((card, index) => (
-                  <div 
-                    key={index}
-                    className={`${card.color} border-2 rounded-xl p-6 flex flex-col h-full transition-all hover:shadow-lg hover:border-gray-300`}
-                  >
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="p-3 bg-white rounded-lg shadow-sm">
-                        {card.icon}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 text-lg">{card.title}</h3>
-                        <p className="text-gray-600 text-sm">{card.description}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-auto">
-                      <Link
-                        href={card.href}
-                        className={`${card.buttonColor} text-white font-semibold py-3 px-4 rounded-lg w-full flex items-center justify-center gap-2 transition-colors hover:shadow-md`}
-                      >
-                        <FaPlus />
-                        <span>Ajouter maintenant</span>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* TROISIÈME LIGNE - 2 dernières cartes d'ajout */}
-            <div className="mb-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {quickAddCards.slice(4, 6).map((card, index) => (
-                  <div 
-                    key={index}
-                    className={`${card.color} border-2 rounded-xl p-6 flex flex-col h-full transition-all hover:shadow-lg hover:border-gray-300`}
-                  >
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="p-3 bg-white rounded-lg shadow-sm">
-                        {card.icon}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 text-lg">{card.title}</h3>
-                        <p className="text-gray-600 text-sm">{card.description}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-auto">
-                      <Link
-                        href={card.href}
-                        className={`${card.buttonColor} text-white font-semibold py-3 px-4 rounded-lg w-full flex items-center justify-center gap-2 transition-colors hover:shadow-md`}
-                      >
-                        <FaPlus />
-                        <span>Ajouter maintenant</span>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Contenu central avec défilement */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      {/* Suppression de la transparence avec bg-white sur le conteneur principal */}
+      <div className="bg-white min-h-screen">
+        <ScrollArea className="h-screen">
+          <div className="p-6">
+            <div className="max-w-7xl mx-auto">
               
-              {/* Colonne de gauche - Contenu principal défilable */}
-              <div className="lg:col-span-2 space-y-6">
-                
-                {/* Statistiques */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Aperçu Global</h2>
-                  <div className="grid grid-cols-2 gap-6">
-                    {statCards.map((stat, index) => (
-                      <div 
-                        key={index}
-                        className={`${stat.color} border rounded-xl p-6 transition-all hover:shadow-md`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="text-gray-600 text-sm">{stat.title}</div>
-                          <div className={`text-xs font-semibold ${
-                            stat.trend === 'up' ? 'text-green-600' : 
-                            stat.trend === 'down' ? 'text-red-600' : 'text-gray-600'
-                          }`}>
-                            {stat.change}
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="text-3xl font-bold text-gray-900">{stat.value}</div>
-                          <div className="p-3 bg-white rounded-lg shadow-sm">
-                            {stat.icon}
-                          </div>
-                        </div>
+              {/* En-tête fixe avec fond blanc opaque */}
+              <Card className="p-6 mb-6 sticky top-0 z-10 bg-white/95 backdrop-blur-sm">
+                <CardContent className="p-0">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div>
+                      <h1 className="text-3xl font-bold text-gray-900">
+                        Tableau de Bord Administrateur
+                      </h1>
+                      <p className="text-gray-600 mt-2">
+                        Bienvenue, {user.firstName} {user.lastName} 👋
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          ✅ Administrateur
+                        </Badge>
+                        <span className="text-sm text-gray-500">
+                          {user.primaryEmailAddress?.emailAddress}
+                        </span>
                       </div>
-                    ))}
+                    </div>
+                    <div className="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg">
+                      {new Date().toLocaleDateString('fr-FR', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </div>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                {/* Actions rapides avec défilement vertical */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Actions Rapides</h3>
-                  <div className="max-h-80 overflow-y-auto pr-2">
-                    <div className="space-y-4">
-                      {quickActions.map((action, index) => (
-                        <Link
-                          key={index}
-                          href={action.href}
-                          className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all hover:shadow-sm group"
-                        >
-                          <div className="p-3 bg-gray-100 rounded-lg group-hover:bg-white transition-colors">
-                            {action.icon}
+              {/* PREMIÈRE LIGNE - 2 cartes d'ajout */}
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Ajout Rapide d&apos;Utilisateurs</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {quickAddCards.slice(0, 2).map((card, index) => (
+                    <Card 
+                      key={index}
+                      className={`${card.color} border-2 transition-all hover:shadow-lg hover:border-gray-300 bg-white`}
+                    >
+                      <CardContent className="p-6 flex flex-col h-full">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="p-3 bg-white rounded-lg shadow-sm border">
+                            {card.icon}
                           </div>
                           <div className="flex-1">
-                            <div className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                              {action.title}
-                            </div>
-                            <div className="text-sm text-gray-500">{action.description}</div>
+                            <h3 className="font-semibold text-gray-900 text-lg">{card.title}</h3>
+                            <p className="text-gray-600 text-sm">{card.description}</p>
                           </div>
-                          <div className="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                            {action.count}
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
+                        </div>
+                        
+                        <div className="mt-auto">
+                          <Link href={card.href}>
+                            <Button className={`${card.buttonColor} text-white font-semibold py-3 px-4 w-full flex items-center justify-center gap-2`}>
+                              <FaPlus />
+                              <span>Ajouter maintenant</span>
+                            </Button>
+                          </Link>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-
               </div>
 
-              {/* Colonne de droite - Nouveau contenu remplaçant les sections supprimées */}
-              <div className="space-y-6">
+              {/* DEUXIÈME LIGNE - 2 cartes d'ajout */}
+              <div className="mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {quickAddCards.slice(2, 4).map((card, index) => (
+                    <Card 
+                      key={index}
+                      className={`${card.color} border-2 transition-all hover:shadow-lg hover:border-gray-300 bg-white`}
+                    >
+                      <CardContent className="p-6 flex flex-col h-full">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="p-3 bg-white rounded-lg shadow-sm border">
+                            {card.icon}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 text-lg">{card.title}</h3>
+                            <p className="text-gray-600 text-sm">{card.description}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-auto">
+                          <Link href={card.href}>
+                            <Button className={`${card.buttonColor} text-white font-semibold py-3 px-4 w-full flex items-center justify-center gap-2`}>
+                              <FaPlus />
+                              <span>Ajouter maintenant</span>
+                            </Button>
+                          </Link>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* TROISIÈME LIGNE - 2 dernières cartes d'ajout */}
+              <div className="mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {quickAddCards.slice(4, 6).map((card, index) => (
+                    <Card 
+                      key={index}
+                      className={`${card.color} border-2 transition-all hover:shadow-lg hover:border-gray-300 bg-white`}
+                    >
+                      <CardContent className="p-6 flex flex-col h-full">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="p-3 bg-white rounded-lg shadow-sm border">
+                            {card.icon}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 text-lg">{card.title}</h3>
+                            <p className="text-gray-600 text-sm">{card.description}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-auto">
+                          <Link href={card.href}>
+                            <Button className={`${card.buttonColor} text-white font-semibold py-3 px-4 w-full flex items-center justify-center gap-2`}>
+                              <FaPlus />
+                              <span>Ajouter maintenant</span>
+                            </Button>
+                          </Link>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* Contenu central avec défilement */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 
-                {/* Support rapide */}
-                <div className="bg-blue-50 border border-blue-200 rounded-xl py-8 px-4">
-                  <h3 className="font-semibold text-blue-900 mb-2">Support & Aide</h3>
-                  <p className="text-blue-800 text-sm mb-4">
-                    Besoin d'aide pour gérer votre établissement ?
-                  </p>
-                  <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-                    Contacter le support
-                  </button>
+                {/* Colonne de gauche - Contenu principal défilable */}
+                <div className="lg:col-span-2 space-y-6">
+                  
+                  {/* Statistiques */}
+                  <Card className="bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-2xl">Aperçu Global</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-6">
+                        {statCards.map((stat, index) => (
+                          <Card 
+                            key={index}
+                            className={`${stat.color} border transition-all hover:shadow-md bg-white`}
+                          >
+                            <CardContent className="p-6">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="text-gray-600 text-sm">{stat.title}</div>
+                                <div className={`text-xs font-semibold ${
+                                  stat.trend === 'up' ? 'text-green-600' : 
+                                  stat.trend === 'down' ? 'text-red-600' : 'text-gray-600'
+                                }`}>
+                                  {stat.change}
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <div className="text-3xl font-bold text-gray-900">{stat.value}</div>
+                                <div className="p-3 bg-white rounded-lg shadow-sm border">
+                                  {stat.icon}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Actions rapides avec défilement vertical */}
+                  <Card className="bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-xl">Actions Rapides</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-80 pr-2">
+                        <div className="space-y-4">
+                          {quickActions.map((action, index) => (
+                            <Link
+                              key={index}
+                              href={action.href}
+                              className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all hover:shadow-sm group bg-white"
+                            >
+                              <div className="p-3 bg-gray-100 rounded-lg group-hover:bg-white transition-colors border">
+                                {action.icon}
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                                  {action.title}
+                                </div>
+                                <div className="text-sm text-gray-500">{action.description}</div>
+                              </div>
+                              <Badge variant="secondary" className="text-xs font-semibold bg-gray-100">
+                                {action.count}
+                              </Badge>
+                            </Link>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+
                 </div>
 
-                {/* Activité récente */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Activité Récente</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium">5 nouveaux élèves</span> inscrits aujourd'hui
+                {/* Colonne de droite */}
+                <div className="space-y-6">
+                  
+                  {/* Support rapide */}
+                  <Card className="bg-blue-50 border-blue-200">
+                    <CardContent className="p-6">
+                      <h3 className="font-semibold text-blue-900 mb-2">Support & Aide</h3>
+                      <p className="text-blue-800 text-sm mb-4">
+                        Besoin d&apos;aide pour gérer votre établissement ?
+                      </p>
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                        Contacter le support
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Activité récente */}
+                  <Card className="bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Activité Récente</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium">5 nouveaux élèves</span> inscrits aujourd&apos;hui
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium">3 professeurs</span> ont mis à jour leur profil
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium">12 paiements</span> traités cette semaine
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium">8 bulletins</span> générés aujourd&apos;hui
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium">3 professeurs</span> ont mis à jour leur profil
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium">12 paiements</span> traités cette semaine
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium">8 bulletins</span> générés aujourd'hui
-                      </div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </ScrollArea>
       </div>
     </div>
   );

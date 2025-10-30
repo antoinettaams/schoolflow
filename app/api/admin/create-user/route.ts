@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Vérifier que l'utilisateur est admin via l'API Clerk
+    // Vérifier que l'utilisateur est admin ou secrétaire via l'API Clerk
     const client = await clerkClient();
     const currentUser = await client.users.getUser(userId);
     const userRole = currentUser.publicMetadata.role as string;
@@ -28,22 +28,30 @@ export async function POST(req: NextRequest) {
       userRole.toLowerCase().includes("admin") || 
       userRole === "Administrateur"
     );
+
+    const isSecretaire = userRole && (
+      userRole.toLowerCase().includes("secretaire") || 
+      userRole === "Secrétaire"
+    );
     
     console.log("🔍 DEBUG - Is admin?", isAdmin);
+    console.log("🔍 DEBUG - Is secretaire?", isSecretaire);
     
-    if (!isAdmin) {
+    // Autoriser seulement les admins et secrétaires
+    if (!isAdmin && !isSecretaire) {
       return NextResponse.json(
         { 
-          error: "Accès non autorisé - Rôle admin requis",
+          error: "Accès non autorisé - Rôle admin ou secrétaire requis",
           details: {
             yourRole: userRole || "non défini",
-            required: "admin/Administrateur"
+            required: "admin/Administrateur ou secrétaire"
           }
         },
         { status: 403 }
       );
     }
 
+    // ✅ CORRIGÉ : 'phone' est gardé car utilisé dans le formulaire
     const { 
       email, 
       firstName, 
@@ -52,17 +60,19 @@ export async function POST(req: NextRequest) {
       phone, 
       studentNumber, 
       filiere, 
-      niveau, 
       matiere, 
       enfantName, 
       relation,
       departement,
       specialite,
       domaine,
-      customPassword
+      customPassword,
+      vagueNumber
     } = await req.json();
 
-    console.log("📥 Données reçues:", { email, firstName, lastName, role });
+    console.log("📥 Données reçues:", { 
+      email, firstName, lastName, role, phone, vagueNumber 
+    });
 
     // Validation de base
     if (!email || !firstName || !lastName || !role) {
@@ -88,23 +98,29 @@ export async function POST(req: NextRequest) {
     const username = email.split('@')[0]; // Prend la partie avant le @
     const cleanUsername = username.replace(/[^a-zA-Z0-9_]/g, '_'); // Nettoie le username
 
-    // Données pour l'API Clerk
+    // ✅ CORRIGÉ : Données pour l'API Clerk avec numéro de téléphone
     const userData = {
       email_address: [email],
-      username: cleanUsername, // 🔥 AJOUT DU USERNAME OBLIGATOIRE
+      username: cleanUsername,
       first_name: firstName,
       last_name: lastName,
       password: password,
+      // ✅ AJOUT du numéro de téléphone dans les données utilisateur
+      ...(phone && {
+        phone_numbers: [phone] // Ajoute le numéro si fourni
+      }),
       public_metadata: {
         role: role,
         status: "active",
         createdBy: userId,
         createdAt: new Date().toISOString(),
+        // ✅ AJOUT du phone dans les métadonnées aussi
+        phone: phone || null,
         // Champs spécifiques selon le rôle
         ...(role === "Etudiant" && {
           studentNumber: studentNumber,
           filiere: filiere,
-          niveau: niveau
+          vagueNumber: vagueNumber
         }),
         ...(role === "Enseignant" && {
           matiere: matiere,
@@ -165,12 +181,16 @@ export async function POST(req: NextRequest) {
         firstName: createdUser.first_name,
         lastName: createdUser.last_name,
         role: role,
-        temporaryPassword: customPassword ? "Personnalisé" : password
+        phone: phone || "Non renseigné", // ✅ RETOURNER le numéro de téléphone
+        temporaryPassword: customPassword ? "Personnalisé" : password,
+        vagueNumber: vagueNumber
       },
       credentials: {
         email: email,
+        phone: phone || "Non renseigné", // ✅ AJOUT dans les credentials
         password: customPassword ? "Personnalisé" : password,
-        loginUrl: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/sign-in`
+        loginUrl: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/sign-in`,
+        vagueNumber: vagueNumber
       }
     });
 

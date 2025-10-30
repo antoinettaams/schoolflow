@@ -199,13 +199,13 @@ const ParentDashboard = () => {
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
           <p className="text-gray-600 mb-4">
-            Vous n'avez pas les permissions de parent.
+            Vous n&apos;avez pas les permissions de parent.
           </p>
           <button
             onClick={() => router.push("/")}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
           >
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </button>
         </div>
       </div>
@@ -249,7 +249,7 @@ const ParentDashboard = () => {
             value={nextSchedule.subject} 
             description={`${nextSchedule.time} • ${nextSchedule.location}`} 
             link="/parent/schedules" 
-            linkText="Voir l'EDT complet"
+            linkText="Voir l&apos;EDT complet"
           />
         </div>
 

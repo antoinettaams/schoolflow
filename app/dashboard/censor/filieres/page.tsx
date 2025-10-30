@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
 import { 
   FaPlus, FaSave, FaCalendarAlt, FaChalkboardTeacher, 
   FaClock, FaMapMarkerAlt, FaFilter, FaTrash, FaTimes 
@@ -43,12 +42,39 @@ interface Teacher {
   clerkUserId?: string;
 }
 
+interface Vague {
+  id: string;
+  name: string;
+  // Ajoutez d'autres propriétés si nécessaire
+}
+
+interface Filiere {
+  id: string;
+  name: string;
+  vagues?: string[];
+  modules?: Module[];
+}
+
+interface Module {
+  id: string;
+  name: string;
+  // Ajoutez d'autres propriétés si nécessaire
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  statut?: string;
+  // Ajoutez d'autres propriétés si nécessaire
+}
+
 // Composant Principal
 export default function PlanningAssignationsPage() {
-  const { user } = useUser();
   const [assignations, setAssignations] = useState<Assignment[]>([]);
-  const [vagues, setVagues] = useState<any[]>([]);
-  const [filieres, setFilieres] = useState<any[]>([]);
+  const [vagues, setVagues] = useState<Vague[]>([]);
+  const [filieres, setFilieres] = useState<Filiere[]>([]);
   const [formateurs, setFormateurs] = useState<Teacher[]>([]);
   const [selectedVague, setSelectedVague] = useState<string>('');
   const [selectedFiliere, setSelectedFiliere] = useState<string>('');
@@ -134,10 +160,10 @@ export default function PlanningAssignationsPage() {
 
       // 1. Charger les enseignants du localStorage
       if (savedUsers) {
-        const users = JSON.parse(savedUsers);
+        const users: User[] = JSON.parse(savedUsers);
         console.log('📚 Utilisateurs du localStorage:', users);
         
-        const localTeachers = users.filter((user: any) => {
+        const localTeachers = users.filter((user) => {
           const isTeacher = user.role === 'Enseignant' || user.role === 'enseignant';
           const isActive = user.statut !== 'inactif';
           console.log(`🔍 ${user.name} - Rôle: ${user.role}, Statut: ${user.statut}, Actif: ${isActive}`);
@@ -294,7 +320,7 @@ export default function PlanningAssignationsPage() {
   };
 
   const ajouterAssignation = () => {
-    console.log('🔄 Tentative d\'ajout d\'assignation:');
+    console.log('🔄 Tentative d&apos;ajout d&apos;assignation:');
     console.log('Vague:', selectedVague);
     console.log('Filière:', selectedFiliere);
     console.log('Module:', selectedModule);
@@ -454,38 +480,38 @@ export default function PlanningAssignationsPage() {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h2 className="text-lg font-semibold mb-4">Assignations existantes</h2>
           {assignations.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">Aucune assignation pour l'instant.</p>
+            <p className="text-gray-500 text-center py-8">Aucune assignation pour l&apos;instant.</p>
           ) : (
             <div className="space-y-4">
-              {assignations.map(a => {
-                const vague = vagues.find(v => v.id === a.vagueId);
-                const filiere = filieres.find(f => f.id === a.filiereId);
-                const module = filiere?.modules.find((m: any) => m.id === a.moduleId);
-                const teacher = formateurs.find(f => f.id === a.teacherId);
+              {assignations.map(assignment => {
+                const vague = vagues.find(v => v.id === assignment.vagueId);
+                const filiere = filieres.find(f => f.id === assignment.filiereId);
+                const moduleItem = filiere?.modules?.find(m => m.id === assignment.moduleId);
+                const teacher = formateurs.find(f => f.id === assignment.teacherId);
                 
                 console.log('📊 Affichage assignation:', {
-                  assignment: a,
+                  assignment,
                   vague,
                   filiere,
-                  module,
+                  moduleItem,
                   teacher
                 });
 
                 return (
-                  <div key={a.id} className="border p-4 rounded-lg">
+                  <div key={assignment.id} className="border p-4 rounded-lg">
                     <div className="flex justify-between mb-3">
                       <div>
-                        <p className="font-semibold text-lg">{module?.name || 'Module inconnu'}</p>
+                        <p className="font-semibold text-lg">{moduleItem?.name || 'Module inconnu'}</p>
                         <p className="text-sm text-gray-500">
                           {filiere?.name || 'Filière inconnue'} - {vague?.name || 'Vague inconnue'}
                         </p>
                         <p className="text-sm text-gray-700 mt-1">
                           <FaChalkboardTeacher className="inline mr-1" />
-                          {teacher ? getTeacherDisplayName(teacher) : `Formateur ID: ${a.teacherId}`}
+                          {teacher ? getTeacherDisplayName(teacher) : `Formateur ID: ${assignment.teacherId}`}
                         </p>
                       </div>
                       <button 
-                        onClick={() => supprimerAssignation(a.id)} 
+                        onClick={() => supprimerAssignation(assignment.id)} 
                         className="text-red-500 hover:text-red-700 self-start"
                       >
                         <FaTrash />
@@ -495,7 +521,7 @@ export default function PlanningAssignationsPage() {
                     <div className="border-t pt-3">
                       <h4 className="font-medium text-gray-900 mb-2">Créneaux horaires :</h4>
                       <div className="space-y-1">
-                        {a.schedule.slots.map((slot) => (
+                        {assignment.schedule.slots.map((slot) => (
                           <div key={slot.id} className="flex items-center gap-3 text-sm bg-gray-50 p-2 rounded">
                             <span className="font-medium min-w-[60px]">{getDayLabel(slot.day)}</span>
                             <span>{slot.startTime} - {slot.endTime}</span>
@@ -508,7 +534,7 @@ export default function PlanningAssignationsPage() {
                         ))}
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
-                        Période: {a.schedule.period.startDate} à {a.schedule.period.endDate}
+                        Période: {assignment.schedule.period.startDate} à {assignment.schedule.period.endDate}
                       </p>
                     </div>
                   </div>
@@ -519,7 +545,7 @@ export default function PlanningAssignationsPage() {
         </div>
       </div>
 
-      {/* MODAL D'ASSIGNATION */}
+      {/* MODAL D&apos;ASSIGNATION */}
       {showAssignmentForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl border w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
@@ -548,13 +574,13 @@ export default function PlanningAssignationsPage() {
                     className="w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Choisissez un module</option>
-                    {modulesDisponibles.map(module => (
+                    {modulesDisponibles.map(moduleItem => (
                       <option 
-                        key={module.id} 
-                        value={module.id}
-                        disabled={moduleDejaAssigne(module.id)}
+                        key={moduleItem.id} 
+                        value={moduleItem.id}
+                        disabled={moduleDejaAssigne(moduleItem.id)}
                       >
-                        {module.name} {moduleDejaAssigne(module.id) && '(Déjà assigné)'}
+                        {moduleItem.name} {moduleDejaAssigne(moduleItem.id) && '(Déjà assigné)'}
                       </option>
                     ))}
                   </select>
@@ -576,7 +602,7 @@ export default function PlanningAssignationsPage() {
                   </select>
                   {formateursDisponibles.length === 0 && (
                     <p className="text-xs text-red-600 mt-1">
-                      ⚠️ Aucun formateur disponible. Créez d'abord des comptes formateurs.
+                      ⚠️ Aucun formateur disponible. Créez d&apos;abord des comptes formateurs.
                     </p>
                   )}
                 </div>
@@ -623,7 +649,7 @@ export default function PlanningAssignationsPage() {
                   <FaClock /> Créneaux horaires
                 </h3>
 
-                {/* Formulaire d'ajout de créneau */}
+                {/* Formulaire d&apos;ajout de créneau */}
                 <div className="bg-blue-50 p-3 rounded-lg mb-3">
                   <h4 className="font-medium text-gray-900 mb-2 text-sm">Ajouter un créneau</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">

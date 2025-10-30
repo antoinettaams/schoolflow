@@ -129,12 +129,12 @@ const AdminParentsPage = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
-          <p className="text-gray-600 mb-4">Vous n'avez pas les permissions d'administrateur.</p>
+          <p className="text-gray-600 mb-4">Vous n&apos;avez pas les permissions d&apos;administrateur.</p>
           <button
             onClick={() => router.push("/")}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
           >
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </button>
         </div>
       </div>
@@ -149,7 +149,7 @@ const AdminParentsPage = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Gestion des Parents</h1>
             <p className="text-gray-600 mt-2">
-              Vue d'ensemble complète de tous les parents.
+              Vue d&apos;ensemble complète de tous les parents.
             </p>
           </div>
           <Link href="/auth/signup">

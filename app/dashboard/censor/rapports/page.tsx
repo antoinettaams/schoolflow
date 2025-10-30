@@ -3,20 +3,24 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Download, FileText, BarChart3, Users, BookOpen, UserCheck, TrendingUp, TrendingDown, Minus, Eye, Calendar, School, UserCog, Filter, MessageSquare, AlertTriangle, CheckCircle, Trash2, Plus, Clock, Edit } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Download, FileText, BookOpen, School, UserCog, Filter, MessageSquare, Trash2, Plus, Clock, Edit, Search } from 'lucide-react';
 
 export default function RapportsPersonnelsPage() {
   const [selectedFiliere, setSelectedFiliere] = useState('developpement-web');
   const [selectedVague, setSelectedVague] = useState('all');
+  const [selectedFormateur, setSelectedFormateur] = useState('all');
   const [commentaire, setCommentaire] = useState('');
   const [editingRapport, setEditingRapport] = useState<number | null>(null);
+  const [isNewRapportOpen, setIsNewRapportOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Données organisées par filière
   const filieresData = {
@@ -29,7 +33,7 @@ export default function RapportsPersonnelsPage() {
           module: 'React.js Avancé',
           formateur: 'M. Diallo',
           vague: 'WAVE-2024-01',
-          date: '2024-01-15',
+          date: new Date().toISOString().split('T')[0], // Aujourd'hui
           chapitre: 'Hooks Avancés',
           objectif: 'Maîtriser useReducer et useContext',
           dureePlanifiee: '2h',
@@ -46,7 +50,7 @@ export default function RapportsPersonnelsPage() {
           module: 'Node.js & Express',
           formateur: 'M. Sanogo',
           vague: 'WAVE-2024-01',
-          date: '2024-01-16',
+          date: new Date(Date.now() - 86400000).toISOString().split('T')[0], // Hier
           chapitre: 'Création API REST',
           objectif: 'Implémenter un CRUD complet',
           dureePlanifiee: '3h',
@@ -69,7 +73,7 @@ export default function RapportsPersonnelsPage() {
           module: 'Machine Learning',
           formateur: 'Mme. Traoré',
           vague: 'WAVE-2024-01',
-          date: '2024-01-17',
+          date: new Date(Date.now() - 172800000).toISOString().split('T')[0], // Avant-hier
           chapitre: 'Algorithmes de Classification',
           objectif: 'Implémenter Random Forest',
           dureePlanifiee: '3h',
@@ -92,7 +96,7 @@ export default function RapportsPersonnelsPage() {
           module: 'Sécurité Réseaux',
           formateur: 'M. Ndiaye',
           vague: 'WAVE-2024-02',
-          date: '2024-01-18',
+          date: new Date(Date.now() - 259200000).toISOString().split('T')[0], // Il y a 3 jours
           chapitre: 'Tests de Penetration',
           objectif: 'Utilisation de Nmap et Wireshark',
           dureePlanifiee: '3h',
@@ -103,6 +107,52 @@ export default function RapportsPersonnelsPage() {
           evaluation: 3.5,
           commentaireProf: 'Problèmes techniques avec le lab virtuel',
           commentaireCenseur: 'Expertise technique mais pédagogie à améliorer'
+        }
+      ]
+    },
+    'design-graphique': {
+      nom: 'Design Graphique',
+      formateurs: ['Mme. Koné', 'M. Coulibaly'],
+      rapports: [
+        {
+          id: 5,
+          module: 'UI/UX Design',
+          formateur: 'Mme. Koné',
+          vague: 'WAVE-2024-01',
+          date: new Date(Date.now() - 345600000).toISOString().split('T')[0], // Il y a 4 jours
+          chapitre: 'Design System',
+          objectif: 'Créer un système de design cohérent',
+          dureePlanifiee: '2h30',
+          dureeReelle: '2h45',
+          progression: 'Terminé',
+          difficulte: 'Intégration des composants',
+          correctionTemps: '+15min',
+          evaluation: 4.6,
+          commentaireProf: 'Créativité remarquable des étudiants',
+          commentaireCenseur: 'Approche moderne et professionnelle'
+        }
+      ]
+    },
+    'marketing-digital': {
+      nom: 'Marketing Digital',
+      formateurs: ['M. Keita'],
+      rapports: [
+        {
+          id: 6,
+          module: 'SEO Avancé',
+          formateur: 'M. Keita',
+          vague: 'WAVE-2024-02',
+          date: new Date(Date.now() - 432000000).toISOString().split('T')[0], // Il y a 5 jours
+          chapitre: 'Optimisation On-Page',
+          objectif: 'Maîtriser les techniques de référencement',
+          dureePlanifiee: '2h',
+          dureeReelle: '2h',
+          progression: 'Terminé',
+          difficulte: 'Aucune',
+          correctionTemps: '0',
+          evaluation: 4.3,
+          commentaireProf: 'Bonne participation, cas pratiques pertinents',
+          commentaireCenseur: 'Contenu actualisé et pertinent'
         }
       ]
     }
@@ -125,31 +175,36 @@ export default function RapportsPersonnelsPage() {
       { module: 'Sécurité', progression: 70, evaluation: 3.5, respectDelais: 75 },
       { module: 'Réseaux', progression: 80, evaluation: 4.0, respectDelais: 82 },
       { module: 'Cyber Defense', progression: 65, evaluation: 3.2, respectDelais: 70 }
+    ],
+    'design-graphique': [
+      { module: 'UI/UX Design', progression: 88, evaluation: 4.6, respectDelais: 90 },
+      { module: 'Graphisme', progression: 85, evaluation: 4.4, respectDelais: 88 },
+      { module: 'Motion Design', progression: 80, evaluation: 4.2, respectDelais: 85 }
+    ],
+    'marketing-digital': [
+      { module: 'SEO', progression: 82, evaluation: 4.3, respectDelais: 85 },
+      { module: 'Social Media', progression: 78, evaluation: 4.1, respectDelais: 80 },
+      { module: 'Content Marketing', progression: 85, evaluation: 4.5, respectDelais: 88 }
     ]
   };
 
-  // Fonctions utilitaires
-  const getEvaluationColor = (score: number) => {
-    if (score >= 4.5) return 'text-green-600';
-    if (score >= 4.0) return 'text-blue-600';
-    if (score >= 3.5) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getProgressionColor = (progression: string) => {
-    switch (progression) {
-      case 'Terminé': return 'green';
-      case 'Partiel': return 'orange';
-      case 'Non terminé': return 'red';
-      default: return 'gray';
-    }
-  };
-
-  const getCorrectionTempsColor = (correction: string) => {
-    if (correction.startsWith('+')) return 'text-red-600';
-    if (correction.startsWith('-')) return 'text-green-600';
-    return 'text-gray-600';
-  };
+  // Nouveau rapport state
+  const [newRapport, setNewRapport] = useState({
+    filiere: '',
+    module: '',
+    formateur: '',
+    vague: '',
+    date: new Date().toISOString().split('T')[0],
+    chapitre: '',
+    objectif: '',
+    dureePlanifiee: '',
+    dureeReelle: '',
+    progression: 'Terminé',
+    difficulte: '',
+    evaluation: 4.0,
+    commentaireProf: '',
+    commentaireCenseur: ''
+  });
 
   const handleDeleteRapport = (rapportId: number) => {
     console.log(`Deleting report ${rapportId}`);
@@ -165,8 +220,67 @@ export default function RapportsPersonnelsPage() {
     // Sauvegarde des modifications
   };
 
+  const handleCreateRapport = () => {
+    console.log('Creating new report:', newRapport);
+    // Implémentation de la création
+    setIsNewRapportOpen(false);
+    // Reset form
+    setNewRapport({
+      filiere: '',
+      module: '',
+      formateur: '',
+      vague: '',
+      date: new Date().toISOString().split('T')[0],
+      chapitre: '',
+      objectif: '',
+      dureePlanifiee: '',
+      dureeReelle: '',
+      progression: 'Terminé',
+      difficulte: '',
+      evaluation: 4.0,
+      commentaireProf: '',
+      commentaireCenseur: ''
+    });
+  };
+
+  const getCorrectionTempsColor = (correction: string) => {
+    if (correction.startsWith('+')) return 'text-red-600';
+    if (correction.startsWith('-')) return 'text-green-600';
+    return 'text-gray-600';
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   const selectedFiliereData = filieresData[selectedFiliere as keyof typeof filieresData];
   const selectedStatsData = statsFiliereData[selectedFiliere as keyof typeof statsFiliereData];
+
+  // Tous les formateurs disponibles
+  const allFormateurs = Array.from(
+    new Set(
+      Object.values(filieresData).flatMap(filiere => filiere.formateurs)
+    )
+  );
+
+  // Filtrer les rapports par recherche et filtres
+  const filteredRapports = selectedFiliereData.rapports.filter(rapport => {
+    const matchesSearch = 
+      rapport.module.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      rapport.formateur.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      rapport.chapitre.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesVague = selectedVague === 'all' || rapport.vague === selectedVague;
+    const matchesFormateur = selectedFormateur === 'all' || rapport.formateur === selectedFormateur;
+    
+    return matchesSearch && matchesVague && matchesFormateur;
+  });
 
   return (
     <div className="h-screen flex flex-col">
@@ -176,14 +290,14 @@ export default function RapportsPersonnelsPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex-1 space-y-2">
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900">
-                Rapports Personnels par Filière
+                Rapports
               </h1>
               <p className="text-sm md:text-base text-gray-600">
                 Suivi détaillé des cours et évaluation des formateurs
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Select value={selectedFiliere} onValueChange={setSelectedFiliere}>
                   <SelectTrigger className="w-full sm:w-[200px] bg-white">
                     <School className="h-4 w-4 mr-2" />
@@ -193,6 +307,8 @@ export default function RapportsPersonnelsPage() {
                     <SelectItem value="developpement-web">Développement Web</SelectItem>
                     <SelectItem value="data-science">Data Science</SelectItem>
                     <SelectItem value="reseau-securite">Réseaux & Sécurité</SelectItem>
+                    <SelectItem value="design-graphique">Design Graphique</SelectItem>
+                    <SelectItem value="marketing-digital">Marketing Digital</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -207,12 +323,234 @@ export default function RapportsPersonnelsPage() {
                     <SelectItem value="WAVE-2024-02">WAVE 2024-02</SelectItem>
                   </SelectContent>
                 </Select>
+
+                <Select value={selectedFormateur} onValueChange={setSelectedFormateur}>
+                  <SelectTrigger className="w-full sm:w-[180px] bg-white">
+                    <UserCog className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Formateur" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous formateurs</SelectItem>
+                    {allFormateurs.map((formateur) => (
+                      <SelectItem key={formateur} value={formateur}>
+                        {formateur}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nouveau Rapport
-              </Button>
+              <Dialog open={isNewRapportOpen} onOpenChange={setIsNewRapportOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nouveau Rapport
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
+                  <DialogHeader>
+                    <DialogTitle>Créer un Nouveau Rapport</DialogTitle>
+                    <DialogDescription>
+                      Remplissez les informations du nouveau rapport de cours
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="filiere">Filière *</Label>
+                      <Select 
+                        value={newRapport.filiere} 
+                        onValueChange={(value) => setNewRapport(prev => ({ ...prev, filiere: value }))}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="Sélectionner une filière" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="developpement-web">Développement Web</SelectItem>
+                          <SelectItem value="data-science">Data Science</SelectItem>
+                          <SelectItem value="reseau-securite">Réseaux & Sécurité</SelectItem>
+                          <SelectItem value="design-graphique">Design Graphique</SelectItem>
+                          <SelectItem value="marketing-digital">Marketing Digital</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="module">Module *</Label>
+                      <Input
+                        id="module"
+                        placeholder="Nom du module"
+                        value={newRapport.module}
+                        onChange={(e) => setNewRapport(prev => ({ ...prev, module: e.target.value }))}
+                        className="bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="formateur">Formateur *</Label>
+                      <Select 
+                        value={newRapport.formateur} 
+                        onValueChange={(value) => setNewRapport(prev => ({ ...prev, formateur: value }))}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="Sélectionner un formateur" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allFormateurs.map((formateur) => (
+                            <SelectItem key={formateur} value={formateur}>
+                              {formateur}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="vague">Vague *</Label>
+                      <Select 
+                        value={newRapport.vague} 
+                        onValueChange={(value) => setNewRapport(prev => ({ ...prev, vague: value }))}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="Sélectionner une vague" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="WAVE-2024-01">WAVE 2024-01</SelectItem>
+                          <SelectItem value="WAVE-2024-02">WAVE 2024-02</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="date">Date du cours *</Label>
+                      <Input
+                        id="date"
+                        type="date"
+                        value={newRapport.date}
+                        onChange={(e) => setNewRapport(prev => ({ ...prev, date: e.target.value }))}
+                        className="bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="chapitre">Chapitre traité *</Label>
+                      <Input
+                        id="chapitre"
+                        placeholder="Chapitre du cours"
+                        value={newRapport.chapitre}
+                        onChange={(e) => setNewRapport(prev => ({ ...prev, chapitre: e.target.value }))}
+                        className="bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="objectif">Objectif pédagogique *</Label>
+                      <Textarea
+                        id="objectif"
+                        placeholder="Objectif principal du cours"
+                        value={newRapport.objectif}
+                        onChange={(e) => setNewRapport(prev => ({ ...prev, objectif: e.target.value }))}
+                        className="bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="dureePlanifiee">Durée planifiée *</Label>
+                      <Input
+                        id="dureePlanifiee"
+                        placeholder="Ex: 2h"
+                        value={newRapport.dureePlanifiee}
+                        onChange={(e) => setNewRapport(prev => ({ ...prev, dureePlanifiee: e.target.value }))}
+                        className="bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="dureeReelle">Durée réelle *</Label>
+                      <Input
+                        id="dureeReelle"
+                        placeholder="Ex: 2h15"
+                        value={newRapport.dureeReelle}
+                        onChange={(e) => setNewRapport(prev => ({ ...prev, dureeReelle: e.target.value }))}
+                        className="bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="progression">Progression</Label>
+                      <Select 
+                        value={newRapport.progression} 
+                        onValueChange={(value) => setNewRapport(prev => ({ ...prev, progression: value }))}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Terminé">Terminé</SelectItem>
+                          <SelectItem value="Partiel">Partiel</SelectItem>
+                          <SelectItem value="Non terminé">Non terminé</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="evaluation">Évaluation (1-5)</Label>
+                      <Input
+                        id="evaluation"
+                        type="number"
+                        min="1"
+                        max="5"
+                        step="0.1"
+                        value={newRapport.evaluation}
+                        onChange={(e) => setNewRapport(prev => ({ ...prev, evaluation: parseFloat(e.target.value) }))}
+                        className="bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="difficulte">Difficultés rencontrées</Label>
+                      <Textarea
+                        id="difficulte"
+                        placeholder="Problèmes techniques ou pédagogiques rencontrés"
+                        value={newRapport.difficulte}
+                        onChange={(e) => setNewRapport(prev => ({ ...prev, difficulte: e.target.value }))}
+                        className="bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="commentaireProf">Commentaire du formateur</Label>
+                      <Textarea
+                        id="commentaireProf"
+                        placeholder="Observations du formateur sur la séance"
+                        value={newRapport.commentaireProf}
+                        onChange={(e) => setNewRapport(prev => ({ ...prev, commentaireProf: e.target.value }))}
+                        className="bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="commentaireCenseur">Commentaire du censeur</Label>
+                      <Textarea
+                        id="commentaireCenseur"
+                        placeholder="Vos observations et recommandations"
+                        value={newRapport.commentaireCenseur}
+                        onChange={(e) => setNewRapport(prev => ({ ...prev, commentaireCenseur: e.target.value }))}
+                        className="bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsNewRapportOpen(false)}>
+                      Annuler
+                    </Button>
+                    <Button onClick={handleCreateRapport}>
+                      Créer le rapport
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
@@ -303,12 +641,45 @@ export default function RapportsPersonnelsPage() {
             </Card>
           </div>
 
+          {/* Barre de recherche et statistiques des filtres */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="bg-white border-gray-200 lg:col-span-2">
+              <CardContent className="pt-6">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Rechercher un rapport par module, formateur ou chapitre..."
+                    className="pl-10 bg-white"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border-gray-200">
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">{filteredRapports.length}</div>
+                  <div className="text-sm text-gray-600">Rapport(s) trouvé(s)</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {selectedVague !== 'all' && `Vague: ${selectedVague}`}
+                    {selectedFormateur !== 'all' && ` • Formateur: ${selectedFormateur}`}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Rapports détaillés par cours */}
           <Card className="bg-white border-gray-200">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
                 Rapports de Cours - {selectedFiliereData.nom}
+                <Badge variant="secondary" className="ml-2">
+                  {filteredRapports.length} rapport(s)
+                </Badge>
               </CardTitle>
               <CardDescription>
                 Détail des séances avec suivi temps réel des formateurs
@@ -316,14 +687,14 @@ export default function RapportsPersonnelsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {selectedFiliereData.rapports.map((rapport) => (
-                  <div key={rapport.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+                {filteredRapports.map((rapport) => (
+                  <div key={rapport.id} className="border border-gray-200 rounded-lg p-4 bg-white hover:border-gray-300 transition-colors">
                     {/* En-tête du rapport */}
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">{rapport.module}</h3>
                         <p className="text-sm text-gray-600">
-                          {rapport.formateur} • {rapport.vague} • {rapport.date}
+                          {rapport.formateur} • {selectedFiliereData.nom} • {rapport.vague} • {formatDate(rapport.date)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -428,14 +799,14 @@ export default function RapportsPersonnelsPage() {
                               min="1" 
                               max="5" 
                               defaultValue={rapport.evaluation}
-                              className="mt-1"
+                              className="mt-1 bg-white"
                             />
                           </div>
                           <div>
                             <label className="text-sm font-medium">Commentaire Censeur</label>
                             <Textarea 
                               defaultValue={rapport.commentaireCenseur}
-                              className="mt-1"
+                              className="mt-1 bg-white"
                             />
                           </div>
                           <div className="flex gap-2">
@@ -472,7 +843,7 @@ export default function RapportsPersonnelsPage() {
                   placeholder="Ajouter vos observations générales sur la filière, les points forts, axes d'amélioration..."
                   value={commentaire}
                   onChange={(e) => setCommentaire(e.target.value)}
-                  className="min-h-[100px]"
+                  className="min-h-[100px] bg-white"
                 />
                 <div className="flex justify-end">
                   <Button disabled={!commentaire.trim()}>

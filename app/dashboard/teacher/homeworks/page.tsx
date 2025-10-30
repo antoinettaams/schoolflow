@@ -1,484 +1,495 @@
-'use client';
+// app/dashboard/emploi-du-temps-global/page.tsx
+"use client"
+import { useState, useEffect, useCallback } from 'react'
+import { useUser } from '@clerk/nextjs'
+import { Search, Filter, Clock, MapPin, User, Calendar} from 'lucide-react'
 
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  FaSearch, 
-  FaFilter, 
-  FaChalkboardTeacher,
-  FaPlus,
-  FaBook,
-  FaDownload,
-  FaUniversity,
-  FaTrash,
-  FaCheck,
-  FaArrowUp,
-  FaArrowDown
-} from 'react-icons/fa';
-import { Exercise, ClassInfo } from '@/types/exercise';
+// Import des composants shadcn
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge" 
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
-const TeacherExercises = () => {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const createFormRef = useRef<HTMLDivElement>(null);
+// Interfaces
+interface ScheduleSlot {
+  id: string;
+  day: string;
+  startTime: string;
+  endTime: string;
+  classroom: string;
+}
 
-  const [currentTeacher] = useState({
-    id: 'teacher1',
-    name: 'Prof. Martin',
-    subject: 'Mathématiques'
-  });
+interface Schedule {
+  id: string;
+  vagueId: string;
+  filiereId: string;
+  moduleId: string;
+  teacherId: string;
+  schedule: {
+    slots: ScheduleSlot[];
+    period: {
+      startDate: string;
+      endDate: string;
+    };
+  };
+}
 
-  const [selectedClass, setSelectedClass] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
+interface Vague {
+  id: string;
+  name: string;
+}
 
-  const [classes, setClasses] = useState<ClassInfo[]>([]);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [collapsedExercises, setCollapsedExercises] = useState<{ [id: number]: boolean }>({});
-  const [newExercise, setNewExercise] = useState({
-    title: '',
-    description: '',
-    dueDate: '',
-    class: ''
-  });
+interface FiliereModule {
+  id: string;
+  name: string;
+}
 
-  const teacherClasses: ClassInfo[] = [
-    { id: '1', name: 'Classe A', level: '6ème', subject: 'Mathématiques', studentCount: 25 },
-    { id: '2', name: 'Classe B', level: '5ème', subject: 'Mathématiques', studentCount: 28 },
-    { id: '3', name: 'Classe C', level: '4ème', subject: 'Mathématiques', studentCount: 30 }
-  ];
+interface Filiere {
+  id: string;
+  name: string;
+  modules?: FiliereModule[];
+}
 
-  const initialExercises: Exercise[] = [
-    {
-      id: 1,
-      title: 'Exercices de géométrie - Angles et triangles',
-      subject: 'Mathématiques',
-      class: '1',
-      dueDate: '2024-10-05',
-      assignedDate: '2024-09-28',
-      description: 'Série d\'exercices sur les propriétés des angles dans les triangles.',
-      status: 'assigned',
-      studentCount: 25,
-      submittedCount: 20
-    },
-    {
-      id: 2,
-      title: 'Projet - Théorème de Pythagore',
-      subject: 'Mathématiques',
-      class: '2',
-      dueDate: '2024-10-15',
-      assignedDate: '2024-10-01',
-      description: 'Projet de recherche et d\'application du théorème de Pythagore dans des situations concrètes.',
-      status: 'assigned',
-      studentCount: 28,
-      submittedCount: 15
-    },
-    {
-      id: 3,
-      title: 'Contrôle - Fractions et pourcentages',
-      subject: 'Mathématiques',
-      class: '1',
-      dueDate: '2024-09-25',
-      assignedDate: '2024-09-20',
-      description: 'Contrôle sur les opérations avec les fractions et les calculs de pourcentages.',
-      status: 'closed',
-      studentCount: 25,
-      submittedCount: 24
-    },
-    {
-      id: 4,
-      title: 'Devoir maison - Équations du premier degré',
-      subject: 'Mathématiques',
-      class: '3',
-      dueDate: '2024-10-20',
-      assignedDate: '2024-10-05',
-      description: 'Série d\'exercices sur la résolution d\'équations du premier degré à une inconnue.',
-      status: 'assigned',
-      studentCount: 30,
-      submittedCount: 10
+interface SchoolUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  teacherNumber?: string;
+  statut?: string;
+  prenom?: string;
+  nom?: string;
+  specialite?: string;
+}
+
+// Composant Principal
+export default function EmploiDuTempsGlobalPage() {
+  const { user, isLoaded } = useUser()
+  const [isLoading, setIsLoading] = useState(true)
+  const [schedules, setSchedules] = useState<Schedule[]>([])
+  const [vagues, setVagues] = useState<Vague[]>([])
+  const [filieres, setFilieres] = useState<Filiere[]>([])
+  const [formateurs, setFormateurs] = useState<SchoolUser[]>([])
+  const [filteredSchedules, setFilteredSchedules] = useState<Schedule[]>([])
+  const [selectedVague, setSelectedVague] = useState<string>('all')
+  const [selectedFiliere, setSelectedFiliere] = useState<string>('all')
+  const [searchTerm, setSearchTerm] = useState<string>('')
+
+  const joursSemaine = [
+    { id: 'monday', label: 'Lundi' },
+    { id: 'tuesday', label: 'Mardi' },
+    { id: 'wednesday', label: 'Mercredi' },
+    { id: 'thursday', label: 'Jeudi' },
+    { id: 'friday', label: 'Vendredi' },
+    { id: 'saturday', label: 'Samedi' }
+  ]
+
+  // Chargement des données
+  const loadData = useCallback(() => {
+    try {
+      // Charger les emplois du temps
+      const savedSchedules = localStorage.getItem('schoolflow_assignations')
+      if (savedSchedules) {
+        const schedulesData = JSON.parse(savedSchedules) as Schedule[]
+        setSchedules(schedulesData)
+      }
+
+      // Charger les vagues
+      const savedVagues = localStorage.getItem('schoolflow_vagues')
+      if (savedVagues) {
+        const vaguesData = JSON.parse(savedVagues) as Vague[]
+        setVagues(vaguesData)
+      }
+
+      // Charger les filières - CORRECTION ICI
+      const savedFilieres = localStorage.getItem('schoolflow_filieres')
+      if (savedFilieres) {
+        const filieresData = JSON.parse(savedFilieres) as Filiere[]
+        setFilieres(filieresData) // Correction: filieresData au lieu de fileresData
+      }
+
+      // Charger les formateurs
+      const savedUsers = localStorage.getItem('schoolflow_users')
+      if (savedUsers) {
+        const users = JSON.parse(savedUsers) as SchoolUser[]
+        const teachers = users.filter((user: SchoolUser) => 
+          user.role === 'Enseignant' && user.statut !== 'inactif'
+        )
+        setFormateurs(teachers)
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error)
     }
-  ];
+  }, [])
 
   useEffect(() => {
-    setClasses(teacherClasses);
-    setExercises(initialExercises);
-    
-    if (teacherClasses.length > 0 && !selectedClass) {
-      setSelectedClass(teacherClasses[0].id);
-      setNewExercise(prev => ({ ...prev, class: teacherClasses[0].id }));
+    if (isLoaded) {
+      loadData()
+      setIsLoading(false)
     }
-  }, []);
+  }, [isLoaded, loadData])
 
-  const filteredExercises = exercises
-    .filter(exercise => 
-      (selectedClass ? exercise.class === selectedClass : true) &&
-      (selectedStatus ? exercise.status === selectedStatus : true) &&
-      (searchTerm ? 
-        exercise.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        exercise.description.toLowerCase().includes(searchTerm.toLowerCase())
-        : true
-      )
-    );
+  // Filtrage des emplois du temps
+  useEffect(() => {
+    let filtered = schedules
 
-  const createExercise = () => {
-    if (!newExercise.title || !newExercise.dueDate || !newExercise.class) {
-      alert('Veuillez remplir tous les champs obligatoires');
-      return;
+    // Filtre par vague
+    if (selectedVague !== 'all') {
+      filtered = filtered.filter(schedule => schedule.vagueId === selectedVague)
     }
 
-    const selectedClasse = classes.find(c => c.id === newExercise.class);
-    const exerciseToAdd: Exercise = {
-      id: Date.now(),
-      subject: currentTeacher.subject,
-      assignedDate: new Date().toISOString().split('T')[0],
-      status: 'draft',
-      studentCount: selectedClasse?.studentCount || 0,
-      submittedCount: 0,
-      ...newExercise
-    };
-
-    setExercises(prev => [...prev, exerciseToAdd]);
-    setShowCreateForm(false);
-    setNewExercise({
-      title: '',
-      description: '',
-      dueDate: '',
-      class: selectedClass
-    });
-    
-    alert('Exercice créé avec succès !');
-  };
-
-  const assignExercise = (exerciseId: number) => {
-    setExercises(prev => prev.map(exercise => 
-      exercise.id === exerciseId 
-        ? { ...exercise, status: 'assigned' as const }
-        : exercise
-    ));
-    alert('Exercice assigné à la classe !');
-  };
-
-  const deleteExercise = (exerciseId: number) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet exercice ?')) {
-      setExercises(prev => prev.filter(exercise => exercise.id !== exerciseId));
+    // Filtre par filière
+    if (selectedFiliere !== 'all') {
+      filtered = filtered.filter(schedule => schedule.filiereId === selectedFiliere)
     }
-  };
 
-  const handleScroll = (direction: 'up' | 'down') => {
-    if (contentRef.current) {
-      const scrollAmount = 300;
-      contentRef.current.scrollTop += direction === 'down' ? scrollAmount : -scrollAmount;
+    // Filtre par recherche
+    if (searchTerm) {
+      filtered = filtered.filter(schedule => {
+        const filiere = filieres.find(f => f.id === schedule.filiereId)
+        const moduleItem = filiere?.modules?.find((m: FiliereModule) => m.id === schedule.moduleId)
+        const moduleName = moduleItem?.name || ''
+        const teacher = formateurs.find(f => f.id === schedule.teacherId)
+        const teacherName = teacher ? getTeacherDisplayName(teacher) : ''
+        
+        return moduleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               teacherName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               filiere?.name.toLowerCase().includes(searchTerm.toLowerCase())
+      })
     }
-  };
 
-  const handleFormScroll = (direction: 'up' | 'down') => {
-    if (createFormRef.current) {
-      const scrollAmount = 200;
-      createFormRef.current.scrollTop += direction === 'down' ? scrollAmount : -scrollAmount;
-    }
-  };
+    // Tri alphabétique par nom de module
+    filtered.sort((a, b) => {
+      const filiereA = filieres.find(f => f.id === a.filiereId)
+      const moduleA = filiereA?.modules?.find((m: FiliereModule) => m.id === a.moduleId)
+      const filiereB = filieres.find(f => f.id === b.filiereId)
+      const moduleB = filiereB?.modules?.find((m: FiliereModule) => m.id === b.moduleId)
+      
+      const nameA = moduleA?.name || ''
+      const nameB = moduleB?.name || ''
+      
+      return nameA.localeCompare(nameB)
+    })
 
-  const getStatusColor = (status: Exercise['status']) => {
-    switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800';
-      case 'assigned': return 'bg-blue-100 text-blue-800';
-      case 'closed': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+    setFilteredSchedules(filtered)
+  }, [schedules, selectedVague, selectedFiliere, searchTerm, filieres, formateurs])
 
-  const getStatusLabel = (status: Exercise['status']) => {
-    switch (status) {
-      case 'draft': return 'Brouillon';
-      case 'assigned': return 'Assigné';
-      case 'closed': return 'Fermé';
-      default: return status;
+  // Fonctions utilitaires
+  const getTeacherDisplayName = (teacher: SchoolUser) => {
+    if (teacher.prenom && teacher.nom) {
+      return `${teacher.prenom} ${teacher.nom}`
     }
-  };
+    return teacher.name || 'Non assigné'
+  }
+
+  const getDayLabel = (day: string) => {
+    return joursSemaine.find(j => j.id === day)?.label || day
+  }
+
+  const formatTime = (time: string) => {
+    return time.slice(0, 5) // Format HH:MM
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+          <p className="text-muted-foreground">Chargement de l&apos;emploi du temps global...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="max-w-md text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl">Accès non autorisé</CardTitle>
+            <CardDescription>
+              Veuillez vous connecter pour accéder à cette page.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 overflow-y-auto custom-scrollbar lg:pl-5 pt-20 lg:pt-6">
+    <div className="min-h-screen bg-background p-6 overflow-y-auto  lg:pl-5 pt-20 lg:pt-6">
       <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Gestion des Exercices</h1>
-                <p className="text-gray-600">
-                  {currentTeacher.name} - {currentTeacher.subject}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 flex-wrap">
-              <button
-                onClick={() => setShowCreateForm(true)}
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-              >
-                <FaPlus />
-                Nouvel Exercice
-              </button>
-            </div>
+        {/* En-tête */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <Calendar className="h-8 w-8 text-blue-600" />
+            <h1 className="text-3xl font-bold text-foreground">Emploi du Temps Global</h1>
           </div>
+          <p className="text-muted-foreground">
+            Consultation de tous les emplois du temps - Vue Administrative
+          </p>
         </div>
 
-        {showCreateForm && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border-2 border-blue-200">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-gray-900">Créer un nouvel exercice</h3>
-              
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleFormScroll('up')}
-                  className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg transition-colors"
-                  title="Défiler vers le haut du formulaire"
-                >
-                  <FaArrowUp size={14} />
-                </button>
-                <button
-                  onClick={() => handleFormScroll('down')}
-                  className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg transition-colors"
-                  title="Défiler vers le bas du formulaire"
-                >
-                  <FaArrowDown size={14} />
-                </button>
-              </div>
-            </div>
-            
-            <div 
-              ref={createFormRef}
-              className="max-h-[50vh] overflow-y-auto pr-2 scroll-smooth custom-scrollbar"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Titre de l'exercice *
-                  </label>
-                  <input
-                    type="text"
-                    value={newExercise.title}
-                    onChange={(e) => setNewExercise(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ex: Exercices de géométrie..."
-                  />
+        {/* Filtres */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+              <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+                {/* Sélection Vague */}
+                <div className="w-full sm:w-48">
+                  <Select value={selectedVague} onValueChange={setSelectedVague}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Toutes les vagues" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toutes les vagues</SelectItem>
+                      {vagues.map(vague => (
+                        <SelectItem key={vague.id} value={vague.id}>
+                          {vague.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Classe *
-                  </label>
-                  <select
-                    value={newExercise.class}
-                    onChange={(e) => setNewExercise(prev => ({ ...prev, class: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+
+                {/* Sélection Filière */}
+                <div className="w-full sm:w-48">
+                  <Select 
+                    value={selectedFiliere} 
+                    onValueChange={setSelectedFiliere}
+                    disabled={!selectedVague || selectedVague === 'all'}
                   >
-                    <option value="">Sélectionner une classe</option>
-                    {classes.map(classe => (
-                      <option key={classe.id} value={classe.id}>
-                        {classe.name} - {classe.level}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Toutes les filières" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toutes les filières</SelectItem>
+                      {filieres.map(filiere => (
+                        <SelectItem key={filiere.id} value={filiere.id}>
+                          {filiere.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date de rendu *
-                  </label>
-                  <input
-                    type="date"
-                    value={newExercise.dueDate}
-                    onChange={(e) => setNewExercise(prev => ({ ...prev, dueDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={newExercise.description}
-                    onChange={(e) => setNewExercise(prev => ({ ...prev, description: e.target.value }))}
-                    rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Description détaillée de l'exercice..."
+
+                {/* Recherche */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    type="text"
+                    placeholder="Rechercher un module, formateur..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
                   />
                 </div>
               </div>
+
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    Filtres avancés
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetTitle>Filtres avancés</SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-6">
+                    <h4 className="text-sm font-semibold text-foreground mb-3">Statistiques globales :</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <div className="text-2xl font-bold text-blue-600">{filteredSchedules.length}</div>
+                          <div className="text-muted-foreground">Cours programmés</div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <div className="text-2xl font-bold text-green-600">{vagues.length}</div>
+                          <div className="text-muted-foreground">Vagues actives</div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <div className="text-2xl font-bold text-purple-600">{filieres.length}</div>
+                          <div className="text-muted-foreground">Filières</div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <div className="text-2xl font-bold text-orange-600">{formateurs.length}</div>
+                          <div className="text-muted-foreground">Formateurs</div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
-            
-            <div className="flex gap-3 pt-4 border-t border-gray-200">
-              <button
-                onClick={createExercise}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-              >
-                Créer l'exercice
-              </button>
-              <button
-                onClick={() => setShowCreateForm(false)}
-                className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-              >
-                Annuler
-              </button>
-            </div>
+          </CardContent>
+        </Card>
+
+        {/* Liste des emplois du temps */}
+        {filteredSchedules.length === 0 ? (
+          <Card className="text-center">
+            <CardContent className="p-12">
+              <div className="text-muted-foreground mb-4">
+                <Clock className="h-12 w-12 mx-auto" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Aucun emploi du temps trouvé
+              </h3>
+              <p className="text-muted-foreground">
+                Aucun emploi du temps ne correspond à vos critères de recherche.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {filteredSchedules.map((schedule) => {
+              const vague = vagues.find(v => v.id === schedule.vagueId)
+              const filiere = filieres.find(f => f.id === schedule.filiereId)
+              const moduleItem = filiere?.modules?.find((m: FiliereModule) => m.id === schedule.moduleId)
+              const teacher = formateurs.find(f => f.id === schedule.teacherId)
+
+              return (
+                <Card key={schedule.id} className="overflow-hidden">
+                  {/* En-tête */}
+                  <CardHeader className="bg-muted/50">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div>
+                        <CardTitle className="text-lg">
+                          {moduleItem?.name || 'Module inconnu'}
+                        </CardTitle>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          <Badge variant="secondary">
+                            {filiere?.name || 'Filière inconnue'}
+                          </Badge>
+                          <Badge variant="outline">
+                            {vague?.name || 'Vague inconnue'}
+                          </Badge>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <User className="h-4 w-4 mr-1" />
+                            {teacher ? getTeacherDisplayName(teacher) : 'Formateur non assigné'}
+                          </div>
+                        </div>
+                      </div>
+                      <CardDescription>
+                        Période: {new Date(schedule.schedule.period.startDate).toLocaleDateString('fr-FR')} - {new Date(schedule.schedule.period.endDate).toLocaleDateString('fr-FR')}
+                      </CardDescription>
+                    </div>
+                  </CardHeader>
+
+                  {/* Créneaux horaires */}
+                  <CardContent className="p-6">
+                    <h4 className="font-medium text-foreground mb-4">Créneaux horaires :</h4>
+                    <div className="grid gap-3">
+                      {schedule.schedule.slots.map((slot: ScheduleSlot, index: number) => (
+                        <Card key={slot.id} className="p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-6">
+                              <div className="w-24">
+                                <Badge className="w-full justify-center bg-blue-600 text-white">
+                                  {getDayLabel(slot.day)}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center text-sm">
+                                  <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+                                  {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                                </div>
+                                {slot.classroom && (
+                                  <div className="flex items-center text-sm text-muted-foreground">
+                                    <MapPin className="h-4 w-4 mr-1" />
+                                    {slot.classroom}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Créneau {index + 1}
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <FaUniversity className="inline mr-2" />
-                Classe
-              </label>
-              <select
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Toutes les classes</option>
-                {classes.map(classe => (
-                  <option key={classe.id} value={classe.id}>
-                    {classe.name} - {classe.level}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <FaFilter className="inline mr-2" />
-                Statut
-              </label>
-              <select 
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Tous les statuts</option>
-                <option value="draft">Brouillon</option>
-                <option value="assigned">Assigné</option>
-                <option value="closed">Fermé</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <FaSearch className="inline mr-2" />
-                Rechercher
-              </label>
-              <input
-                type="text"
-                placeholder="Titre, description..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div 
-          ref={contentRef} 
-          className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-y-auto max-h-[60vh] scroll-smooth custom-scrollbar"
-        >
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Mes Exercices Créés
-              </h2>
-              <div className="text-sm text-gray-500">
-                {filteredExercises.length} exercice(s) trouvé(s)
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              {filteredExercises.map((exercise) => {
-                const classe = classes.find(c => c.id === exercise.class);
-                const isCollapsed = collapsedExercises[exercise.id] || false;
-
-                return (
-                  <div key={exercise.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{exercise.title}</h3>
-                      <div className="flex gap-2">
-                        {exercise.status === 'draft' && (
-                          <button
-                            onClick={() => assignExercise(exercise.id)}
-                            className="bg-green-600 text-white px-3 py-1 rounded text-sm"
-                          >
-                            Assigner
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setCollapsedExercises(prev => ({
-                            ...prev,
-                            [exercise.id]: !prev[exercise.id]
-                          }))}
-                          className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
-                        >
-                          {isCollapsed ? 'Ouvrir' : 'Fermer'}
-                        </button>
-                        <button
-                          onClick={() => deleteExercise(exercise.id)}
-                          className="bg-red-600 text-white px-3 py-1 rounded text-sm"
-                        >
-                          Supprimer
-                        </button>
-                      </div>
+        {/* Résumé en bas de page */}
+        {filteredSchedules.length > 0 && (
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle>Résumé global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                <div>
+                  <h4 className="font-medium text-foreground mb-2">Répartition par vague</h4>
+                  <ScrollArea className="h-48">
+                    <div className="space-y-2">
+                      {vagues.map(vague => {
+                        const count = filteredSchedules.filter(s => s.vagueId === vague.id).length
+                        if (count === 0) return null
+                        return (
+                          <div key={vague.id} className="flex justify-between py-1">
+                            <span className="text-muted-foreground">{vague.name}</span>
+                            <span className="font-medium">{count} cours</span>
+                          </div>
+                        )
+                      })}
                     </div>
-
-                    {!isCollapsed && (
-                      <div>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(exercise.status)}`}>
-                          {getStatusLabel(exercise.status)}
-                        </span>
-                        <p className="text-gray-600 mb-2 mt-2">{exercise.description}</p>
-                        <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                          <span><strong>Classe:</strong> {classe?.name} - {classe?.level}</span>
-                          <span><strong>Assigné le:</strong> {new Date(exercise.assignedDate).toLocaleDateString('fr-FR')}</span>
-                          <span><strong>À rendre le:</strong> {new Date(exercise.dueDate).toLocaleDateString('fr-FR')}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {filteredExercises.length === 0 && (
-              <div className="text-center py-12">
-                <FaBook className="text-5xl text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Aucun exercice trouvé
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  {searchTerm || selectedClass || selectedStatus
-                    ? 'Aucun exercice ne correspond aux filtres sélectionnés.'
-                    : 'Vous n\'avez encore créé aucun exercice.'}
-                </p>
+                  </ScrollArea>
+                </div>
+                <div>
+                  <h4 className="font-medium text-foreground mb-2">Répartition par filière</h4>
+                  <ScrollArea className="h-48">
+                    <div className="space-y-2">
+                      {filieres.map(filiere => {
+                        const count = filteredSchedules.filter(s => s.filiereId === filiere.id).length
+                        if (count === 0) return null
+                        return (
+                          <div key={filiere.id} className="flex justify-between py-1">
+                            <span className="text-muted-foreground">{filiere.name}</span>
+                            <span className="font-medium">{count} cours</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </ScrollArea>
+                </div>
+                <div>
+                  <h4 className="font-medium text-foreground mb-2">Formateurs actifs</h4>
+                  <ScrollArea className="h-48">
+                    <div className="space-y-2">
+                      {formateurs.map(teacher => {
+                        const count = filteredSchedules.filter(s => s.teacherId === teacher.id).length
+                        if (count === 0) return null
+                        return (
+                          <div key={teacher.id} className="flex justify-between py-1">
+                            <span className="text-muted-foreground">{getTeacherDisplayName(teacher)}</span>
+                            <span className="font-medium">{count} cours</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            onClick={() => handleScroll('up')}
-            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg transition-colors"
-          >
-            <FaArrowUp />
-          </button>
-          <button
-            onClick={() => handleScroll('down')}
-            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg transition-colors"
-          >
-            <FaArrowDown />
-          </button>
-        </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
-  );
-};
-
-export default TeacherExercises;
+  )
+}

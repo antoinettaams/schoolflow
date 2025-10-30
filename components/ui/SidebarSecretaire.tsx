@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
+import Image from "next/image";
 import {
   FaTachometerAlt,
   FaUserGraduate,
@@ -13,7 +14,7 @@ import {
   FaClipboardList,
   FaSignOutAlt,
   FaBars,
-  FaTimes,
+  FaTimes, 
   FaUser,
   FaChevronDown,
   FaFileArchive,
@@ -21,9 +22,9 @@ import {
   FaIdCard,
   FaCog,
   FaExclamationTriangle,
-  FaBell, // Icône notifications
-  FaMoneyBillWave, // Icône paiements
-  FaListAlt, // Icône liste des élèves
+  FaBell,
+  FaMoneyBillWave,
+  FaListAlt,
 } from "react-icons/fa";
 
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,25 @@ const SidebarSecretaire = () => {
     
     const isActive = exact ? pathname === href : pathname.startsWith(href);
     return isActive ? "text-white text-base" : "text-principal text-base";
+  };
+
+  // ✅ CORRIGÉ : Wrapper pour les icônes
+  const IconWrapper = ({ 
+    icon, 
+    href, 
+    exact = false 
+  }: { 
+    icon: React.ReactElement; 
+    href: string; 
+    exact?: boolean; 
+  }) => {
+    const iconClass = getIconClasses(href, exact);
+    
+    return (
+      <span className={iconClass}>
+        {icon}
+      </span>
+    );
   };
 
   // === MENU SPÉCIFIQUE SECRÉTAIRE ===
@@ -200,9 +220,7 @@ const SidebarSecretaire = () => {
               href={dashboardItem.href} 
               className={getLinkClasses(dashboardItem.href, true)}
             >
-              {React.cloneElement(dashboardItem.icon, { 
-                className: getIconClasses(dashboardItem.href, true) 
-              })}
+              <IconWrapper icon={dashboardItem.icon} href={dashboardItem.href} exact={true} />
               <span>{dashboardItem.label}</span>
             </Link>
           </div>
@@ -220,9 +238,7 @@ const SidebarSecretaire = () => {
                   href={item.href} 
                   className={getLinkClasses(item.href)}
                 >
-                  {React.cloneElement(item.icon, { 
-                    className: getIconClasses(item.href) 
-                  })}
+                  <IconWrapper icon={item.icon} href={item.href} />
                   <span>{item.label}</span>
                 </Link>
               ))}
@@ -238,11 +254,16 @@ const SidebarSecretaire = () => {
           >
             <div className="flex items-center gap-2">
               {user?.imageUrl ? (
-                <img 
-                  src={user.imageUrl} 
-                  alt={userName}
-                  className="h-7 w-7 rounded-full object-cover"
-                />
+                // ✅ CORRIGÉ : Utilisation de Image
+                <div className="h-7 w-7 rounded-full overflow-hidden">
+                  <Image 
+                    src={user.imageUrl} 
+                    alt={userName}
+                    width={28}
+                    height={28}
+                    className="object-cover"
+                  />
+                </div>
               ) : (
                 <div className="h-7 w-7 rounded-full bg-principal text-white flex items-center justify-center text-xs font-medium">
                   {userInitials}

@@ -3,14 +3,44 @@
 import React, { useState } from "react";
 import { FaTimes, FaMobile, FaCreditCard, FaShieldAlt, FaLock } from "react-icons/fa";
 
+interface Fee {
+  description: string;
+  amount: number;
+  dueDate: string;
+}
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface MomoData {
+  phoneNumber: string;
+  network: string;
+}
+
+interface CardData {
+  cardNumber: string;
+  expiryDate: string;
+  cvv: string;
+  cardHolder: string;
+}
+
 interface PaymentModalProps {
-  fee: any;
+  fee: Fee;
   paymentStep: string;
   selectedPaymentMethod: string;
   onPaymentMethodSelect: (method: string) => void;
   onStepChange: (step: string) => void;
   onClose: () => void;
-  paymentMethods: any[];
+  paymentMethods: PaymentMethod[];
+}
+
+// Fonction formatFCFA corrigée avec guillemets doubles
+function formatFCFA(amount: number): string {
+  return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
 }
 
 export default function PaymentModal({
@@ -22,12 +52,12 @@ export default function PaymentModal({
   onClose,
   paymentMethods
 }: PaymentModalProps) {
-  const [momoData, setMomoData] = useState({
+  const [momoData, setMomoData] = useState<MomoData>({
     phoneNumber: "",
     network: "orange"
   });
   const [pinCode, setPinCode] = useState("");
-  const [cardData, setCardData] = useState({
+  const [cardData, setCardData] = useState<CardData>({
     cardNumber: "",
     expiryDate: "",
     cvv: "",
@@ -325,7 +355,7 @@ export default function PaymentModal({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date d'expiration
+                    Date d&apos;expiration
                   </label>
                   <input
                     type="text"
@@ -407,7 +437,7 @@ export default function PaymentModal({
             <p className="text-gray-600 mb-4">
               Votre paiement de <strong>{formatFCFA(fee.amount)}</strong> a été traité avec succès.
             </p>
-            <div className="bg-[9FF696] border border-green-200 rounded-lg p-4 mb-6">
+            <div className="bg-[#9FF696] border border-green-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-[#326F2C]">
                 <strong>Transaction ID:</strong> TX{Date.now()}
               </p>
@@ -437,8 +467,4 @@ export default function PaymentModal({
       </div>
     </div>
   );
-}
-
-function formatFCFA(amount: number): string {
-  return new Intl.NumberFormat('fr-FR').format(amount) + ' FCFA';
 }

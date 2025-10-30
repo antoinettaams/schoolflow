@@ -3,6 +3,23 @@
 import { useSignIn, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import Image from "next/image";
+
+// Interface pour l'utilisateur Clerk
+interface ClerkUser {
+  publicMetadata?: {
+    role?: string;
+  };
+}
+
+// Interface pour les erreurs Clerk
+interface ClerkError {
+  errors?: Array<{
+    code?: string;
+    message?: string;
+  }>;
+  message?: string;
+}
 
 export default function SigninPage() {
   const { isLoaded, signIn, setActive } = useSignIn();
@@ -22,7 +39,7 @@ export default function SigninPage() {
   }, [isSignedIn, user]);
 
   // 🔥 FONCTION DE REDIRECTION BASÉE SUR LE RÔLE
-  const redirectToDashboard = (user: any) => {
+  const redirectToDashboard = (user: ClerkUser) => {
     const userRole = user.publicMetadata?.role;
     
     console.log("🔍 Rôle utilisateur:", userRole);
@@ -37,7 +54,7 @@ export default function SigninPage() {
       'Parent': '/dashboard/parent',
     };
 
-    const redirectPath = roleRoutes[userRole] || '/not-found';
+    const redirectPath = userRole ? roleRoutes[userRole] : '/not-found';
     
     console.log('🎯 Redirection directe vers:', redirectPath);
     window.location.href = redirectPath;
@@ -76,11 +93,13 @@ export default function SigninPage() {
           setError("Échec de la connexion. Veuillez réessayer.");
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("❌ Erreur détaillée:", err);
       
-      if (err.errors && err.errors[0]) {
-        const errorDetail = err.errors[0];
+      const clerkError = err as ClerkError;
+      
+      if (clerkError.errors && clerkError.errors[0]) {
+        const errorDetail = clerkError.errors[0];
         if (errorDetail.code === "form_identifier_not_found") {
           setError("Aucun compte trouvé avec cet email/identifiant");
         } else if (errorDetail.code === "form_password_incorrect") {
@@ -111,21 +130,25 @@ export default function SigninPage() {
   }
 
   return (
-    <div className="flex items-center justify-center bg-white min-h-screen p-4">
+    <div className="flex items-center justify-center bg-white min-h-screen p-3">
       <div className="w-full max-w-4xl h-auto md:h-[500px] rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row">
         
         {/* --- Partie gauche (Branding) --- */}
-        <div className="w-full md:w-1/2 bg-principal text-white flex flex-col items-center justify-center p-8 text-center hidden md:flex">
-          <div className="mb-8">
-            <Link href="/" className="flex items-center space-x-2">
-              <svg className="h-8 w-8 text-tertiary" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5v-2l-10 5-10-5v2z" />
-              </svg>
-              <span className="text-xl font-title font-bold text-tertiary">SchoolFlow</span>
+        <div className="w-full md:w-1/2 bg-principal text-white flex flex-col items-center justify-center text-center md:flex">
+          <div className="">
+            <Link href="/" className="flex items-center justify-center">
+              <Image 
+                src="/images/logo.png" 
+                alt="SchoolFlow Logo" 
+                className="h-48 w-48"
+                width={192}
+                height={192}
+                priority
+              />
             </Link>
           </div>
           
-          <h1 className="text-3xl font-bold mb-4">Bienvenue !</h1>
+          <h1 className="text-3xl font-bold mb-2">Bienvenue !</h1>
           <p className="text-lg text-gray-100 max-w-xs">
             Connectez-vous pour accéder à votre espace personnel.
           </p>
@@ -209,12 +232,12 @@ export default function SigninPage() {
 
               <div className="text-center pt-3">
                 <p className="text-gray-600 text-sm">
-                  Vous n'avez pas de compte ?{" "}
+                  Vous n&apos;avez pas de compte ?{" "}
                   <Link 
                     href="/auth/signup" 
                     className="text-lien font-medium hover:underline"
                   >
-                    S'inscrire
+                    S&apos;inscrire
                   </Link>
                 </p>
               </div>
@@ -222,7 +245,7 @@ export default function SigninPage() {
 
             <div className="text-center mt-2 pt-3 border-t border-gray-200">
               <p className="text-gray-600 text-sm">
-                Gestionnaire d'école{" "}
+                Gestionnaire d&apos;école{" "}
                 <span className="font-bold font-title text-dark">SchoolFlow</span>
               </p>
             </div>

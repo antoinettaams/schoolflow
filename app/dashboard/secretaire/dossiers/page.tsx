@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, Filter, Download, Eye, MoreHorizontal, FileText, User, Mail, Plus, Upload, X } from "lucide-react";
+import { Search, Download, MoreHorizontal, FileText, User, Mail, Plus, Upload, X } from "lucide-react";
 
 interface Dossier {
   id: string;
@@ -125,20 +125,21 @@ export default function DossiersPage() {
 
   const getStatutBadge = (statut: string) => {
     const config = {
-      complet: { label: "Complet", variant: "success" as const },
+      complet: { label: "Complet", variant: "default" as const },
       incomplet: { label: "Incomplet", variant: "destructive" as const },
-      en_attente: { label: "En attente", variant: "warning" as const }
+      en_attente: { label: "En attente", variant: "outline" as const }
     };
     
     const { label, variant } = config[statut as keyof typeof config];
     return <Badge variant={variant}>{label}</Badge>;
   };
-
+   
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getStatutPaiementBadge = (statut: string) => {
     const config = {
-      paye: { label: "Payé", variant: "success" as const },
+      paye: { label: "Payé", variant: "default" as const },
       en_retard: { label: "En retard", variant: "destructive" as const },
-      en_attente: { label: "En attente", variant: "warning" as const }
+      en_attente: { label: "En attente", variant: "outline" as const }
     };
     
     const { label, variant } = config[statut as keyof typeof config];
@@ -234,7 +235,7 @@ export default function DossiersPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Dossiers Élèves</h1>
           <p className="text-gray-600 mt-2">
-            Gérez et suivez l'état des dossiers des élèves
+            Gérez et suivez l&apos;état des dossiers des élèves
           </p>
         </div>
         
@@ -289,7 +290,7 @@ export default function DossiersPage() {
                   {/* Photo d'identité */}
                   <div className="space-y-2">
                     <Label htmlFor="photoIdentite" className="text-sm font-medium">
-                      Photo d'identité
+                      Photo d&apos;identité
                     </Label>
                     {!nouveauDossier.documents.photoIdentite ? (
                       <div className="flex items-center gap-3">
@@ -407,13 +408,13 @@ export default function DossiersPage() {
                     <CardContent className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-blue-800">Documents uploadés:</span>
-                        <Badge variant={tousDocumentsUploades ? "success" : "warning"}>
+                        <Badge variant={tousDocumentsUploades ? "default" : "outline"}>
                           {Object.values(nouveauDossier.documents).filter(Boolean).length}/3
                         </Badge>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-blue-800">Statut du dossier:</span>
-                        <Badge variant={tousDocumentsUploades ? "success" : "destructive"}>
+                        <Badge variant={tousDocumentsUploades ? "default" : "destructive"}>
                           {tousDocumentsUploades ? "Complet" : "Incomplet"}
                         </Badge>
                       </div>
@@ -561,7 +562,7 @@ export default function DossiersPage() {
                   <TableHead>Élève</TableHead>
                   <TableHead>Filière</TableHead>
                   <TableHead>Vague</TableHead>
-                  <TableHead>Date d'inscription</TableHead>
+                  <TableHead>Date d&apos;inscription</TableHead>
                   <TableHead>Statut du dossier</TableHead>
                   <TableHead>Documents manquants</TableHead>
                   <TableHead className="text-right">Actions</TableHead>

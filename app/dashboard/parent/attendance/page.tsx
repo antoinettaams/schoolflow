@@ -3,13 +3,11 @@
 
 import React, { useState } from "react";
 import { FaCalendarTimes, FaCheck, FaTimes, FaExclamationTriangle, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
-import { useRouter } from "next/navigation";
 
 export default function ParentAttendancePage() {
   const [selectedPeriod, setSelectedPeriod] = useState("month");
   const [sortField, setSortField] = useState("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const router = useRouter();
 
   // Données d'assiduité simulées
   const attendanceData = [
@@ -142,7 +140,7 @@ export default function ParentAttendancePage() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                   <FaCalendarTimes className="text-blue-600" />
-                  Détail de l'Assiduité
+                  Détail de l&apos;Assiduité
                 </h2>
                 <div className="text-sm text-gray-500">
                   {sortedData.length} cours enregistré(s)
@@ -222,10 +220,10 @@ export default function ParentAttendancePage() {
                 <div className="text-center py-12">
                   <FaCalendarTimes className="text-5xl text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Aucune donnée d'assiduité
+                    Aucune donnée d&apos;assiduité
                   </h3>
                   <p className="text-gray-500">
-                    Aucune information d'assiduité n'est disponible pour cette période.
+                    Aucune information d&apos;assiduité n&apos;est disponible pour cette période.
                   </p>
                 </div>
               )}

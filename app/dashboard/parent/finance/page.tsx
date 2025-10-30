@@ -17,16 +17,38 @@ import {
 } from "react-icons/fa";
 import PaymentModal from "@/components/ui/payment-modal";
 
+// Interfaces TypeScript
+interface Fee {
+  id: number;
+  description: string;
+  amount: number;
+  dueDate: string;
+  status: "paid" | "pending" | "overdue";
+  paymentDate: string;
+  type: "Scolarité" | "Cantine" | "Activités";
+  reference: string;
+}
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+  icon: React.ComponentType;
+  description: string;
+}
+
+// Type pour les champs de tri valides
+type SortableField = "reference" | "description" | "amount" | "dueDate";
+
 export default function ParentFinancePage() {
   const [selectedStatus, setSelectedStatus] = useState("all");
-  const [sortField, setSortField] = useState("dueDate");
+  const [sortField, setSortField] = useState<SortableField>("dueDate");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [selectedFee, setSelectedFee] = useState<any>(null);
+  const [selectedFee, setSelectedFee] = useState<Fee | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [paymentStep, setPaymentStep] = useState("select");
 
-  const feesData = [
+  const feesData: Fee[] = [
     { id: 1, description: "Frais de scolarité - Trimestre 1", amount: 295000, dueDate: "15/09/2024", status: "paid", paymentDate: "10/09/2024", type: "Scolarité", reference: "FSC-2024-T1" },
     { id: 2, description: "Frais de cantine - Septembre", amount: 78700, dueDate: "05/10/2024", status: "paid", paymentDate: "01/10/2024", type: "Cantine", reference: "CAN-2024-09" },
     { id: 3, description: "Frais de scolarité - Trimestre 2", amount: 295000, dueDate: "15/11/2024", status: "pending", paymentDate: "", type: "Scolarité", reference: "FSC-2024-T2" },
@@ -41,13 +63,13 @@ export default function ParentFinancePage() {
     { id: "overdue", name: "En retard" }
   ];
 
-  const paymentMethods = [
+  const paymentMethods: PaymentMethod[] = [
     { id: "momo", name: "Mobile Money", icon: FaMobile, description: "Payer avec Orange Money ou MTN Mobile Money" },
     { id: "card", name: "Carte Bancaire", icon: FaCreditCard, description: "Payer par carte Visa, Mastercard" },
     { id: "cash", name: "Espèces", icon: FaMoneyBillWave, description: "Payer en espèces à la comptabilité" }
   ];
 
-  const downloadReceipt = (fee: any) => {
+  const downloadReceipt = (fee: Fee) => {
     const receiptContent = `
       RECU DE PAIEMENT - SCHOOLFLOW
       ==============================
@@ -81,14 +103,14 @@ export default function ParentFinancePage() {
     URL.revokeObjectURL(url);
   };
 
-  const initiatePayment = (fee: any) => {
+  const initiatePayment = (fee: Fee) => {
     setSelectedFee(fee);
     setShowPaymentModal(true);
     setPaymentStep("select");
     setSelectedPaymentMethod("");
   };
 
-  const handleSort = (field: string) => {
+  const handleSort = (field: SortableField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -97,7 +119,7 @@ export default function ParentFinancePage() {
     }
   };
 
-  const getSortIcon = (field: string) => {
+  const getSortIcon = (field: SortableField) => {
     if (sortField !== field) return <FaSort className="text-gray-400" />;
     return sortDirection === "asc" ? <FaSortUp className="text-blue-600" /> : <FaSortDown className="text-blue-600" />;
   };
@@ -106,23 +128,42 @@ export default function ParentFinancePage() {
     selectedStatus === "all" || fee.status === selectedStatus
   );
 
+  // Fonction de tri corrigée
   const sortedFees = [...filteredFees].sort((a, b) => {
-    let aValue: any = a[sortField as keyof typeof a];
-    let bValue: any = b[sortField as keyof typeof b];
+    let aValue: string | number;
+    let bValue: string | number;
 
-    if (sortField === "amount") {
-      aValue = Number(aValue);
-      bValue = Number(bValue);
-    } else if (sortField === "dueDate") {
-      aValue = new Date(aValue.split('/').reverse().join('-'));
-      bValue = new Date(bValue.split('/').reverse().join('-'));
+    switch (sortField) {
+      case "amount":
+        aValue = a.amount;
+        bValue = b.amount;
+        break;
+      case "reference":
+        aValue = a.reference;
+        bValue = b.reference;
+        break;
+      case "description":
+        aValue = a.description;
+        bValue = b.description;
+        break;
+      case "dueDate":
+        // Conversion des dates pour un tri correct
+        aValue = new Date(a.dueDate.split('/').reverse().join('-')).getTime();
+        bValue = new Date(b.dueDate.split('/').reverse().join('-')).getTime();
+        break;
+      default:
+        aValue = a.reference;
+        bValue = b.reference;
     }
 
-    if (sortDirection === "asc") return aValue > bValue ? 1 : -1;
-    return aValue < bValue ? 1 : -1;
+    if (sortDirection === "asc") {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return aValue < bValue ? 1 : -1;
+    }
   });
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: Fee["status"]) => {
     switch (status) {
       case "paid": return "bg-green-100 text-green-800 border-green-200";
       case "pending": return "bg-blue-100 text-blue-800 border-blue-200";
@@ -131,7 +172,7 @@ export default function ParentFinancePage() {
     }
   };
 
-  const getTypeColor = (type: string) => {
+  const getTypeColor = (type: Fee["type"]) => {
     switch (type) {
       case "Scolarité": return "bg-purple-100 text-purple-800 border-purple-200";
       case "Cantine": return "bg-orange-100 text-orange-800 border-orange-200";

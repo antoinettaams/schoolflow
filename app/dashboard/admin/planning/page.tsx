@@ -1,15 +1,15 @@
 // app/dashboard/emploi-du-temps-global/page.tsx
 "use client"
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { Search, Filter, Clock, MapPin, User, Calendar, ChevronDown } from 'lucide-react'
+import { Search, Filter, Clock, MapPin, User, Calendar} from 'lucide-react'
 
 // Import des composants shadcn
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
+import { Badge } from "@/components/ui/badge" 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
@@ -37,7 +37,23 @@ interface Schedule {
   };
 }
 
-interface Teacher {
+interface Vague {
+  id: string;
+  name: string;
+}
+
+interface FiliereModule {
+  id: string;
+  name: string;
+}
+
+interface Filiere {
+  id: string;
+  name: string;
+  modules?: FiliereModule[];
+}
+
+interface SchoolUser {
   id: string;
   name: string;
   email: string;
@@ -54,9 +70,9 @@ export default function EmploiDuTempsGlobalPage() {
   const { user, isLoaded } = useUser()
   const [isLoading, setIsLoading] = useState(true)
   const [schedules, setSchedules] = useState<Schedule[]>([])
-  const [vagues, setVagues] = useState<any[]>([])
-  const [filieres, setFilieres] = useState<any[]>([])
-  const [formateurs, setFormateurs] = useState<any[]>([])
+  const [vagues, setVagues] = useState<Vague[]>([])
+  const [filieres, setFilieres] = useState<Filiere[]>([])
+  const [formateurs, setFormateurs] = useState<SchoolUser[]>([])
   const [filteredSchedules, setFilteredSchedules] = useState<Schedule[]>([])
   const [selectedVague, setSelectedVague] = useState<string>('all')
   const [selectedFiliere, setSelectedFiliere] = useState<string>('all')
@@ -72,12 +88,49 @@ export default function EmploiDuTempsGlobalPage() {
   ]
 
   // Chargement des données
+  const loadData = useCallback(() => {
+    try {
+      // Charger les emplois du temps
+      const savedSchedules = localStorage.getItem('schoolflow_assignations')
+      if (savedSchedules) {
+        const schedulesData = JSON.parse(savedSchedules) as Schedule[]
+        setSchedules(schedulesData)
+      }
+
+      // Charger les vagues
+      const savedVagues = localStorage.getItem('schoolflow_vagues')
+      if (savedVagues) {
+        const vaguesData = JSON.parse(savedVagues) as Vague[]
+        setVagues(vaguesData)
+      }
+
+      // Charger les filières - CORRECTION ICI
+      const savedFilieres = localStorage.getItem('schoolflow_filieres')
+      if (savedFilieres) {
+        const filieresData = JSON.parse(savedFilieres) as Filiere[]
+        setFilieres(filieresData) // Correction: filieresData au lieu de fileresData
+      }
+
+      // Charger les formateurs
+      const savedUsers = localStorage.getItem('schoolflow_users')
+      if (savedUsers) {
+        const users = JSON.parse(savedUsers) as SchoolUser[]
+        const teachers = users.filter((user: SchoolUser) => 
+          user.role === 'Enseignant' && user.statut !== 'inactif'
+        )
+        setFormateurs(teachers)
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error)
+    }
+  }, [])
+
   useEffect(() => {
     if (isLoaded) {
       loadData()
       setIsLoading(false)
     }
-  }, [isLoaded])
+  }, [isLoaded, loadData])
 
   // Filtrage des emplois du temps
   useEffect(() => {
@@ -97,8 +150,8 @@ export default function EmploiDuTempsGlobalPage() {
     if (searchTerm) {
       filtered = filtered.filter(schedule => {
         const filiere = filieres.find(f => f.id === schedule.filiereId)
-        const module = filiere?.modules?.find((m: any) => m.id === schedule.moduleId)
-        const moduleName = module?.name || ''
+        const moduleItem = filiere?.modules?.find((m: FiliereModule) => m.id === schedule.moduleId)
+        const moduleName = moduleItem?.name || ''
         const teacher = formateurs.find(f => f.id === schedule.teacherId)
         const teacherName = teacher ? getTeacherDisplayName(teacher) : ''
         
@@ -111,9 +164,9 @@ export default function EmploiDuTempsGlobalPage() {
     // Tri alphabétique par nom de module
     filtered.sort((a, b) => {
       const filiereA = filieres.find(f => f.id === a.filiereId)
-      const moduleA = filiereA?.modules?.find((m: any) => m.id === a.moduleId)
+      const moduleA = filiereA?.modules?.find((m: FiliereModule) => m.id === a.moduleId)
       const filiereB = filieres.find(f => f.id === b.filiereId)
-      const moduleB = filiereB?.modules?.find((m: any) => m.id === b.moduleId)
+      const moduleB = filiereB?.modules?.find((m: FiliereModule) => m.id === b.moduleId)
       
       const nameA = moduleA?.name || ''
       const nameB = moduleB?.name || ''
@@ -124,62 +177,12 @@ export default function EmploiDuTempsGlobalPage() {
     setFilteredSchedules(filtered)
   }, [schedules, selectedVague, selectedFiliere, searchTerm, filieres, formateurs])
 
-  const loadData = () => {
-    try {
-      // Charger les emplois du temps
-      const savedSchedules = localStorage.getItem('schoolflow_assignations')
-      if (savedSchedules) {
-        const schedulesData = JSON.parse(savedSchedules)
-        setSchedules(schedulesData)
-      }
-
-      // Charger les vagues
-      const savedVagues = localStorage.getItem('schoolflow_vagues')
-      if (savedVagues) {
-        const vaguesData = JSON.parse(savedVagues)
-        setVagues(vaguesData)
-      }
-
-      // Charger les filières
-      const savedFilieres = localStorage.getItem('schoolflow_filieres')
-      if (savedFilieres) {
-        const filieresData = JSON.parse(savedFilieres)
-        setFilieres(filieresData)
-      }
-
-      // Charger les formateurs
-      const savedUsers = localStorage.getItem('schoolflow_users')
-      if (savedUsers) {
-        const users = JSON.parse(savedUsers)
-        const teachers = users.filter((user: any) => 
-          user.role === 'Enseignant' && user.statut !== 'inactif'
-        )
-        setFormateurs(teachers)
-      }
-    } catch (error) {
-      console.error('Erreur lors du chargement des données:', error)
-    }
-  }
-
   // Fonctions utilitaires
-  const getTeacherDisplayName = (teacher: Teacher) => {
+  const getTeacherDisplayName = (teacher: SchoolUser) => {
     if (teacher.prenom && teacher.nom) {
       return `${teacher.prenom} ${teacher.nom}`
     }
     return teacher.name || 'Non assigné'
-  }
-
-  const getFiliereName = (filiereId: string) => {
-    return filieres.find(f => f.id === filiereId)?.name || 'Inconnue'
-  }
-
-  const getVagueName = (vagueId: string) => {
-    return vagues.find(v => v.id === vagueId)?.name || 'Inconnue'
-  }
-
-  const getModuleName = (filiereId: string, moduleId: string) => {
-    const filiere = filieres.find(f => f.id === filiereId)
-    return filiere?.modules?.find((m: any) => m.id === moduleId)?.name || 'Inconnu'
   }
 
   const getDayLabel = (day: string) => {
@@ -195,7 +198,7 @@ export default function EmploiDuTempsGlobalPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-          <p className="text-muted-foreground">Chargement de l'emploi du temps global...</p>
+          <p className="text-muted-foreground">Chargement de l&apos;emploi du temps global...</p>
         </div>
       </div>
     )
@@ -352,7 +355,7 @@ export default function EmploiDuTempsGlobalPage() {
             {filteredSchedules.map((schedule) => {
               const vague = vagues.find(v => v.id === schedule.vagueId)
               const filiere = filieres.find(f => f.id === schedule.filiereId)
-              const module = filiere?.modules?.find((m: any) => m.id === schedule.moduleId)
+              const moduleItem = filiere?.modules?.find((m: FiliereModule) => m.id === schedule.moduleId)
               const teacher = formateurs.find(f => f.id === schedule.teacherId)
 
               return (
@@ -362,7 +365,7 @@ export default function EmploiDuTempsGlobalPage() {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div>
                         <CardTitle className="text-lg">
-                          {module?.name || 'Module inconnu'}
+                          {moduleItem?.name || 'Module inconnu'}
                         </CardTitle>
                         <div className="flex flex-wrap gap-2 mt-1">
                           <Badge variant="secondary">

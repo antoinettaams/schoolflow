@@ -16,7 +16,6 @@ import {
   FaSort,
   FaUsers,
   FaLayerGroup,
-  FaBook,
   FaClock,
   FaCheckCircle
 } from "react-icons/fa";
@@ -103,9 +102,9 @@ const TeachersManagement = () => {
         lastName: "Durand",
         email: "pierre.durand@schoolflow.com",
         phone: "+225 01 23 45 67 89",
-        vagues: [],  // ← En attente d'assignation
-        subjects: [], // ← En attente d'assignation
-        classes: [],  // ← En attente d'assignation
+        vagues: [],  // ← En attente d&apos;assignation
+        subjects: [], // ← En attente d&apos;assignation
+        classes: [],  // ← En attente d&apos;assignation
         status: "pending",
         createdAt: "2024-03-10"
       }
@@ -140,7 +139,7 @@ const TeachersManagement = () => {
       const aValue = a[sortField];
       const bValue = b[sortField];
       
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
+      if (typeof aValue === "string" && typeof bValue === "string") {
         return sortDirection === "asc" 
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue);
@@ -181,16 +180,22 @@ const TeachersManagement = () => {
   if (userRole !== "Administrateur") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
-          <p className="text-gray-600 mb-4">Vous n'avez pas les permissions d'administrateur.</p>
-          <button
-            onClick={() => router.push("/")}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Retour à l'accueil
-          </button>
-        </div>
+        <Card className="p-8 max-w-md text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl text-red-600">Accès Refusé</CardTitle>
+            <CardDescription className="text-gray-600">
+              Vous n&apos;avez pas les permissions d&apos;administrateur.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => router.push("/")}
+              className="bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Retour à l&apos;accueil
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -246,7 +251,7 @@ const TeachersManagement = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
-              <p className="text-xs text-muted-foreground">En attente d'assignation</p>
+              <p className="text-xs text-muted-foreground">En attente d&apos;assignation</p>
             </CardContent>
           </Card>
 

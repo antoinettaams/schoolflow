@@ -27,6 +27,19 @@ interface ClassInfo {
   level: string;
 }
 
+// Données simulées déplacées en dehors du composant
+const teacherClasses: ClassInfo[] = [
+  { id: '1', name: 'Classe A', level: '6ème' },
+  { id: '2', name: 'Classe B', level: '5ème' },
+  { id: '3', name: 'Classe C', level: '4ème' }
+];
+
+const initialExamDates: ExamDate[] = [
+  { id: 1, title: 'Devoir Mathématiques', type: 'devoir', classId: '1', date: '2024-10-25', description: 'Devoir sur les fractions', createdBy: 'admin' },
+  { id: 2, title: 'Composition Français', type: 'composition', classId: '2', date: '2024-10-30', description: 'Analyse de texte', createdBy: 'admin' },
+  { id: 3, title: 'Interrogation Histoire', type: 'interrogation', classId: '1', date: '2024-10-22', description: 'Révolution française', createdBy: 'teacher' }
+];
+
 export default function TeacherExamDatesPage() {
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -39,24 +52,11 @@ export default function TeacherExamDatesPage() {
 
   const [newDate, setNewDate] = useState({
     title: '',
-    type: 'interrogation',
+    type: 'interrogation' as ExamDate['type'],
     classId: '',
     date: '',
     description: ''
   });
-
-  // Données simulées
-  const teacherClasses: ClassInfo[] = [
-    { id: '1', name: 'Classe A', level: '6ème' },
-    { id: '2', name: 'Classe B', level: '5ème' },
-    { id: '3', name: 'Classe C', level: '4ème' }
-  ];
-
-  const initialExamDates: ExamDate[] = [
-    { id: 1, title: 'Devoir Mathématiques', type: 'devoir', classId: '1', date: '2024-10-25', description: 'Devoir sur les fractions', createdBy: 'admin' },
-    { id: 2, title: 'Composition Français', type: 'composition', classId: '2', date: '2024-10-30', description: 'Analyse de texte', createdBy: 'admin' },
-    { id: 3, title: 'Interrogation Histoire', type: 'interrogation', classId: '1', date: '2024-10-22', description: 'Révolution française', createdBy: 'teacher' }
-  ];
 
   useEffect(() => {
     setClasses(teacherClasses);
@@ -66,7 +66,19 @@ export default function TeacherExamDatesPage() {
       setSelectedClass(teacherClasses[0].id);
       setNewDate(prev => ({ ...prev, classId: teacherClasses[0].id }));
     }
-  }, []);
+  }, [selectedClass]); // Maintenant selectedClass est inclus dans les dépendances
+
+  // Alternative : utiliser un useEffect séparé pour l'initialisation
+  // useEffect(() => {
+  //   // Initialisation des données
+  //   setClasses(teacherClasses);
+  //   setExamDates(initialExamDates);
+  //   
+  //   if (teacherClasses.length > 0) {
+  //     setSelectedClass(teacherClasses[0].id);
+  //     setNewDate(prev => ({ ...prev, classId: teacherClasses[0].id }));
+  //   }
+  // }, []); // Tableau de dépendances vide pour l'initialisation
 
   // Filtrage
   const filteredDates = useMemo(() => {
@@ -83,10 +95,21 @@ export default function TeacherExamDatesPage() {
       return;
     }
 
-    const dateToAdd: ExamDate = { id: Date.now(), createdBy: 'teacher', ...newDate };
+    const dateToAdd: ExamDate = { 
+      id: Date.now(), 
+      createdBy: 'teacher', 
+      ...newDate 
+    };
+    
     setExamDates(prev => [...prev, dateToAdd]);
     setShowAddForm(false);
-    setNewDate({ title: '', type: 'interrogation', classId: selectedClass, date: '', description: '' });
+    setNewDate({ 
+      title: '', 
+      type: 'interrogation', 
+      classId: selectedClass, 
+      date: '', 
+      description: '' 
+    });
     alert('Date ajoutée avec succès !');
   };
 
@@ -205,7 +228,10 @@ export default function TeacherExamDatesPage() {
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2"><FaUniversity className="inline mr-2" />Classe</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <FaUniversity className="inline mr-2" />
+                Classe
+              </label>
               <select
                 value={selectedClass}
                 onChange={e => setSelectedClass(e.target.value)}
@@ -219,7 +245,10 @@ export default function TeacherExamDatesPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2"><FaFilter className="inline mr-2" />Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <FaFilter className="inline mr-2" />
+                Type
+              </label>
               <select
                 value={selectedType}
                 onChange={e => setSelectedType(e.target.value)}
@@ -234,7 +263,10 @@ export default function TeacherExamDatesPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2"><FaSearch className="inline mr-2" />Rechercher</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <FaSearch className="inline mr-2" />
+                Rechercher
+              </label>
               <input
                 type="text"
                 value={searchTerm}
@@ -283,9 +315,16 @@ export default function TeacherExamDatesPage() {
                         )}
                       </td>
                       <td className="py-3 px-4 flex gap-2">
-                        <button className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm"><FaEye /></button>
+                        <button className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm">
+                          <FaEye />
+                        </button>
                         {ed.createdBy === 'teacher' && (
-                          <button onClick={() => deleteDate(ed.id)} className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"><FaTrash /></button>
+                          <button 
+                            onClick={() => deleteDate(ed.id)} 
+                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+                          >
+                            <FaTrash />
+                          </button>
                         )}
                       </td>
                     </tr>

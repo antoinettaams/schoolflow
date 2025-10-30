@@ -1,11 +1,11 @@
 // app/dashboard/finances/student/[id]/page.tsx
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   ArrowLeft, User, Mail, Book, Calendar, DollarSign, 
   CreditCard, CheckCircle, XCircle, Clock, AlertCircle,
-  Download, Printer, Edit
+  Printer, Edit
 } from 'lucide-react';
 
 // Import des composants shadcn
@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface Student {
   id: string;
@@ -50,11 +49,8 @@ export default function StudentDetailsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadStudentData();
-  }, [params.id]);
-
-  const loadStudentData = () => {
+  // Déplacer loadStudentData dans un useCallback pour éviter les recréations
+  const loadStudentData = useCallback(() => {
     // Données simulées
     const mockStudent: Student = {
       id: params.id as string,
@@ -99,7 +95,11 @@ export default function StudentDetailsPage() {
     setStudent(mockStudent);
     setPayments(mockPayments);
     setIsLoading(false);
-  };
+  }, [params.id]); // Ajouter params.id comme dépendance
+
+  useEffect(() => {
+    loadStudentData();
+  }, [loadStudentData]); // Maintenant loadStudentData est stable grâce à useCallback
 
   const getStatusBadge = (statut: Student['statutPaiement']) => {
     const config = {
@@ -181,7 +181,7 @@ export default function StudentDetailsPage() {
           <CardHeader>
             <CardTitle className="text-2xl">Étudiant non trouvé</CardTitle>
             <CardDescription>
-              L'étudiant que vous recherchez n'existe pas ou a été supprimé.
+              L&apos;étudiant que vous recherchez n&apos;existe pas ou a été supprimé.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -213,7 +213,7 @@ export default function StudentDetailsPage() {
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                 {student.prenom} {student.nom}
               </h1>
-              <p className="text-muted-foreground">Détails financiers de l'étudiant</p>
+              <p className="text-muted-foreground">Détails financiers de l&apos;étudiant</p>
             </div>
             <div className="flex gap-3">
               <Button variant="outline" className="flex items-center gap-2">
@@ -258,7 +258,7 @@ export default function StudentDetailsPage() {
                   </div>
                 )}
                 <div>
-                  <p className="text-sm text-muted-foreground">Date d'inscription</p>
+                  <p className="text-sm text-muted-foreground">Date d&apos;inscription</p>
                   <p className="text-sm font-medium text-foreground flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     {formatDate(student.dateInscription)}
@@ -314,7 +314,7 @@ export default function StudentDetailsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                   <div className="space-y-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Frais d'inscription</p>
+                      <p className="text-sm text-muted-foreground">Frais d&apos;inscription</p>
                       <p className="text-2xl font-bold text-foreground">
                         {formatMoney(student.montantInscription)}
                       </p>

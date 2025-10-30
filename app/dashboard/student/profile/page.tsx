@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
+import Image from "next/image";
 import {
   User,
   Mail,
@@ -16,7 +17,25 @@ import {
   CheckCircle,
   Clock,
   Shield,
+  LucideIcon,
 } from "lucide-react";
+
+// Types pour l'activité utilisateur
+interface UserActivity {
+  id: number;
+  type: string;
+  description: string;
+  timestamp: Date;
+  icon: React.ReactNode;
+}
+
+// Types pour les métadonnées étudiant
+interface StudentMetadata {
+  classe?: string;
+  studentId?: string;
+  enrollmentYear?: string;
+  filiere?: string;
+}
 
 const StudentProfilePage = () => {
   const { user, isLoaded } = useUser();
@@ -25,11 +44,11 @@ const StudentProfilePage = () => {
   const [showImageModal, setShowImageModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [userActivity, setUserActivity] = useState<any[]>([]);
+  const [userActivity, setUserActivity] = useState<UserActivity[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 🔥 Activité simulée pour étudiant
-  const getUserActivity = () => [
+  const getUserActivity = (): UserActivity[] => [
     {
       id: 1,
       type: "login",
@@ -143,8 +162,8 @@ const StudentProfilePage = () => {
   const profileImage = user.imageUrl || "https://placehold.co/150x150/3b82f6/ffffff?text=É";
   const createdAt = user.createdAt ? new Date(user.createdAt) : new Date();
   
-  // Métadonnées étudiant
-  const studentMetadata = user.publicMetadata as any;
+  // Métadonnées étudiant avec typage approprié
+  const studentMetadata = user.publicMetadata as StudentMetadata;
   const studentClass = studentMetadata?.classe || "Non assigné";
   const studentId = studentMetadata?.studentId || "Non assigné";
   const enrollmentYear = studentMetadata?.enrollmentYear || "2024";
@@ -168,9 +187,11 @@ const StudentProfilePage = () => {
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-40 w-full relative">
               <div className="absolute left-8 bottom-0 translate-y-1/2">
                 <div className="relative">
-                  <img
+                  <Image
                     src={profileImage}
                     alt="Photo de profil"
+                    width={128}
+                    height={128}
                     className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-2xl cursor-pointer"
                     onClick={() => setShowImageOptions(true)}
                   />
@@ -252,11 +273,15 @@ const StudentProfilePage = () => {
                   >
                     ✕
                   </button>
-                  <img
-                    src={user.imageUrl}
-                    alt="Photo de profil"
-                    className="w-full h-auto rounded-xl object-cover"
-                  />
+                  {user.imageUrl && (
+                    <Image
+                      src={user.imageUrl}
+                      alt="Photo de profil"
+                      width={500}
+                      height={500}
+                      className="w-full h-auto rounded-xl object-cover"
+                    />
+                  )}
                   <div className="flex justify-end gap-3 p-4 border-t border-gray-200 mt-4">
                     <button
                       onClick={() => setShowImageModal(false)}
@@ -427,16 +452,14 @@ const StudentProfilePage = () => {
   );
 };
 
-// ✅ Composants utilitaires (MÊME FORMAT QUE ADMIN)
-const Info = ({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: any;
+// ✅ Composants utilitaires avec typage approprié
+interface InfoProps {
+  icon: LucideIcon;
   label: string;
   value: string;
-}) => (
+}
+
+const Info = ({ icon: Icon, label, value }: InfoProps) => (
   <div className="flex items-center p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
     <Icon className="w-5 h-5 text-blue-600 mr-4" />
     <div>
@@ -446,15 +469,7 @@ const Info = ({
   </div>
 );
 
-const SchoolInfo = ({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: any;
-  label: string;
-  value: string;
-}) => (
+const SchoolInfo = ({ icon: Icon, label, value }: InfoProps) => (
   <div className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
     <Icon className="w-5 h-5 text-green-600 mr-4" />
     <div>
@@ -464,15 +479,13 @@ const SchoolInfo = ({
   </div>
 );
 
-const Section = ({
-  title,
-  icon,
-  children,
-}: {
+interface SectionProps {
   title: string;
-  icon: JSX.Element;
+  icon: React.ReactNode;
   children: React.ReactNode;
-}) => (
+}
+
+const Section = ({ title, icon, children }: SectionProps) => (
   <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
     <h3 className="text-xl font-bold text-gray-700 mb-4 flex items-center gap-3">
       {icon}

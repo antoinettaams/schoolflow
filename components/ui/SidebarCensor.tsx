@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
+import Image from "next/image";
 import {
   FaTachometerAlt,
   FaUserGraduate,
@@ -20,9 +21,9 @@ import {
   FaCalendarAlt,
   FaProjectDiagram,
   FaExclamationTriangle,
-  FaBell, // Icône notifications
-  FaCalendarCheck, // Icône événements
-  FaFileSignature, // Icône notes d'examens
+  FaBell,
+  FaCalendarCheck,
+  FaFileSignature,
 } from "react-icons/fa";
 
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,24 @@ const SidebarCenseur = () => {
     return isActive ? "text-white text-base" : "text-principal text-base";
   };
 
+  const IconWrapper = ({ 
+    icon, 
+    href, 
+    exact = false 
+  }: { 
+    icon: React.ReactElement; 
+    href: string; 
+    exact?: boolean; 
+  }) => {
+    const iconClass = getIconClasses(href, exact);
+    
+    return (
+      <span className={iconClass}>
+        {icon}
+      </span>
+    );
+  };
+
   const navItems = [
     { label: "Tableau de Bord", href: "/dashboard/censor", icon: <FaTachometerAlt /> },
     { label: "Vagues de Formation", href: "/dashboard/censor/vagues", icon: <FaLayerGroup />, category: "ORGANISATION PÉDAGOGIQUE" },
@@ -70,6 +89,7 @@ const SidebarCenseur = () => {
     { label: "Absences", href: "/dashboard/censor/absences", icon: <FaUserGraduate />, category: "SURVEILLANCE" },
     { label: "Statistiques", href: "/dashboard/censor/statistiques", icon: <FaChartLine />, category: "ANALYSE" },
     { label: "Rapports Hebdomadaires", href: "/dashboard/censor/rapports", icon: <FaClipboardList />, category: "ANALYSE" },
+    { label: "Statistiques", href: "/dashboard/censor/statistiques", icon: <FaChartLine />, category: "ANALYSE" },
   ];
 
   const groupedItems = {
@@ -131,7 +151,7 @@ const SidebarCenseur = () => {
         {dashboardItem && (
           <div className="p-3 border-b border-gray-200">
             <Link href={dashboardItem.href} className={getLinkClasses(dashboardItem.href, true)}>
-              {React.cloneElement(dashboardItem.icon, { className: getIconClasses(dashboardItem.href, true) })}
+              <IconWrapper icon={dashboardItem.icon} href={dashboardItem.href} exact={true} />
               <span>{dashboardItem.label}</span>
             </Link>
           </div>
@@ -143,7 +163,7 @@ const SidebarCenseur = () => {
               <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">{category}</h3>
               {items.map((item, index) => (
                 <Link key={index} href={item.href} className={getLinkClasses(item.href)}>
-                  {React.cloneElement(item.icon, { className: getIconClasses(item.href) })}
+                  <IconWrapper icon={item.icon} href={item.href} />
                   <span>{item.label}</span>
                 </Link>
               ))}
@@ -155,9 +175,19 @@ const SidebarCenseur = () => {
           <Button variant="ghost" onClick={handleProfileClick} className="w-full flex items-center gap-2 text-sm justify-between hover:bg-gray-50">
             <div className="flex items-center gap-2">
               {user?.imageUrl ? (
-                <img src={user.imageUrl} alt={userName} className="h-7 w-7 rounded-full object-cover" />
+                <div className="h-7 w-7 rounded-full overflow-hidden">
+                  <Image 
+                    src={user.imageUrl} 
+                    alt={userName} 
+                    width={28}
+                    height={28}
+                    className="object-cover"
+                  />
+                </div>
               ) : (
-                <div className="h-7 w-7 rounded-full bg-principal text-white flex items-center justify-center text-xs font-medium">{userInitials}</div>
+                <div className="h-7 w-7 rounded-full bg-principal text-white flex items-center justify-center text-xs font-medium">
+                  {userInitials}
+                </div>
               )}
               <div className="text-left leading-tight">
                 <div className="font-medium text-gray-700 text-[13px] truncate max-w-[120px]">{userName}</div>
@@ -172,18 +202,17 @@ const SidebarCenseur = () => {
               <div className="fixed inset-0 bg-black bg-opacity-10 z-40" onClick={handleCloseModal} />
               <div className="absolute bottom-14 left-3 right-3 bg-white rounded-lg shadow-lg border border-gray-200 z-50 overflow-hidden">
                 <div className="p-2 space-y-1">
-                  <Link href="/dashboard/censeur/profile" className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium" onClick={handleCloseModal}>
+                  <Link href="/dashboard/censor/profile" className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium" onClick={handleCloseModal}>
                     <FaUser className="text-gray-600 text-sm" />
                     <span>Mon Profil</span>
                   </Link>
 
-                  {/* NOUVEAU MENU NOTIFICATIONS AJOUTÉ */}
-                  <Link href="/dashboard/censeur/notifications" className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium" onClick={handleCloseModal}>
+                  <Link href="/dashboard/censor/notifications" className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium" onClick={handleCloseModal}>
                     <FaBell className="text-gray-600 text-sm" />
                     <span>Notifications</span>
                   </Link>
 
-                  <Link href="/dashboard/censeur/settings" className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium" onClick={handleCloseModal}>
+                  <Link href="/dashboard/censor/settings" className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium" onClick={handleCloseModal}>
                     <FaCog className="text-gray-600 text-sm" />
                     <span>Paramètres</span>
                   </Link>

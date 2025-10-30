@@ -1,3 +1,4 @@
+// middleware.ts - VERSION CORRIGÉE
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { clerkClient } from '@clerk/nextjs/server';
@@ -12,7 +13,7 @@ const isPublicRoute = createRouteMatcher([
   '/unauthorized',
 ]);
 
-// 🎯 CONFIGURATION CORRIGÉE
+// 🎯 CONFIGURATION CORRIGÉE - AJOUT DE LA SECRÉTAIRE
 const rolePermissions = {
   // ADMIN - Accès à tous les dashboards
   'Administrateur': [
@@ -26,12 +27,18 @@ const rolePermissions = {
     '/auth/signup'
   ],
 
+  // SECRÉTAIRE - Son dashboard et inscription étudiants
+  'Secretaire': [
+    '/dashboard/secretaire',
+    '/auth/signup'
+  ],
+
   // CENSEUR - Son dashboard uniquement
   'Censeur': [
     '/dashboard/censor'
   ],
   
-  // PROFESSEUR - Son dashboard uniquement (CORRIGÉ : Enseignant)
+  // PROFESSEUR - Son dashboard uniquement
   'Enseignant': [
     '/dashboard/teacher'
   ],
@@ -46,18 +53,13 @@ const rolePermissions = {
     '/dashboard/comptable'
   ],
   
-  // SECRÉTAIRE - Son dashboard uniquement
-  'Secretaire': [
-    '/dashboard/secretaire'
-  ],
-
-  // ÉLÈVE - Son dashboard uniquement (AJOUTÉ)
+  // ÉLÈVE - Son dashboard uniquement
   'Élève': [
     '/dashboard/student'
   ]
 };
 
-// 🔍 Fonction pour vérifier les permissions - CORRIGÉE
+// 🔍 Fonction pour vérifier les permissions
 const hasPermission = (userRole: string, pathname: string): boolean => {
   const allowedPaths = rolePermissions[userRole as keyof typeof rolePermissions] || [];
   
@@ -72,12 +74,12 @@ const hasPermission = (userRole: string, pathname: string): boolean => {
   return hasAccess;
 };
 
-// 🗺️ Mappage des redirections par rôle - CORRIGÉ
+// 🗺️ Mappage des redirections par rôle
 const getRoleDashboard = (userRole: string): string => {
   const dashboardMap: Record<string, string> = {
     'Administrateur': '/dashboard/admin',
     'Élève': '/dashboard/student',
-    'Enseignant': '/dashboard/teacher', // CORRIGÉ : Enseignant → teacher
+    'Enseignant': '/dashboard/teacher', 
     'Parent': '/dashboard/parent',
     'Censeur': '/dashboard/censor',
     'Comptable': '/dashboard/comptable',
@@ -95,7 +97,7 @@ export default clerkMiddleware(async (auth, req) => {
   console.log('🔍 Middleware - Path:', pathname);
   console.log('🔍 Middleware - User ID:', userId);
 
-  // 🔥 PROTECTION DE /auth/signup - SEULS LES ADMINS
+  // 🔥 PROTECTION DE /auth/signup - ADMINS ET SECRÉTAIRES
   if (pathname.toLowerCase() === '/auth/signup') {
     console.log('🛡️  === DÉBUT PROTECTION SIGNUP ===');
     
@@ -111,21 +113,28 @@ export default clerkMiddleware(async (auth, req) => {
       
       console.log('🔍 Rôle depuis API Clerk:', userRole);
 
-      // Vérification admin plus flexible
+      // Vérification admin ou secrétaire
       const isAdmin = userRole && (
         userRole.toLowerCase().includes('admin') || 
         userRole === 'Administrateur' ||
         userRole.toLowerCase().includes('administrateur')
       );
+
+      const isSecretaire = userRole && (
+        userRole.toLowerCase().includes('secretaire') || 
+        userRole === 'Secrétaire' ||
+        userRole.toLowerCase().includes('secrétaire')
+      );
       
       console.log('🔍 Est admin?', isAdmin);
+      console.log('🔍 Est secrétaire?', isSecretaire);
       
-      if (!isAdmin) {
-        console.log('🚫 Accès refusé à /auth/signup - Rôle non admin:', userRole);
+      if (!isAdmin && !isSecretaire) {
+        console.log('🚫 Accès refusé à /auth/signup - Rôle non autorisé:', userRole);
         return NextResponse.redirect(new URL('/unauthorized', req.url));
       }
 
-      console.log('✅ Accès autorisé à /auth/signup pour admin');
+      console.log('✅ Accès autorisé à /auth/signup');
       
     } catch (error) {
       console.error('❌ Erreur API Clerk:', error);
@@ -172,7 +181,7 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   // 🔐 VÉRIFICATION DES RÔLES POUR LES ROUTES PROTÉGÉES
-  if (pathname.startsWith('/dashboard')) {
+  if (pathname.startsWith('/dashboard') || pathname.startsWith('/auth/signup')) {
     console.log('🔐 === VÉRIFICATION DES RÔLES ===');
     
     try {
@@ -189,6 +198,11 @@ export default clerkMiddleware(async (auth, req) => {
         
         const userDashboard = getRoleDashboard(userRole);
         console.log(`🎯 Redirection vers: ${userDashboard}`);
+        
+        // Pour /auth/signup, rediriger vers le dashboard si pas autorisé
+        if (pathname === '/auth/signup') {
+          return NextResponse.redirect(new URL(userDashboard, req.url));
+        }
         
         return NextResponse.redirect(new URL(userDashboard, req.url));
       }
@@ -208,4 +222,4 @@ export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
-};
+}; 

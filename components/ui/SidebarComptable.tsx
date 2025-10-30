@@ -5,12 +5,12 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
+import Image from "next/image";
 import {
   FaTachometerAlt,
   FaMoneyBillWave,
   FaCreditCard,
   FaFileInvoiceDollar,
-  FaCalculator,
   FaChartLine,
   FaChartBar,
   FaFileAlt,
@@ -22,9 +22,8 @@ import {
   FaChevronDown,
   FaReceipt,
   FaBalanceScale,
-  FaRegMoneyBillAlt,
   FaExclamationTriangle,
-  FaBell, // Icône notifications ajoutée
+  FaBell,
 } from "react-icons/fa";
 
 import { Button } from "@/components/ui/button";
@@ -75,19 +74,43 @@ const SidebarComptable = () => {
     return isActive ? "text-white text-base" : "text-principal text-base";
   };
 
+  // ✅ CORRIGÉ : Wrapper pour les icônes
+  const IconWrapper = ({ 
+    icon, 
+    href, 
+    exact = false 
+  }: { 
+    icon: React.ReactElement; 
+    href: string; 
+    exact?: boolean; 
+  }) => {
+    const iconClass = getIconClasses(href, exact);
+    
+    return (
+      <span className={iconClass}>
+        {icon}
+      </span>
+    );
+  };
+
   // === MENU SPÉCIFIQUE COMPTABLE ===
   const navItems = [
+    // TABLEAU DE BORD
     { label: "Tableau de Bord", href: "/dashboard/comptable", icon: <FaTachometerAlt /> },
-    { label: "Frais de Formation", href: "/dashboard/comptable/tuition", icon: <FaMoneyBillWave />, category: "FINANCES" },
-    { label: "Paiements", href: "/dashboard/comptable/payments", icon: <FaCreditCard />, category: "FINANCES" },
-    { label: "Facturation", href: "/dashboard/comptable/invoices", icon: <FaFileInvoiceDollar />, category: "FINANCES" },
-    { label: "Reçus & Quittances", href: "/dashboard/comptable/receipts", icon: <FaReceipt />, category: "FINANCES" },
-    { label: "Calcul des Frais", href: "/dashboard/comptable/fees-calculation", icon: <FaCalculator />, category: "COMPTABILITÉ" },
+  
+    // GESTION FINANCIÈRE
+    { label: "Frais de Formation", href: "/dashboard/comptable/frais-formation", icon: <FaMoneyBillWave />, category: "FINANCES" },
+    { label: "Paiements", href: "/dashboard/comptable/paiements", icon: <FaCreditCard />, category: "FINANCES" },
+    { label: "Facturation", href: "/dashboard/comptable/facturation", icon: <FaFileInvoiceDollar />, category: "FINANCES" },
+    { label: "Reçus & Quittances", href: "/dashboard/comptable/recus", icon: <FaReceipt />, category: "FINANCES" },
+  
+    // COMPTABILITÉ
     { label: "Balance Comptable", href: "/dashboard/comptable/balance", icon: <FaBalanceScale />, category: "COMPTABILITÉ" },
     { label: "Journal des Opérations", href: "/dashboard/comptable/journal", icon: <FaFileAlt />, category: "COMPTABILITÉ" },
-    { label: "Budget & Prévisions", href: "/dashboard/comptable/budget", icon: <FaRegMoneyBillAlt />, category: "COMPTABILITÉ" },
-    { label: "Statistiques Financières", href: "/dashboard/comptable/analytics", icon: <FaChartLine />, category: "ANALYSE" },
-    { label: "Rapports Mensuels", href: "/dashboard/comptable/monthly-reports", icon: <FaChartBar />, category: "ANALYSE" },
+  
+    // ANALYSE
+    { label: "Statistiques Financières", href: "/dashboard/comptable/statistiques", icon: <FaChartLine />, category: "ANALYSE" },
+    { label: "Rapports Mensuels", href: "/dashboard/comptable/rapports", icon: <FaChartBar />, category: "ANALYSE" },
   ];
 
   const groupedItems = {
@@ -190,9 +213,7 @@ const SidebarComptable = () => {
               href={dashboardItem.href} 
               className={getLinkClasses(dashboardItem.href, true)}
             >
-              {React.cloneElement(dashboardItem.icon, { 
-                className: getIconClasses(dashboardItem.href, true) 
-              })}
+              <IconWrapper icon={dashboardItem.icon} href={dashboardItem.href} exact={true} />
               <span>{dashboardItem.label}</span>
             </Link>
           </div>
@@ -210,9 +231,7 @@ const SidebarComptable = () => {
                   href={item.href} 
                   className={getLinkClasses(item.href)}
                 >
-                  {React.cloneElement(item.icon, { 
-                    className: getIconClasses(item.href) 
-                  })}
+                  <IconWrapper icon={item.icon} href={item.href} />
                   <span>{item.label}</span>
                 </Link>
               ))}
@@ -228,11 +247,16 @@ const SidebarComptable = () => {
           >
             <div className="flex items-center gap-2">
               {user?.imageUrl ? (
-                <img 
-                  src={user.imageUrl} 
-                  alt={comptableName}
-                  className="h-7 w-7 rounded-full object-cover"
-                />
+                // ✅ CORRIGÉ : Utilisation de Image
+                <div className="h-7 w-7 rounded-full overflow-hidden">
+                  <Image 
+                    src={user.imageUrl} 
+                    alt={comptableName}
+                    width={28}
+                    height={28}
+                    className="object-cover"
+                  />
+                </div>
               ) : (
                 <div className="h-7 w-7 rounded-full bg-principal text-white flex items-center justify-center text-xs font-medium">
                   {comptableInitials}

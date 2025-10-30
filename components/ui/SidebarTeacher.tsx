@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
+import Image from "next/image";
 import {
   FaChalkboardTeacher,
   FaCalendarAlt,
@@ -69,6 +70,25 @@ const SidebarTeacher = () => {
     
     const isActive = exact ? pathname === href : pathname.startsWith(href);
     return isActive ? "text-white text-base" : "text-principal text-base";
+  };
+
+  // ✅ CORRIGÉ : Wrapper pour les icônes
+  const IconWrapper = ({ 
+    icon, 
+    href, 
+    exact = false 
+  }: { 
+    icon: React.ReactElement; 
+    href: string; 
+    exact?: boolean; 
+  }) => {
+    const iconClass = getIconClasses(href, exact);
+    
+    return (
+      <span className={iconClass}>
+        {icon}
+      </span>
+    );
   };
 
   // === MENU SPÉCIFIQUE PROFESSEUR ===
@@ -186,9 +206,7 @@ const SidebarTeacher = () => {
               href={dashboardItem.href} 
               className={getLinkClasses(dashboardItem.href, true)}
             >
-              {React.cloneElement(dashboardItem.icon, { 
-                className: getIconClasses(dashboardItem.href, true) 
-              })}
+              <IconWrapper icon={dashboardItem.icon} href={dashboardItem.href} exact={true} />
               <span>{dashboardItem.label}</span>
             </Link>
           </div>
@@ -207,9 +225,7 @@ const SidebarTeacher = () => {
                   href={item.href} 
                   className={getLinkClasses(item.href)}
                 >
-                  {React.cloneElement(item.icon, { 
-                    className: getIconClasses(item.href) 
-                  })}
+                  <IconWrapper icon={item.icon} href={item.href} />
                   <span>{item.label}</span>
                 </Link>
               ))}
@@ -226,11 +242,16 @@ const SidebarTeacher = () => {
           >
             <div className="flex items-center gap-2">
               {user?.imageUrl ? (
-                <img 
-                  src={user.imageUrl} 
-                  alt={teacherName}
-                  className="h-7 w-7 rounded-full object-cover"
-                />
+                // ✅ CORRIGÉ : Utilisation de Image
+                <div className="h-7 w-7 rounded-full overflow-hidden">
+                  <Image 
+                    src={user.imageUrl} 
+                    alt={teacherName}
+                    width={28}
+                    height={28}
+                    className="object-cover"
+                  />
+                </div>
               ) : (
                 <div className="h-7 w-7 rounded-full bg-principal text-white flex items-center justify-center text-xs font-medium">
                   {teacherInitials}
@@ -273,7 +294,7 @@ const SidebarTeacher = () => {
                   </Link>
                   
                   <Link
-                    href="/dashboard/secretaire/notifications"
+                    href="/dashboard/teacher/notifications"
                     className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium"
                     onClick={handleCloseModal}
                   >

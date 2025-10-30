@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
+import Image from "next/image";
 import {
   FaTachometerAlt,
   FaUserGraduate,
@@ -17,6 +18,7 @@ import {
   FaChartLine,
   FaCog,
   FaBell,
+  FaGraduationCap,
   FaSignOutAlt,
   FaBars,
   FaTimes,
@@ -56,6 +58,24 @@ const SidebarAdmin = () => {
     return isActive ? "text-white text-base" : "text-principal text-base";
   };
 
+  const IconWrapper = ({ 
+    icon, 
+    href, 
+    exact = false 
+  }: { 
+    icon: React.ReactElement; 
+    href: string; 
+    exact?: boolean; 
+  }) => {
+    const iconClass = getIconClasses(href, exact);
+    
+    return (
+      <span className={iconClass}>
+        {icon}
+      </span>
+    );
+  };
+
   const navItems = [
     { label: "Tableau de Bord", href: "/dashboard/admin", icon: <FaTachometerAlt /> },
     { label: "Professeurs", href: "/dashboard/admin/teachers", icon: <FaChalkboardTeacher />, category: "Gestion des utilisateurs" },
@@ -65,6 +85,7 @@ const SidebarAdmin = () => {
     { label: "Filières & Modules", href: "/dashboard/admin/filieres", icon: <FaProjectDiagram />, category: "Organisation pédagogique" },
     { label: "Planning (Emploi du temps global)", href: "/dashboard/admin/planning", icon: <FaCalendarCheck />, category: "Organisation pédagogique" },
     { label: "Bilan Académiques", href: "/dashboard/admin/bilan-academiques", icon: <FaFileAlt />, category: "Organisation pédagogique" },
+    { label: "Évènements Scolaires", href: "/dashboard/admin/events", icon: <FaGraduationCap />, category: "Organisation pédagogique" },
     { label: "Paiements & Finances", href: "/dashboard/admin/finances", icon: <FaMoneyBillWave />, category: "Finances" },
     { label: "Rapports & Statistiques", href: "/dashboard/admin/rapports", icon: <FaChartLine />, category: "Analyse" },
   ];
@@ -126,7 +147,7 @@ const SidebarAdmin = () => {
         {dashboardItem && (
           <div className="p-3 border-b border-gray-200">
             <Link href={dashboardItem.href} className={getLinkClasses(dashboardItem.href, true)}>
-              {React.cloneElement(dashboardItem.icon, { className: getIconClasses(dashboardItem.href, true) })}
+              <IconWrapper icon={dashboardItem.icon} href={dashboardItem.href} exact={true} />
               <span>{dashboardItem.label}</span>
             </Link>
           </div>
@@ -138,7 +159,7 @@ const SidebarAdmin = () => {
               <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">{category}</h3>
               {items.map((item, index) => (
                 <Link key={index} href={item.href} className={getLinkClasses(item.href)}>
-                  {React.cloneElement(item.icon, { className: getIconClasses(item.href) })}
+                  <IconWrapper icon={item.icon} href={item.href} />
                   <span>{item.label}</span>
                 </Link>
               ))}
@@ -149,8 +170,21 @@ const SidebarAdmin = () => {
         <div className="mt-auto border-t border-gray-100 p-3 relative">
           <Button variant="ghost" onClick={handleProfileClick} className="w-full flex items-center gap-2 text-sm justify-between hover:bg-gray-50">
             <div className="flex items-center gap-2">
-              {user?.imageUrl ? <img src={user.imageUrl} alt={adminName} className="h-7 w-7 rounded-full object-cover" /> :
-                <div className="h-7 w-7 rounded-full bg-principal text-white flex items-center justify-center text-xs font-medium">{adminInitials}</div>}
+              {user?.imageUrl ? (
+                <div className="h-7 w-7 rounded-full overflow-hidden">
+                  <Image 
+                    src={user.imageUrl} 
+                    alt={adminName} 
+                    width={28}
+                    height={28}
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="h-7 w-7 rounded-full bg-principal text-white flex items-center justify-center text-xs font-medium">
+                  {adminInitials}
+                </div>
+              )}
               <div className="text-left leading-tight">
                 <div className="font-medium text-gray-700 text-[13px] truncate max-w-[120px]">{adminName}</div>
                 <div className="text-[10px] text-gray-500">Administrateur</div>
@@ -168,7 +202,7 @@ const SidebarAdmin = () => {
                     <FaUser className="text-gray-600 text-sm" /><span>Profil</span>
                   </Link>
                   <Link
-                    href="/dashboard/comptable/notifications"
+                    href="/dashboard/admin/notifications"
                     className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium"
                     onClick={handleCloseModal}
                   >

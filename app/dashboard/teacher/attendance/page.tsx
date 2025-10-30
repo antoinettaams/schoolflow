@@ -21,6 +21,50 @@ import {
   FaChalkboardTeacher
 } from "react-icons/fa";
 
+// Interfaces TypeScript
+interface AttendanceRecord {
+  date: string;
+  courseTime: string;
+  subject: string;
+  status: "present" | "absent";
+  justified: boolean;
+  reason: string;
+  semester: string;
+}
+
+interface Student {
+  id: number;
+  name: string;
+  studentId: string;
+  attendance: AttendanceRecord[];
+}
+
+interface ClassSchedule {
+  id: string;
+  label: string;
+  subject: string;
+  dayOfWeek: string;
+  time: string;
+}
+
+interface ClassInfo {
+  id: string;
+  name: string;
+  level: string;
+  teacherSchedule: ClassSchedule[];
+}
+
+interface Semester {
+  id: string;
+  name: string;
+  start: string;
+  end: string;
+}
+
+interface StudentData {
+  [key: string]: Student[];
+}
+
 export default function TeacherAttendancePage() {
   const [selectedClass, setSelectedClass] = useState("1");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -34,12 +78,11 @@ export default function TeacherAttendancePage() {
   const [newStudent, setNewStudent] = useState({ name: "", studentId: "" });
 
   // Données simulées des classes AVEC LES HORAIRES HEBDOMADAIRES DU PROFESSEUR
-  const classesData = [
+  const classesData: ClassInfo[] = [
     { 
       id: "1", 
       name: "Classe A", 
       level: "6ème",
-      // Le professeur a cette classe 3 fois par semaine à des horaires différents
       teacherSchedule: [
         { 
           id: "mon-08:00-10:00", 
@@ -109,38 +152,14 @@ export default function TeacherAttendancePage() {
   ];
 
   // Trimestres
-  const semesters = [
+  const semesters: Semester[] = [
     { id: "t1", name: "Premier Trimestre", start: "2024-09-01", end: "2024-12-20" },
     { id: "t2", name: "Deuxième Trimestre", start: "2025-01-06", end: "2025-04-05" },
     { id: "t3", name: "Troisième Trimestre", start: "2025-04-22", end: "2025-06-30" }
   ];
 
-  // Obtenir les horaires de cours pour la classe sélectionnée
-  const getCurrentClassSchedule = () => {
-    const currentClass = classesData.find(c => c.id === selectedClass);
-    return currentClass?.teacherSchedule || [];
-  };
-
-  // Obtenir le jour de la semaine pour une date
-  const getDayOfWeek = (dateString: string) => {
-    const date = new Date(dateString);
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    return days[date.getDay()];
-  };
-
-  // Filtrer les horaires disponibles pour la date sélectionnée
-  const getAvailableTimeSlots = () => {
-    const currentSchedule = getCurrentClassSchedule();
-    const selectedDayOfWeek = getDayOfWeek(selectedDate);
-    
-    // Retourner seulement les horaires qui correspondent au jour de la semaine sélectionné
-    return currentSchedule.filter(schedule => 
-      schedule.dayOfWeek === selectedDayOfWeek
-    );
-  };
-
   // Données simulées des étudiants
-  const [studentData, setStudentData] = useState({
+  const [studentData, setStudentData] = useState<StudentData>({
     "1": [
       { 
         id: 1, 
@@ -173,31 +192,55 @@ export default function TeacherAttendancePage() {
     ]
   });
 
+  // Obtenir les horaires de cours pour la classe sélectionnée
+  const getCurrentClassSchedule = (): ClassSchedule[] => {
+    const currentClass = classesData.find(c => c.id === selectedClass);
+    return currentClass?.teacherSchedule || [];
+  };
+
+  // Obtenir le jour de la semaine pour une date
+  const getDayOfWeek = (dateString: string): string => {
+    const date = new Date(dateString);
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return days[date.getDay()];
+  };
+
+  // Filtrer les horaires disponibles pour la date sélectionnée
+  const getAvailableTimeSlots = (): ClassSchedule[] => {
+    const currentSchedule = getCurrentClassSchedule();
+    const selectedDayOfWeek = getDayOfWeek(selectedDate);
+    
+    return currentSchedule.filter(schedule => 
+      schedule.dayOfWeek === selectedDayOfWeek
+    );
+  };
+
   const currentClass = classesData.find(c => c.id === selectedClass);
-  const currentStudents = studentData[selectedClass as keyof typeof studentData] || [];
+  const currentStudents = studentData[selectedClass] || [];
   const availableTimeSlots = getAvailableTimeSlots();
 
   // Vérifier si la date sélectionnée est dans le semestre choisi
-  const isDateInSelectedSemester = () => {
+  const isDateInSelectedSemester = (): boolean => {
     const semester = semesters.find(s => s.id === selectedSemester);
     if (!semester) return false;
     return selectedDate >= semester.start && selectedDate <= semester.end;
   };
 
   // Obtenir le statut actuel pour la date, l'heure de cours et le semestre sélectionnés
-  const getCurrentStatus = (student: any) => {
+  const getCurrentStatus = (student: Student): AttendanceRecord => {
     if (!selectedCourseTime) {
       return { 
+        date: selectedDate,
+        courseTime: "",
+        subject: getCurrentSubject(),
         status: "present", 
         justified: false, 
         reason: "", 
-        semester: selectedSemester,
-        courseTime: "",
-        date: selectedDate
+        semester: selectedSemester
       };
     }
 
-    const todayRecord = student.attendance.find((a: any) => 
+    const todayRecord = student.attendance.find(a => 
       a.date === selectedDate && 
       a.courseTime === selectedCourseTime
     );
@@ -207,12 +250,13 @@ export default function TeacherAttendancePage() {
     }
     
     return { 
+      date: selectedDate,
+      courseTime: selectedCourseTime,
+      subject: getCurrentSubject(),
       status: "present", 
       justified: false, 
       reason: "", 
-      semester: selectedSemester,
-      courseTime: selectedCourseTime,
-      date: selectedDate
+      semester: selectedSemester
     };
   };
 
@@ -223,20 +267,20 @@ export default function TeacherAttendancePage() {
   );
 
   // Obtenir toutes les absences d'un étudiant pour le semestre sélectionné
-  const getSemesterAbsences = (student: any) => {
-    return student.attendance.filter((a: any) => 
+  const getSemesterAbsences = (student: Student): AttendanceRecord[] => {
+    return student.attendance.filter(a => 
       a.semester === selectedSemester && a.status === "absent"
     );
   };
 
   // Obtenir les absences d'un étudiant pour la matière actuelle
-  const getCurrentSubjectAbsences = (student: any) => {
+  const getCurrentSubjectAbsences = (student: Student): AttendanceRecord[] => {
     if (!selectedCourseTime) return [];
     
     const currentScheduleItem = availableTimeSlots.find(s => s.id === selectedCourseTime);
     if (!currentScheduleItem) return [];
     
-    return student.attendance.filter((a: any) => 
+    return student.attendance.filter(a => 
       a.semester === selectedSemester && 
       a.status === "absent" &&
       a.courseTime === selectedCourseTime
@@ -278,8 +322,8 @@ export default function TeacherAttendancePage() {
 
   // Trier les données
   const sortedStudents = [...filteredStudents].sort((a, b) => {
-    let aValue = a[sortField as keyof typeof a];
-    let bValue = b[sortField as keyof typeof b];
+    let aValue = a[sortField as keyof Student];
+    let bValue = b[sortField as keyof Student];
 
     if (sortField === "name") {
       aValue = String(aValue).toLowerCase();
@@ -299,12 +343,12 @@ export default function TeacherAttendancePage() {
 
     setStudentData(prev => ({
       ...prev,
-      [selectedClass]: prev[selectedClass as keyof typeof prev].map(student => {
+      [selectedClass]: prev[selectedClass].map(student => {
         if (student.id === studentId) {
           const currentStatus = getCurrentStatus(student);
           const newStatus = currentStatus.status === "present" ? "absent" : "present";
           
-          const updatedAttendance = student.attendance.filter((a: any) => 
+          const updatedAttendance = student.attendance.filter(a => 
             !(a.date === selectedDate && a.courseTime === selectedCourseTime)
           );
           
@@ -336,11 +380,11 @@ export default function TeacherAttendancePage() {
 
     setStudentData(prev => ({
       ...prev,
-      [selectedClass]: prev[selectedClass as keyof typeof prev].map(student => {
+      [selectedClass]: prev[selectedClass].map(student => {
         if (student.id === studentId) {
           const currentStatus = getCurrentStatus(student);
           if (currentStatus.status === "absent") {
-            const updatedAttendance = student.attendance.filter((a: any) => 
+            const updatedAttendance = student.attendance.filter(a => 
               !(a.date === selectedDate && a.courseTime === selectedCourseTime)
             );
             updatedAttendance.push({
@@ -365,11 +409,11 @@ export default function TeacherAttendancePage() {
 
     setStudentData(prev => ({
       ...prev,
-      [selectedClass]: prev[selectedClass as keyof typeof prev].map(student => {
+      [selectedClass]: prev[selectedClass].map(student => {
         if (student.id === studentId) {
           const currentStatus = getCurrentStatus(student);
           if (currentStatus.status === "absent") {
-            const updatedAttendance = student.attendance.filter((a: any) => 
+            const updatedAttendance = student.attendance.filter(a => 
               !(a.date === selectedDate && a.courseTime === selectedCourseTime)
             );
             updatedAttendance.push({
@@ -395,7 +439,7 @@ export default function TeacherAttendancePage() {
       return;
     }
 
-    const newStudentData = {
+    const newStudentData: Student = {
       id: Date.now(),
       name: newStudent.name,
       studentId: newStudent.studentId,
@@ -404,7 +448,7 @@ export default function TeacherAttendancePage() {
 
     setStudentData(prev => ({
       ...prev,
-      [selectedClass]: [...prev[selectedClass as keyof typeof prev], newStudentData]
+      [selectedClass]: [...prev[selectedClass], newStudentData]
     }));
 
     setNewStudent({ name: "", studentId: "" });
@@ -418,19 +462,19 @@ export default function TeacherAttendancePage() {
 
     setStudentData(prev => ({
       ...prev,
-      [selectedClass]: prev[selectedClass as keyof typeof prev].filter(student => student.id !== studentId)
+      [selectedClass]: prev[selectedClass].filter(student => student.id !== studentId)
     }));
   };
 
   // Obtenir la matière actuelle
-  const getCurrentSubject = () => {
+  const getCurrentSubject = (): string => {
     if (!selectedCourseTime) return "Sélectionnez un horaire";
     const currentScheduleItem = availableTimeSlots.find(s => s.id === selectedCourseTime);
     return currentScheduleItem?.subject || "Mathématiques";
   };
 
   // Obtenir le libellé de l'horaire actuel
-  const getCurrentTimeLabel = () => {
+  const getCurrentTimeLabel = (): string => {
     if (!selectedCourseTime) return "";
     const currentScheduleItem = availableTimeSlots.find(s => s.id === selectedCourseTime);
     return currentScheduleItem?.label || "";
@@ -458,7 +502,7 @@ export default function TeacherAttendancePage() {
                   value={selectedDate}
                   onChange={(e) => {
                     setSelectedDate(e.target.value);
-                    setSelectedCourseTime(""); // Réinitialiser l'horaire quand la date change
+                    setSelectedCourseTime(""); // Réinitialiser l&apos;horaire quand la date change
                   }}
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -504,7 +548,7 @@ export default function TeacherAttendancePage() {
                   value={selectedClass}
                   onChange={(e) => {
                     setSelectedClass(e.target.value);
-                    setSelectedCourseTime(""); // Réinitialiser l'horaire quand la classe change
+                    setSelectedCourseTime(""); // Réinitialiser l&apos;horaire quand la classe change
                   }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
@@ -586,13 +630,13 @@ export default function TeacherAttendancePage() {
               </div>
             )}
 
-            {/* Avertissement si la date n'est pas dans le semestre */}
+            {/* Avertissement si la date n&apos;est pas dans le semestre */}
             {!isDateInSelectedSemester() && (
               <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div className="flex items-center gap-2 text-yellow-800">
                   <FaExclamationTriangle />
                   <span className="text-sm font-medium">
-                    La date sélectionnée n'est pas dans le trimestre choisi. 
+                    La date sélectionnée n&apos;est pas dans le trimestre choisi. 
                     Les modifications seront enregistrées pour le trimestre sélectionné.
                   </span>
                 </div>
@@ -663,7 +707,7 @@ export default function TeacherAttendancePage() {
                         onClick={() => handleSort("name")}
                       >
                         <div className="flex items-center gap-2">
-                          Nom de l'élève
+                          Nom de l&apos;élève
                           {getSortIcon("name")}
                         </div>
                       </th>
@@ -742,7 +786,7 @@ export default function TeacherAttendancePage() {
                                 value={currentStatus.reason}
                                 onChange={(e) => updateReason(student.id, e.target.value)}
                                 disabled={!isEditing}
-                                placeholder="Motif de l'absence..."
+                                placeholder="Motif de l&apos;absence..."
                                 className={`w-full px-3 py-1 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                                   isEditing ? "border-gray-300 bg-white" : "border-gray-200 bg-gray-100 cursor-not-allowed"
                                 }`}
@@ -780,7 +824,7 @@ export default function TeacherAttendancePage() {
                               <button
                                 onClick={() => removeStudent(student.id)}
                                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Supprimer l'élève"
+                                title="Supprimer l&apos;élève"
                               >
                                 <FaTrash className="text-sm" />
                               </button>
@@ -809,7 +853,7 @@ export default function TeacherAttendancePage() {
         </div>
       </div>
 
-      {/* Modal d'ajout d'élève */}
+      {/* Modal d&apos;ajout d&apos;élève */}
       {showAddStudentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
