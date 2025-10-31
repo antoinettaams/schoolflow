@@ -5,17 +5,21 @@ import React, { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { 
-  FaUserGraduate, 
-  FaSearch, 
+import {
+  FaUserGraduate,
+  FaSearch,
   FaEye,
   FaSort,
   FaUsers,
   FaChartLine,
   FaPlus,
+  FaChartBar,
+  FaTrash,
+  FaPhone,
+  FaEnvelope,
+  FaIdCard,
   FaSchool,
   FaBook,
-  FaChartBar,
   FaTrophy,
   FaCalendarAlt
 } from "react-icons/fa";
@@ -44,8 +48,6 @@ interface Student {
   phone: string;
   studentNumber: string;
   filiere: string;
-  niveau: string;
-  classe: string;
   vagues: string[];
   averageGrade: number;
   attendanceRate: number;
@@ -55,12 +57,13 @@ interface Student {
   modules: Module[];
   rank: number;
   totalStudents: number;
+  anneeScolaire: string;
 }
 
 const AdminStudentsPage = () => {
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
-  
+
   const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFiliere, setSelectedFiliere] = useState<string>("all");
@@ -73,6 +76,10 @@ const AdminStudentsPage = () => {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Modal suppression état
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
   const openModal = (student: Student) => {
     setSelectedStudent(student);
     setIsModalOpen(true);
@@ -83,10 +90,27 @@ const AdminStudentsPage = () => {
     setIsModalOpen(false);
   };
 
+  const openDeleteModal = (student: Student) => {
+    setStudentToDelete(student);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setStudentToDelete(null);
+    setIsDeleteModalOpen(false);
+  };
+
+  const handleDeleteStudent = () => {
+    if (studentToDelete) {
+      setStudents(prev => prev.filter(s => s.id !== studentToDelete.id));
+      closeDeleteModal();
+    }
+  };
+
   // Vérification du rôle admin
   useEffect(() => {
     if (isLoaded && isSignedIn) {
-      const userRole = user?.publicMetadata?.role;
+      const userRole = user?.publicMetadata?.role as string;
       if (userRole !== "Administrateur") {
         router.push("/unauthorized");
       }
@@ -104,8 +128,6 @@ const AdminStudentsPage = () => {
         phone: "+225 07 12 34 56 78",
         studentNumber: "ETU-2024-001",
         filiere: "Informatique",
-        niveau: "Licence",
-        classe: "Terminale S1",
         vagues: ["Vague 2024 A"],
         averageGrade: 15.2,
         attendanceRate: 95,
@@ -120,7 +142,8 @@ const AdminStudentsPage = () => {
           { id: "m5", name: "Anglais technique", coefficient: 1, grade: 17.5, teacher: "Mme. Bamba" }
         ],
         rank: 2,
-        totalStudents: 45
+        totalStudents: 45,
+        anneeScolaire: "2024-2025"
       },
       {
         id: "2",
@@ -130,8 +153,6 @@ const AdminStudentsPage = () => {
         phone: "+225 05 98 76 54 32",
         studentNumber: "ETU-2024-002",
         filiere: "Mathématiques",
-        niveau: "Licence",
-        classe: "Terminale S1",
         vagues: ["Vague 2024 A"],
         averageGrade: 12.8,
         attendanceRate: 88,
@@ -145,7 +166,8 @@ const AdminStudentsPage = () => {
           { id: "m4", name: "Statistiques", coefficient: 3, grade: 12.5, teacher: "Prof. Diallo" }
         ],
         rank: 15,
-        totalStudents: 30
+        totalStudents: 30,
+        anneeScolaire: "2024-2025"
       },
       {
         id: "3",
@@ -155,8 +177,6 @@ const AdminStudentsPage = () => {
         phone: "+225 01 23 45 67 89",
         studentNumber: "ETU-2024-003",
         filiere: "Informatique",
-        niveau: "Master",
-        classe: "Première S2",
         vagues: ["Vague 2024 B"],
         averageGrade: 16.5,
         attendanceRate: 92,
@@ -171,58 +191,8 @@ const AdminStudentsPage = () => {
           { id: "m5", name: "Sécurité", coefficient: 2, grade: 16.0, teacher: "Dr. Diakité" }
         ],
         rank: 1,
-        totalStudents: 25
-      },
-      {
-        id: "4",
-        firstName: "Lucas",
-        lastName: "Petit",
-        email: "lucas.petit@student.com",
-        phone: "+225 04 56 78 90 12",
-        studentNumber: "ETU-2024-004",
-        filiere: "Mathématiques",
-        niveau: "Licence",
-        classe: "Terminale S1",
-        vagues: ["Vague 2024 A"],
-        averageGrade: 9.8,
-        attendanceRate: 75,
-        status: "inactif",
-        createdAt: "2024-09-01",
-        lastActivity: "2024-10-15",
-        modules: [
-          { id: "m1", name: "Algèbre avancée", coefficient: 4, grade: 8.5, teacher: "Dr. Konaté" },
-          { id: "m2", name: "Analyse", coefficient: 4, grade: 7.0, teacher: "Prof. Keita" },
-          { id: "m3", name: "Probabilités", coefficient: 3, grade: 12.0, teacher: "Dr. Coulibaly" },
-          { id: "m4", name: "Statistiques", coefficient: 3, grade: 11.5, teacher: "Prof. Diallo" }
-        ],
-        rank: 28,
-        totalStudents: 30
-      },
-      {
-        id: "5",
-        firstName: "Emma",
-        lastName: "Robert",
-        email: "emma.robert@student.com",
-        phone: "+225 06 78 90 12 34",
-        studentNumber: "ETU-2024-005",
-        filiere: "Informatique",
-        niveau: "Licence",
-        classe: "Terminale S1",
-        vagues: ["Vague 2024 A"],
-        averageGrade: 14.3,
-        attendanceRate: 98,
-        status: "suspendu",
-        createdAt: "2024-09-01",
-        lastActivity: "2024-10-18",
-        modules: [
-          { id: "m1", name: "Programmation Java", coefficient: 4, grade: 15.0, teacher: "Dr. Koné" },
-          { id: "m2", name: "Base de données", coefficient: 3, grade: 13.5, teacher: "Prof. Traoré" },
-          { id: "m3", name: "Réseaux", coefficient: 3, grade: 12.8, teacher: "Dr. Diarra" },
-          { id: "m4", name: "Mathématiques", coefficient: 2, grade: 16.0, teacher: "Prof. Sylla" },
-          { id: "m5", name: "Anglais technique", coefficient: 1, grade: 14.5, teacher: "Mme. Bamba" }
-        ],
-        rank: 12,
-        totalStudents: 45
+        totalStudents: 25,
+        anneeScolaire: "2024-2025"
       }
     ];
 
@@ -232,24 +202,26 @@ const AdminStudentsPage = () => {
   // Filtrage et tri
   const filteredStudents = students
     .filter(student => {
-      const matchesSearch = 
+      const matchesSearch =
         student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.studentNumber.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesFiliere = selectedFiliere === "all" || student.filiere === selectedFiliere;
       const matchesVague = selectedVague === "all" || student.vagues.includes(selectedVague);
       const matchesStatus = selectedStatus === "all" || student.status === selectedStatus;
-      
+
       return matchesSearch && matchesFiliere && matchesVague && matchesStatus;
     })
     .sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
-      
+
+      if (aValue === undefined || bValue === undefined) return 0;
+
       if (typeof aValue === "string" && typeof bValue === "string") {
-        return sortDirection === "asc" 
+        return sortDirection === "asc"
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue);
       }
@@ -269,8 +241,8 @@ const AdminStudentsPage = () => {
   };
 
   const getUniqueValues = (field: keyof Student) => {
-    const values = new Set(students.map(student => student[field]));
-    return Array.from(values);
+    const values = students.map(student => student[field]);
+    return Array.from(new Set(values.filter(value => value !== undefined && value !== null))) as string[];
   };
 
   const getUniqueVagues = () => {
@@ -287,7 +259,7 @@ const AdminStudentsPage = () => {
     const inactive = students.filter(s => s.status === "inactif").length;
     const suspended = students.filter(s => s.status === "suspendu").length;
     const averageGrade = students.reduce((acc, student) => acc + student.averageGrade, 0) / total;
-    
+
     return { total, active, inactive, suspended, averageGrade: averageGrade || 0 };
   };
 
@@ -301,7 +273,15 @@ const AdminStudentsPage = () => {
     );
   }
 
-  const userRole = user?.publicMetadata?.role;
+  if (!isSignedIn) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-lg">Redirection vers la connexion...</div>
+      </div>
+    );
+  }
+
+  const userRole = user?.publicMetadata?.role as string;
   if (userRole !== "Administrateur") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -309,7 +289,7 @@ const AdminStudentsPage = () => {
           <CardHeader>
             <CardTitle className="text-2xl text-red-600">Accès Refusé</CardTitle>
             <CardDescription className="text-gray-600">
-              Vous n&apos;avez pas les permissions d&apos;administrateur.
+              Vous n'avez pas les permissions d'administrateur.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -317,7 +297,7 @@ const AdminStudentsPage = () => {
               onClick={() => router.push("/")}
               className="bg-blue-600 text-white hover:bg-blue-700"
             >
-              Retour à l&apos;accueil
+              Retour à l'accueil
             </Button>
           </CardContent>
         </Card>
@@ -326,19 +306,18 @@ const AdminStudentsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="p-6 space-y-6 h-full overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
-        
+    <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
+      <div className="p-6 space-y-6">
         {/* En-tête */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Gestion des Élèves</h1>
             <p className="text-gray-600 mt-2">
-              Vue d&apos;ensemble complète de tous les élèves de l&apos;établissement.
+              Vue d'ensemble complète de tous les élèves de l'établissement.
             </p>
           </div>
           <Link href="/auth/signup">
-            <Button className="bg-principal hover:bg-principal/90">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
               <FaPlus className="mr-2 h-4 w-4" />
               Ajouter un Élève
             </Button>
@@ -415,7 +394,7 @@ const AdminStudentsPage = () => {
                   className="pl-10"
                 />
               </div>
-              
+
               <Select value={selectedFiliere} onValueChange={setSelectedFiliere}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filière" />
@@ -423,8 +402,8 @@ const AdminStudentsPage = () => {
                 <SelectContent>
                   <SelectItem value="all">Toutes les filières</SelectItem>
                   {getUniqueValues("filiere").map((filiere, index) => (
-                    <SelectItem key={`filiere-${index}`} value={filiere as string}>
-                      {filiere as string}
+                    <SelectItem key={`filiere-${index}`} value={filiere}>
+                      {filiere}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -471,10 +450,7 @@ const AdminStudentsPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead 
-                    className="cursor-pointer"
-                    onClick={() => handleSort("lastName")}
-                  >
+                  <TableHead className="cursor-pointer" onClick={() => handleSort("lastName")}>
                     <div className="flex items-center gap-2">
                       Élève
                       <FaSort className="h-3 w-3" />
@@ -482,20 +458,14 @@ const AdminStudentsPage = () => {
                   </TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Informations Académiques</TableHead>
-                  <TableHead 
-                    className="cursor-pointer text-center"
-                    onClick={() => handleSort("averageGrade")}
-                  >
+                  <TableHead className="cursor-pointer text-center" onClick={() => handleSort("averageGrade")}>
                     <div className="flex items-center gap-2 justify-center">
                       Performance
                       <FaSort className="h-3 w-3" />
                     </div>
                   </TableHead>
                   <TableHead>Vagues</TableHead>
-                  <TableHead 
-                    className="cursor-pointer"
-                    onClick={() => handleSort("status")}
-                  >
+                  <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
                     <div className="flex items-center gap-2">
                       Statut
                       <FaSort className="h-3 w-3" />
@@ -524,29 +494,22 @@ const AdminStudentsPage = () => {
                     <TableCell>
                       <div className="space-y-1">
                         <div className="text-sm font-medium">{student.filiere}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {student.niveau} • {student.classe}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Inscrit le {new Date(student.createdAt).toLocaleDateString("fr-FR")}
-                        </div>
+                        <div className="text-xs text-gray-500">{student.anneeScolaire}</div>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="space-y-2">
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={
                             student.averageGrade >= 15 ? "bg-green-50 text-green-700 border-green-200" :
-                            student.averageGrade >= 10 ? "bg-blue-50 text-blue-700 border-blue-200" :
-                            "bg-red-50 text-red-700 border-red-200"
+                              student.averageGrade >= 10 ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                "bg-red-50 text-red-700 border-red-200"
                           }
                         >
                           {student.averageGrade.toFixed(1)}/20
                         </Badge>
-                        <div className="text-xs text-muted-foreground">
-                          {student.attendanceRate}% présence
-                        </div>
+                        <div className="text-xs text-muted-foreground">{student.attendanceRate}% présence</div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -559,21 +522,24 @@ const AdminStudentsPage = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge 
+                      <Badge
                         className={
                           student.status === "actif" ? "bg-green-100 text-green-800" :
-                          student.status === "inactif" ? "bg-gray-100 text-gray-800" :
-                          "bg-red-100 text-red-800"
+                            student.status === "inactif" ? "bg-gray-100 text-gray-800" :
+                              "bg-red-100 text-red-800"
                         }
                       >
-                        {student.status === "actif" ? "Actif" : 
-                         student.status === "inactif" ? "Inactif" : "Suspendu"}
+                        {student.status === "actif" ? "Actif" :
+                          student.status === "inactif" ? "Inactif" : "Suspendu"}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => openModal(student)}>
                           <FaEye className="h-3 w-3" />
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => openDeleteModal(student)}>
+                          <FaTrash className="h-3 w-3" />
                         </Button>
                       </div>
                     </TableCell>
@@ -584,10 +550,10 @@ const AdminStudentsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Modal détaillé "Voir" */}
+        {/* Modal "Voir" */}
         {isModalOpen && selectedStudent && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 {/* En-tête du modal */}
                 <div className="flex items-center justify-between mb-6">
@@ -602,31 +568,37 @@ const AdminStudentsPage = () => {
                       <p className="text-gray-600">{selectedStudent.studentNumber}</p>
                     </div>
                   </div>
-                  <Button variant="outline" onClick={closeModal}>
-                    Fermer
-                  </Button>
+                  <Button variant="outline" onClick={closeModal}>Fermer</Button>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Première ligne - Informations principales */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                  
                   {/* Informations personnelles */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-lg">
-                        <FaUserGraduate className="h-4 w-4" />
+                        <FaIdCard className="h-4 w-4" />
                         Informations Personnelles
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Email</label>
-                        <p className="text-sm">{selectedStudent.email}</p>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <FaEnvelope className="h-4 w-4 text-gray-400" />
+                        <div>
+                          <p className="text-sm font-medium">Email</p>
+                          <p className="text-sm text-gray-600">{selectedStudent.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <FaPhone className="h-4 w-4 text-gray-400" />
+                        <div>
+                          <p className="text-sm font-medium">Téléphone</p>
+                          <p className="text-sm text-gray-600">{selectedStudent.phone}</p>
+                        </div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Téléphone</label>
-                        <p className="text-sm">{selectedStudent.phone}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Statut</label>
+                        <p className="text-sm font-medium mb-2">Statut</p>
                         <Badge 
                           className={
                             selectedStudent.status === "actif" ? "bg-green-100 text-green-800" :
@@ -649,22 +621,18 @@ const AdminStudentsPage = () => {
                         Informations Académiques
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3">
+                    <CardContent className="space-y-4">
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Filière</label>
-                        <p className="text-sm font-medium">{selectedStudent.filiere}</p>
+                        <p className="text-sm font-medium">Filière</p>
+                        <p className="text-sm font-medium text-blue-600">{selectedStudent.filiere}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Niveau</label>
-                        <p className="text-sm">{selectedStudent.niveau}</p>
+                        <p className="text-sm font-medium">Année Scolaire</p>
+                        <p className="text-sm font-medium text-green-600">{selectedStudent.anneeScolaire}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Classe</label>
-                        <p className="text-sm">{selectedStudent.classe}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Vagues</label>
-                        <div className="flex flex-wrap gap-1 mt-1">
+                        <p className="text-sm font-medium mb-2">Vagues</p>
+                        <div className="flex flex-wrap gap-1">
                           {selectedStudent.vagues.map((vague, index) => (
                             <Badge key={index} variant="secondary" className="text-xs">
                               {vague}
@@ -684,7 +652,7 @@ const AdminStudentsPage = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="text-center">
+                      <div className="text-center p-4 bg-gray-50 rounded-lg">
                         <div className="text-3xl font-bold text-blue-600">
                           {selectedStudent.averageGrade.toFixed(1)}/20
                         </div>
@@ -695,13 +663,13 @@ const AdminStudentsPage = () => {
                           <FaTrophy className="h-4 w-4 text-yellow-500" />
                           <span className="text-sm font-medium">Rang</span>
                         </div>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="text-sm">
                           {selectedStudent.rank}/{selectedStudent.totalStudents}
                         </Badge>
                       </div>
                       <div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Taux de présence</span>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="font-medium">Taux de présence</span>
                           <span>{selectedStudent.attendanceRate}%</span>
                         </div>
                         <Progress value={selectedStudent.attendanceRate} className="h-2" />
@@ -710,19 +678,22 @@ const AdminStudentsPage = () => {
                   </Card>
                 </div>
 
-                {/* Détail des modules */}
-                <Card className="mt-6">
+                {/* Deuxième ligne - Détail des modules */}
+                <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <FaBook className="h-4 w-4" />
                       Détail des Modules et Notes
                     </CardTitle>
+                    <CardDescription>
+                      Performance détaillée par module avec coefficients
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Module</TableHead>
+                          <TableHead className="w-1/3">Module</TableHead>
                           <TableHead>Enseignant</TableHead>
                           <TableHead>Coefficient</TableHead>
                           <TableHead>Note</TableHead>
@@ -733,8 +704,12 @@ const AdminStudentsPage = () => {
                         {selectedStudent.modules.map((module) => (
                           <TableRow key={module.id}>
                             <TableCell className="font-medium">{module.name}</TableCell>
-                            <TableCell>{module.teacher}</TableCell>
-                            <TableCell>{module.coefficient}</TableCell>
+                            <TableCell className="text-sm">{module.teacher}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono">
+                                {module.coefficient}
+                              </Badge>
+                            </TableCell>
                             <TableCell>
                               <Badge 
                                 variant="outline"
@@ -750,7 +725,8 @@ const AdminStudentsPage = () => {
                             <TableCell>
                               <span className={
                                 module.grade >= 15 ? "text-green-600 font-medium" :
-                                module.grade >= 10 ? "text-blue-600" :
+                                module.grade >= 12 ? "text-blue-600" :
+                                module.grade >= 10 ? "text-gray-600" :
                                 "text-red-600"
                               }>
                                 {module.grade >= 15 ? "Excellent" :
@@ -766,62 +742,37 @@ const AdminStudentsPage = () => {
                   </CardContent>
                 </Card>
 
-                {/* Informations supplémentaires */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-sm">
-                        <FaCalendarAlt className="h-4 w-4" />
-                        Dates Importantes
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Inscription:</span>
-                        <span className="text-sm font-medium">
-                          {new Date(selectedStudent.createdAt).toLocaleDateString("fr-FR")}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Dernière activité:</span>
-                        <span className="text-sm font-medium">
-                          {new Date(selectedStudent.lastActivity).toLocaleDateString("fr-FR")}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Résumé Académique</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-500">Nombre de modules:</span>
-                          <span className="text-sm font-medium">{selectedStudent.modules.length}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-500">Meilleure note:</span>
-                          <span className="text-sm font-medium text-green-600">
-                            {Math.max(...selectedStudent.modules.map(m => m.grade)).toFixed(1)}/20
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-500">Note la plus basse:</span>
-                          <span className="text-sm font-medium text-red-600">
-                            {Math.min(...selectedStudent.modules.map(m => m.grade)).toFixed(1)}/20
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {/* Informations de dates en bas */}
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <FaCalendarAlt className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-600">Inscrit le {new Date(selectedStudent.createdAt).toLocaleDateString("fr-FR")}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaChartLine className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-600">Dernière activité le {new Date(selectedStudent.lastActivity).toLocaleDateString("fr-FR")}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
+        {/* Modal suppression */}
+        {isDeleteModalOpen && studentToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <h2 className="text-xl font-bold text-red-600 mb-4">Confirmer la suppression</h2>
+              <p className="mb-6">Êtes-vous sûr de vouloir supprimer {studentToDelete.firstName} {studentToDelete.lastName} ? Cette action est irréversible.</p>
+              <div className="flex justify-end gap-4">
+                <Button variant="outline" onClick={closeDeleteModal}>Annuler</Button>
+                <Button variant="destructive" onClick={handleDeleteStudent}>Supprimer</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

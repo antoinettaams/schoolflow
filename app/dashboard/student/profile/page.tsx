@@ -170,7 +170,7 @@ const StudentProfilePage = () => {
   const filiere = studentMetadata?.filiere || "Non assigné";
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       <input
         type="file"
         ref={fileInputRef}

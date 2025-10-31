@@ -283,7 +283,7 @@ export default function RapportsPersonnelsPage() {
   });
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col lg:pl-5 pt-20 lg:pt-6">
       {/* Header fixe */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200">
         <div className="p-4 md:p-6 max-w-7xl mx-auto">

@@ -23,20 +23,7 @@ const CenseurDashboard = () => {
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
 
-  // Vérification du rôle censeur
- 
-      useEffect(() => {
-        if (isLoaded && isSignedIn) {
-          const userRole = user?.publicMetadata?.role;
-          console.log("Rôle utilisateur:", userRole);
-          
-          if (userRole !== "Censeur") {
-            console.log("❌ Accès refusé - Rôle incorrect");
-            router.push("/unauthorized");
-          }
-        }
-      }, [isLoaded, isSignedIn, user, router]);
-    
+  // Vérification du rôle censeu 
 
   // Loading state
   if (!isLoaded) {
@@ -57,25 +44,7 @@ const CenseurDashboard = () => {
   }
 
   // Vérification finale du rôle
-  const userRole = user?.publicMetadata?.role;
-  if (userRole !== "Censeur") {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
-          <p className="text-gray-600 mb-4">
-            Vous n&apos;avez pas les permissions de secrétaire.
-          </p>
-          <button
-            onClick={() => router.push("/")}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Retour à l&apos;accueil
-          </button>
-        </div>
-      </div>
-    );
-  }
+
 
   // Données du censeur
   const censeurData = {
@@ -111,7 +80,7 @@ const CenseurDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       <div className="h-screen overflow-y-auto">
         <div className="p-6">
           <div className="max-w-7xl mx-auto">

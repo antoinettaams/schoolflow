@@ -80,7 +80,7 @@ const VagueCard: React.FC<{
   onViewDetails: (vague: Vague) => void;
 }> = ({ vague, onEdit, onDelete, onViewDetails }) => {
   return (
-    <Card className="hover:shadow-md transition-shadow h-full flex flex-col">
+    <Card className="hover:shadow-md transition-shadow h-full flex flex-col lg:pl-5 pt-20 lg:pt-6">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg">{vague.name}</CardTitle>

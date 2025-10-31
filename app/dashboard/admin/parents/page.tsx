@@ -9,11 +9,15 @@ import {
   FaSearch,
   FaSort,
   FaEye,
-  FaEdit,
   FaTrash,
   FaUsers,
   FaLayerGroup,
-  FaPlus
+  FaPlus,
+  FaPhone,
+  FaEnvelope,
+  FaUserGraduate,
+  FaSchool,
+  FaCalendarAlt
 } from "react-icons/fa";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +27,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Types pour les parents
+interface Enfant {
+  id: string;
+  firstName: string;
+  lastName: string;
+  filiere: string;
+  studentNumber: string;
+}
+
 interface Parent {
   id: string;
   firstName: string;
@@ -31,6 +43,7 @@ interface Parent {
   phone: string;
   status: "actif" | "inactif" | "suspendu";
   vagues: string[];
+  enfants: Enfant[];
   createdAt: string;
 }
 
@@ -44,11 +57,46 @@ const AdminParentsPage = () => {
   const [selectedVague, setSelectedVague] = useState<string>("all");
   const [sortField, setSortField] = useState<keyof Parent>("lastName");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  
+  // Modal "Voir" état
+  const [selectedParent, setSelectedParent] = useState<Parent | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Modal suppression état
+  const [parentToDelete, setParentToDelete] = useState<Parent | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const openModal = (parent: Parent) => {
+    setSelectedParent(parent);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setSelectedParent(null);
+    setIsModalOpen(false);
+  };
+
+  const openDeleteModal = (parent: Parent) => {
+    setParentToDelete(parent);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setParentToDelete(null);
+    setIsDeleteModalOpen(false);
+  };
+
+  const handleDeleteParent = () => {
+    if (parentToDelete) {
+      setParents(prev => prev.filter(p => p.id !== parentToDelete.id));
+      closeDeleteModal();
+    }
+  };
 
   // Vérification du rôle admin
   useEffect(() => {
     if (isLoaded && isSignedIn) {
-      const userRole = user?.publicMetadata?.role;
+      const userRole = user?.publicMetadata?.role as string;
       if (userRole !== "Administrateur") {
         router.push("/unauthorized");
       }
@@ -58,10 +106,60 @@ const AdminParentsPage = () => {
   // Données simulées
   useEffect(() => {
     const mockParents: Parent[] = [
-      { id: "1", firstName: "Jean", lastName: "Dupont", email: "jean.dupont@mail.com", phone: "+229 90 12 34 56", status: "actif", vagues: ["Vague 2024 A"], createdAt: "2024-01-15" },
-      { id: "2", firstName: "Marie", lastName: "Lemoine", email: "marie.lemoine@mail.com", phone: "+229 91 23 45 67", status: "inactif", vagues: ["Vague 2024 B"], createdAt: "2024-02-10" },
-      { id: "3", firstName: "Paul", lastName: "Martin", email: "paul.martin@mail.com", phone: "+229 92 34 56 78", status: "suspendu", vagues: ["Vague 2024 A"], createdAt: "2024-03-05" },
-      { id: "4", firstName: "Sophie", lastName: "Bernard", email: "sophie.bernard@mail.com", phone: "+229 93 45 67 89", status: "actif", vagues: ["Vague 2024 C"], createdAt: "2024-04-20" }
+      { 
+        id: "1", 
+        firstName: "Jean", 
+        lastName: "Dupont", 
+        email: "jean.dupont@mail.com", 
+        phone: "+229 90 12 34 56", 
+        status: "actif", 
+        vagues: ["Vague 2024 A"], 
+        enfants: [
+          { id: "e1", firstName: "Marie", lastName: "Dubois", filiere: "Informatique", studentNumber: "ETU-2024-001" },
+          { id: "e2", firstName: "Pierre", lastName: "Dubois", filiere: "Mathématiques", studentNumber: "ETU-2024-002" }
+        ],
+        createdAt: "2024-01-15" 
+      },
+      { 
+        id: "2", 
+        firstName: "Marie", 
+        lastName: "Lemoine", 
+        email: "marie.lemoine@mail.com", 
+        phone: "+229 91 23 45 67", 
+        status: "inactif", 
+        vagues: ["Vague 2024 B"], 
+        enfants: [
+          { id: "e3", firstName: "Sophie", lastName: "Lemoine", filiere: "Physique", studentNumber: "ETU-2024-003" }
+        ],
+        createdAt: "2024-02-10" 
+      },
+      { 
+        id: "3", 
+        firstName: "Paul", 
+        lastName: "Martin", 
+        email: "paul.martin@mail.com", 
+        phone: "+229 92 34 56 78", 
+        status: "suspendu", 
+        vagues: ["Vague 2024 A"], 
+        enfants: [
+          { id: "e4", firstName: "Luc", lastName: "Martin", filiere: "Chimie", studentNumber: "ETU-2024-004" },
+          { id: "e5", firstName: "Emma", lastName: "Martin", filiere: "Biologie", studentNumber: "ETU-2024-005" }
+        ],
+        createdAt: "2024-03-05" 
+      },
+      { 
+        id: "4", 
+        firstName: "Sophie", 
+        lastName: "Bernard", 
+        email: "sophie.bernard@mail.com", 
+        phone: "+229 93 45 67 89", 
+        status: "actif", 
+        vagues: ["Vague 2024 C"], 
+        enfants: [
+          { id: "e6", firstName: "Thomas", lastName: "Bernard", filiere: "Informatique", studentNumber: "ETU-2024-006" }
+        ],
+        createdAt: "2024-04-20" 
+      }
     ];
     setParents(mockParents);
   }, []);
@@ -83,6 +181,8 @@ const AdminParentsPage = () => {
     .sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
+
+      if (aValue === undefined || bValue === undefined) return 0;
 
       if (typeof aValue === "string" && typeof bValue === "string") {
         return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
@@ -123,20 +223,26 @@ const AdminParentsPage = () => {
     );
   }
 
-  const userRole = user?.publicMetadata?.role;
+  const userRole = user?.publicMetadata?.role as string;
   if (userRole !== "Administrateur") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
-          <p className="text-gray-600 mb-4">Vous n&apos;avez pas les permissions d&apos;administrateur.</p>
-          <button
-            onClick={() => router.push("/")}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Retour à l&apos;accueil
-          </button>
-        </div>
+        <Card className="p-8 max-w-md text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl text-red-600">Accès Refusé</CardTitle>
+            <CardDescription className="text-gray-600">
+              Vous n&apos;avez pas les permissions d&apos;administrateur.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => router.push("/")}
+              className="bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Retour à l&apos;accueil
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -304,13 +410,18 @@ const AdminParentsPage = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => openModal(parent)}
+                        >
                           <FaEye className="h-3 w-3" />
                         </Button>
-                        <Button variant="outline" size="sm">
-                          <FaEdit className="h-3 w-3" />
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => openDeleteModal(parent)}
+                        >
                           <FaTrash className="h-3 w-3" />
                         </Button>
                       </div>
@@ -328,6 +439,151 @@ const AdminParentsPage = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Modal de détail du parent */}
+        {isModalOpen && selectedParent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                {/* En-tête du modal */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                      <FaUsers className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold">
+                        {selectedParent.firstName} {selectedParent.lastName}
+                      </h2>
+                      <p className="text-gray-600">Parent d&apos;élève(s)</p>
+                    </div>
+                  </div>
+                  <Button variant="outline" onClick={closeModal}>
+                    Fermer
+                  </Button>
+                </div>
+
+                {/* Grille d'informations */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                  
+                  {/* Informations du parent */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <FaUsers className="h-4 w-4" />
+                        Informations du Parent
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <FaEnvelope className="h-4 w-4 text-gray-400" />
+                        <div>
+                          <p className="text-sm font-medium">Email</p>
+                          <p className="text-sm text-gray-600">{selectedParent.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <FaPhone className="h-4 w-4 text-gray-400" />
+                        <div>
+                          <p className="text-sm font-medium">Téléphone</p>
+                          <p className="text-sm text-gray-600">{selectedParent.phone}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium mb-2">Statut</p>
+                        <Badge 
+                          className={
+                            selectedParent.status === "actif" ? "bg-green-100 text-green-800" :
+                            selectedParent.status === "inactif" ? "bg-gray-100 text-gray-800" :
+                            "bg-red-100 text-red-800"
+                          }
+                        >
+                          {selectedParent.status === "actif" ? "Actif" : 
+                           selectedParent.status === "inactif" ? "Inactif" : "Suspendu"}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium mb-2">Vagues</p>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedParent.vagues.map((vague, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {vague}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Informations des enfants */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <FaUserGraduate className="h-4 w-4" />
+                        Enfant(s) Inscrit(s)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {selectedParent.enfants.map((enfant) => (
+                          <div key={enfant.id} className="p-3 border rounded-lg">
+                            <div className="flex items-center gap-3 mb-2">
+                              <FaUserGraduate className="h-4 w-4 text-blue-500" />
+                              <div>
+                                <p className="font-medium">
+                                  {enfant.firstName} {enfant.lastName}
+                                </p>
+                                <Badge variant="outline" className="font-mono text-xs">
+                                  {enfant.studentNumber}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <FaSchool className="h-3 w-3 text-gray-400" />
+                              <span className="text-sm text-gray-600">{enfant.filiere}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Informations de date */}
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm">
+                    <FaCalendarAlt className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-600">
+                      Compte créé le {new Date(selectedParent.createdAt).toLocaleDateString("fr-FR")}
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal suppression */}
+        {isDeleteModalOpen && parentToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <h2 className="text-xl font-bold text-red-600 mb-4">Confirmer la suppression</h2>
+              <p className="mb-6">
+                Êtes-vous sûr de vouloir supprimer {parentToDelete.firstName} {parentToDelete.lastName} ? 
+                Cette action est irréversible.
+              </p>
+              <div className="flex justify-end gap-4">
+                <Button variant="outline" onClick={closeDeleteModal}>
+                  Annuler
+                </Button>
+                <Button variant="destructive" onClick={handleDeleteParent}>
+                  Supprimer
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -111,7 +111,7 @@ const StudentDashboard = () => {
   const studentName = user ? `${user.firstName} ${user.lastName}` : studentInfo.name;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       <div className="p-6 space-y-6 h-full overflow-y-auto lg:pl-5 pt-20 lg:pt-6"> 
         
         {/* 1. SECTION ACCUEIL ET BIENVENUE */}

@@ -299,7 +299,7 @@ export default function FacturationsPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       {/* Header */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">

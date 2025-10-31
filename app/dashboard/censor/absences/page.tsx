@@ -275,7 +275,7 @@ export default function AbsencesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-y-auto">
+    <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
       <ScrollArea className="h-screen">
         <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
           

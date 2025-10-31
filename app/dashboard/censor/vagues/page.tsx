@@ -466,7 +466,7 @@ export default function VaguesPageDirecteur() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-y-auto">
+    <div className="flex flex-col h-screen bg-background overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
       {/* Zone de contenu avec défilement vertical */}
       <ScrollArea className="flex-1">
         <div className="container mx-auto p-6 space-y-6 max-w-7xl">

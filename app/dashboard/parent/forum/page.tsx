@@ -48,7 +48,7 @@ const ParentForumPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 lg:pl-5 pt-20 lg:pt-6">
       <div className="max-w-4xl mx-auto">
         {/* En-tête */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">

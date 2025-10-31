@@ -360,7 +360,7 @@ export default function PlanningAssignationsPage() {
   }
 
   return (
-    <div className="p-6 min-h-screen bg-gray-50">
+    <div className="p-6 min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <div>

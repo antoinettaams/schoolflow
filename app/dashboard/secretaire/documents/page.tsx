@@ -79,7 +79,7 @@ export default function DocumentsPage() {
 };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 lg:pl-5 pt-20 lg:pt-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestion des Documents</h1>

@@ -1,431 +1,595 @@
+// app/dashboard/events/page.tsx
 "use client";
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
-  ArrowLeft, User, Mail, Book, Calendar, DollarSign, 
-  CreditCard, CheckCircle, XCircle, Clock, AlertCircle,
-  Printer, Edit
+  CalendarDays, AlertCircle, Users, Sun, ClipboardList, MapPin, 
+  Filter, Search, ChevronDown, Plus, Edit, Trash2, X, Save,
+  LucideIcon
 } from 'lucide-react';
 
-// Import des composants shadcn
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface Student {
-  id: string;
-  nom: string;
-  prenom: string;
-  email: string;
-  filiere: string;
-  telephone?: string;
-  dateNaissance?: string;
-  statutInscription: 'complete' | 'partielle' | 'en_attente';
-  statutPaiement: 'paye' | 'partiel' | 'en_retard' | 'non_paye';
-  montantInscription: number;
-  montantScolarite: number;
-  montantPaye: number;
-  dateInscription: string;
-  vagueName: string;
-}
-
-interface Payment {
+// Interfaces
+interface SchoolEvent {
   id: string;
   date: string;
-  type: 'inscription' | 'scolarite' | 'autre';
-  montant: number;
-  methode: 'especes' | 'cheque' | 'virement' | 'mobile_money';
-  reference: string;
-  statut: 'complete' | 'en_attente' | 'annule';
-  notes?: string;
+  day: string;
+  title: string;
+  type: string;
+  location: string;
+  icon: string;
+  color: string;
+  badge: string;
+  month: string;
+  time: string;
+  description?: string;
 }
 
-export default function StudentDetailsPage() {
-  const params = useParams();
-  const router = useRouter();
-  const [student, setStudent] = useState<Student | null>(null);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+// Composant Principal
+export default function CensorEventsPage() {
+  const [events, setEvents] = useState<SchoolEvent[]>([]);
+  const [eventTypes, setEventTypes] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedType, setSelectedType] = useState("Tous");
+  const [showFilters, setShowFilters] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<SchoolEvent | null>(null);
+  const [formData, setFormData] = useState({
+    title: '',
+    type: '',
+    location: '',
+    date: '',
+    time: '',
+    description: '',
+    badge: 'Important'
+  });
+  const [customType, setCustomType] = useState('');
 
-  const loadStudentData = useCallback(() => {
-    // Données simulées
-    const mockStudent: Student = {
-      id: params.id as string,
-      nom: 'Dupont',
-      prenom: 'Marie',
-      email: 'marie.dupont@email.com',
-      filiere: 'Informatique',
-      telephone: '+225 07 12 34 56 78',
-      dateNaissance: '2000-05-15',
-      statutInscription: 'complete',
-      statutPaiement: 'partiel',
-      montantInscription: 50000,
-      montantScolarite: 300000,
-      montantPaye: 200000,
-      dateInscription: '2024-01-05',
-      vagueName: 'Vague Janvier-Juin 2024'
-    };
-
-    const mockPayments: Payment[] = [
-      {
-        id: 'p1',
-        date: '2024-01-05',
-        type: 'inscription',
-        montant: 50000,
-        methode: 'virement',
-        reference: 'VIR-2024-001',
-        statut: 'complete',
-        notes: 'Paiement inscription complète'
-      },
-      {
-        id: 'p2',
-        date: '2024-01-15',
-        type: 'scolarite',
-        montant: 150000,
-        methode: 'especes',
-        reference: 'ESP-2024-001',
-        statut: 'complete',
-        notes: 'Premier versement scolarité'
-      }
-    ];
-
-    setStudent(mockStudent);
-    setPayments(mockPayments);
-    setIsLoading(false);
-  }, [params.id]);
-
+  // Charger les données depuis le localStorage
   useEffect(() => {
-    loadStudentData();
-  }, [loadStudentData]);
-
-  const getStatusBadge = (statut: Student['statutPaiement']) => {
-    const config = {
-      paye: { variant: "default" as const, text: 'Payé', icon: CheckCircle },
-      partiel: { variant: "secondary" as const, text: 'Partiel', icon: Clock },
-      en_retard: { variant: "destructive" as const, text: 'En retard', icon: AlertCircle },
-      non_paye: { variant: "outline" as const, text: 'Non payé', icon: XCircle }
-    };
+    const savedEvents = localStorage.getItem('schoolflow_events');
+    const savedTypes = localStorage.getItem('schoolflow_event_types');
     
-    const { variant, text, icon: Icon } = config[statut];
-    return (
-      <Badge variant={variant} className="flex items-center gap-1">
-        <Icon className="h-4 w-4" />
-        {text}
-      </Badge>
-    );
+    if (savedEvents) {
+      setEvents(JSON.parse(savedEvents));
+    } else {
+      // Données par défaut
+      const defaultEvents: SchoolEvent[] = [
+        { id: '1', date: "24 Octobre", day: "MER", title: "Réunion Parents-Professeurs", type: "Réunion", location: "Gymnase de l&apos;école", icon: "Users", color: "bg-blue-500", badge: "Important", month: "Octobre", time: "18:00 - 20:00" },
+        { id: '2', date: "27 Octobre", day: "SAM", title: "Voyage Scolaire à Rome", type: "Voyage", location: "Départ à 8h00", icon: "Sun", color: "bg-indigo-500", badge: "Optionnel", month: "Octobre", time: "08:00 - 20:00" },
+        { id: '3', date: "01 Novembre", day: "JEU", title: "Toussaint - Jour Férié", type: "Congé", location: "École Fermée", icon: "AlertCircle", color: "bg-green-500", badge: "Congé", month: "Novembre", time: "Toute la journée" },
+      ];
+      setEvents(defaultEvents);
+      localStorage.setItem('schoolflow_events', JSON.stringify(defaultEvents));
+    }
+
+    if (savedTypes) {
+      setEventTypes(['Tous', ...JSON.parse(savedTypes)]);
+    } else {
+      // Types par défaut
+      const defaultTypes = ['Réunion', 'Voyage', 'Congé', 'Compétition', 'Fête'];
+      setEventTypes(['Tous', ...defaultTypes]);
+      localStorage.setItem('schoolflow_event_types', JSON.stringify(defaultTypes));
+    }
+  }, []);
+
+  // Sauvegarder les événements
+  const saveEvents = (updatedEvents: SchoolEvent[]) => {
+    setEvents(updatedEvents);
+    localStorage.setItem('schoolflow_events', JSON.stringify(updatedEvents));
   };
 
-  const getPaymentMethodBadge = (methode: Payment['methode']) => {
-    const config = {
-      especes: { variant: "default" as const, text: 'Espèces' },
-      cheque: { variant: "secondary" as const, text: 'Chèque' },
-      virement: { variant: "outline" as const, text: 'Virement' },
-      mobile_money: { variant: "destructive" as const, text: 'Mobile Money' }
+  // Sauvegarder les types
+  const saveEventTypes = (updatedTypes: string[]) => {
+    const typesWithoutTous = updatedTypes.filter(type => type !== 'Tous');
+    setEventTypes(['Tous', ...typesWithoutTous]);
+    localStorage.setItem('schoolflow_event_types', JSON.stringify(typesWithoutTous));
+  };
+
+  // Ajouter un nouveau type
+  const addEventType = (newType: string) => {
+    if (newType && !eventTypes.includes(newType)) {
+      const updatedTypes = [...eventTypes.filter(type => type !== 'Tous'), newType];
+      saveEventTypes(updatedTypes);
+      setCustomType('');
+    }
+  };
+
+  // Filtrage des événements
+  const filteredEvents = useMemo(() => {
+    return events.filter(event => {
+      const matchesSearch = searchTerm === "" ||
+                            event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            event.location.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = selectedType === "Tous" || event.type === selectedType;
+      return matchesSearch && matchesType;
+    });
+  }, [events, searchTerm, selectedType]);
+
+  // Grouper par mois
+  const eventsByMonth = filteredEvents.reduce((acc, event) => {
+    if (!acc[event.month]) acc[event.month] = [];
+    acc[event.month].push(event);
+    return acc;
+  }, {} as Record<string, SchoolEvent[]>);
+
+  // Gestion du formulaire
+  const handleAddNew = () => {
+    setEditingEvent(null);
+    setFormData({
+      title: '',
+      type: eventTypes[1] || '', // Premier type après "Tous"
+      location: '',
+      date: '',
+      time: '',
+      description: '',
+      badge: 'Important'
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleEdit = (event: SchoolEvent) => {
+    setEditingEvent(event);
+    setFormData({
+      title: event.title,
+      type: event.type,
+      location: event.location,
+      date: event.date,
+      time: event.time,
+      description: event.description || '',
+      badge: event.badge
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet événement ?')) {
+      const updatedEvents = events.filter(event => event.id !== id);
+      saveEvents(updatedEvents);
+    }
+  };
+
+  const handleSave = () => {
+    if (!formData.title || !formData.type || !formData.location || !formData.date || !formData.time) {
+      alert("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    // Vérifier si le type existe, sinon l'ajouter
+    if (formData.type && !eventTypes.includes(formData.type)) {
+      addEventType(formData.type);
+    }
+
+    // Générer les métadonnées automatiques
+    const dateParts = formData.date.split(' ');
+    const month = dateParts[1] || 'Mois';
+    const dayAbbrev = getDayAbbreviation();
+
+    const eventData: SchoolEvent = {
+      id: editingEvent?.id || Date.now().toString(),
+      title: formData.title,
+      type: formData.type,
+      location: formData.location,
+      date: formData.date,
+      day: dayAbbrev,
+      month: month,
+      time: formData.time,
+      description: formData.description,
+      badge: formData.badge,
+      icon: getIconByType(formData.type),
+      color: getColorByType(formData.type)
     };
-    
-    const { variant, text } = config[methode];
-    return (
-      <Badge variant={variant}>
-        {text}
-      </Badge>
-    );
+
+    if (editingEvent) {
+      // Modification
+      const updatedEvents = events.map(event => 
+        event.id === editingEvent.id ? eventData : event
+      );
+      saveEvents(updatedEvents);
+    } else {
+      // Création
+      saveEvents([...events, eventData]);
+    }
+
+    setIsDialogOpen(false);
+    setEditingEvent(null);
   };
 
-  const getPaymentTypeBadge = (type: Payment['type']) => {
-    const config = {
-      inscription: { variant: "secondary" as const, text: 'Inscription' },
-      scolarite: { variant: "default" as const, text: 'Scolarité' },
-      autre: { variant: "outline" as const, text: 'Autre' }
+  // Fonctions utilitaires
+  const getDayAbbreviation = () => {
+    const days = ['DIM', 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM'];
+    return days[Math.floor(Math.random() * days.length)]; // Simplifié pour l'exemple
+  };
+
+  const getIconByType = (type: string) => {
+    const icons: Record<string, string> = {
+      'Réunion': 'Users',
+      'Voyage': 'Sun',
+      'Congé': 'AlertCircle',
+      'Compétition': 'Users',
+      'Fête': 'Sun',
+      'Sport': 'Users',
+      'Culturel': 'Sun',
+      'Pédagogique': 'ClipboardList'
     };
-    
-    const { variant, text } = config[type];
-    return (
-      <Badge variant={variant}>
-        {text}
-      </Badge>
-    );
+    return icons[type] || 'CalendarDays';
   };
 
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'XOF'
-    }).format(amount);
+  const getColorByType = (type: string) => {
+    const colors: Record<string, string> = {
+      'Réunion': 'bg-blue-500',
+      'Voyage': 'bg-indigo-500',
+      'Congé': 'bg-green-500',
+      'Compétition': 'bg-purple-500',
+      'Fête': 'bg-yellow-500',
+      'Sport': 'bg-red-500',
+      'Culturel': 'bg-pink-500',
+      'Pédagogique': 'bg-teal-500'
+    };
+    return colors[type] || 'bg-gray-500';
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR');
+  const getIconComponent = (iconName: string): LucideIcon => {
+    const icons: Record<string, LucideIcon> = {
+      'Users': Users,
+      'Sun': Sun,
+      'AlertCircle': AlertCircle,
+      'CalendarDays': CalendarDays,
+      'ClipboardList': ClipboardList
+    };
+    return icons[iconName] || CalendarDays;
   };
-
-  const totalAttendu = (student?.montantInscription || 0) + (student?.montantScolarite || 0);
-  const resteAPayer = totalAttendu - (student?.montantPaye || 0);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-          <p className="text-muted-foreground">Chargement des détails...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!student) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="max-w-md text-center">
-          <CardHeader>
-            <CardTitle className="text-2xl">Étudiant non trouvé</CardTitle>
-            <CardDescription>
-              L&lsquo;étudiant que vous recherchez n&lsquo;existe pas ou a été supprimé.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => router.back()}>
-              Retour
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-background overflow-y-auto p-4 sm:p-6 lg:pl-5 pt-20 lg:pt-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <Button 
-            variant="ghost" 
-            onClick={() => router.back()}
-            className="flex items-center gap-2 mb-4 pl-0"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            Retour
-          </Button>
-          
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                {student.prenom} {student.nom}
-              </h1>
-              <p className="text-muted-foreground">Détails financiers de l&lsquo;étudiant</p>
+    <div className="flex flex-col h-screen bg-gray-50 overflow-hidden lg:pl-5 pt-20 lg:pt-6">
+      
+      {/* Header */}
+      <header className="border-b border-gray-200 p-4 sm:p-6 sticky top-0 z-10 shadow-sm flex-shrink-0 bg-gray-50">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
+              Gestion des Événements Scolaires
+            </h1>
+            <p className="text-gray-500 text-sm sm:text-base">
+              {filteredEvents.length} événement(s) - Interface Censeur
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <input
+                type="text"
+                placeholder="Rechercher un événement..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex items-center gap-2">
-                <Printer className="h-4 w-4" />
-                Imprimer
-              </Button>
-            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Filter className="h-4 w-4" />
+              Filtres
+              <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </button>
+            <button 
+              onClick={handleAddNew}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Nouvel événement
+            </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Colonne de gauche - Informations étudiant */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Carte informations personnelles */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5 text-muted-foreground" />
-                  Informations Personnelles
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    {student.email}
-                  </p>
+        {showFilters && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+            <div className="flex flex-col gap-4">
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Filtrer par type :</h4>
+                <div className="flex flex-wrap gap-2">
+                  {eventTypes.map(type => (
+                    <span
+                      key={type}
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+                        selectedType === type 
+                          ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300'
+                      }`}
+                      onClick={() => setSelectedType(type)}
+                    >
+                      {type}
+                    </span>
+                  ))}
                 </div>
-                {student.telephone && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Téléphone</p>
-                    <p className="text-sm font-medium text-foreground">{student.telephone}</p>
-                  </div>
-                )}
-                {student.dateNaissance && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Date de naissance</p>
-                    <p className="text-sm font-medium text-foreground">
-                      {formatDate(student.dateNaissance)}
-                    </p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm text-muted-foreground">Date d&lsquo;inscription</p>
-                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    {formatDate(student.dateInscription)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            {/* Carte formation */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Book className="h-5 w-5 text-muted-foreground" />
-                  Formation
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Filière</p>
-                  <p className="text-sm font-medium text-foreground">{student.filiere}</p>
+              {/* Ajout de type personnalisé */}
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Ajouter un type personnalisé :</h4>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customType}
+                    onChange={(e) => setCustomType(e.target.value)}
+                    placeholder="Nouveau type d&apos;événement"
+                    className="flex-1 px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    onClick={() => {
+                      if (customType.trim()) {
+                        addEventType(customType.trim());
+                        setCustomType('');
+                      }
+                    }}
+                    className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors"
+                  >
+                    Ajouter
+                  </button>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Vague</p>
-                  <p className="text-sm font-medium text-foreground">{student.vagueName}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Statut inscription</p>
-                  <div className="mt-1">
-                    <Badge variant={
-                      student.statutInscription === 'complete' ? 'default' :
-                      student.statutInscription === 'partielle' ? 'secondary' : 'outline'
-                    }>
-                      {student.statutInscription === 'complete' ? 'Complète' :
-                       student.statutInscription === 'partielle' ? 'Partielle' : 'En attente'}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                <p className="text-xs text-gray-500 mt-1">
+                  Les nouveaux types seront disponibles dans les filtres et lors de la création d&apos;événements.
+                </p>
+              </div>
+            </div>
           </div>
+        )}
+      </header>
 
-          {/* Colonne de droite - Informations financières */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Résumé financier */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-muted-foreground" />
-                  Résumé Financier
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Frais d&lsquo;inscription</p>
-                      <p className="text-2xl font-bold text-foreground">
-                        {formatMoney(student.montantInscription)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Frais de scolarité</p>
-                      <p className="text-2xl font-bold text-foreground">
-                        {formatMoney(student.montantScolarite)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total payé</p>
-                      <p className="text-2xl font-bold text-green-600">
-                        {formatMoney(student.montantPaye)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Reste à payer</p>
-                      <p className="text-2xl font-bold text-red-600">
-                        {formatMoney(resteAPayer)}
-                      </p>
-                    </div>
-                  </div>
+      {/* Zone scrollable */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-8 max-w-6xl mx-auto">
+
+          {/* Événements par mois */}
+          {Object.keys(eventsByMonth).length > 0 ? (
+            Object.entries(eventsByMonth).map(([month, monthEvents]) => (
+              <section key={month} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-1 h-8 bg-blue-600 rounded-full"></div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{month}</h2>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 ml-2">
+                    {monthEvents.length} événement(s)
+                  </span>
                 </div>
 
-                {/* Barre de progression */}
-                <div className="mb-2">
-                  <div className="flex justify-between text-sm text-muted-foreground mb-1">
-                    <span>Progression du paiement</span>
-                    <span>{Math.round((student.montantPaye / totalAttendu) * 100)}%</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div 
-                      className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${(student.montantPaye / totalAttendu) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
+                <div className="grid gap-4">
+                  {monthEvents.map(event => {
+                    const EventIcon = getIconComponent(event.icon);
+                    return (
+                      <div key={event.id} className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-blue-500/50 hover:shadow-lg transition-all duration-300">
+                        <div className="flex flex-col sm:flex-row">
+                          {/* Date */}
+                          <div className={`${event.color} text-white p-4 flex items-center justify-between sm:justify-center sm:flex-col w-full sm:w-28 flex-shrink-0`}>
+                            <div className="text-center">
+                              <div className="text-2xl sm:text-3xl font-bold">{event.date.split(' ')[0]}</div>
+                              <div className="text-sm opacity-90">{event.date.split(' ')[1]}</div>
+                              <div className="text-xs opacity-75 mt-1">({event.day})</div>
+                            </div>
+                          </div>
 
-                <div className="flex justify-between items-center mt-4">
-                  <div className="text-sm text-muted-foreground">
-                    Total attendu: <span className="font-semibold text-foreground">{formatMoney(totalAttendu)}</span>
-                  </div>
-                  <div>
-                    {getStatusBadge(student.statutPaiement)}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Historique des paiements */}
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Historique des Paiements</CardTitle>
-                  <CardDescription>{payments.length} paiement(s)</CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {payments.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <CreditCard className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                    <p>Aucun paiement enregistré</p>
-                  </div>
-                ) : (
-                  <ScrollArea className="h-96">
-                    <div className="space-y-4">
-                      {payments.map((payment) => (
-                        <Card key={payment.id} className="hover:bg-muted/50 transition-colors">
-                          <CardContent className="p-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  {getPaymentTypeBadge(payment.type)}
-                                  {getPaymentMethodBadge(payment.methode)}
-                                  <span className="text-sm text-muted-foreground">{formatDate(payment.date)}</span>
-                                </div>
-                                <div className="text-sm text-foreground">
-                                  <div className="font-medium">{formatMoney(payment.montant)}</div>
-                                  {payment.notes && (
-                                    <div className="text-muted-foreground mt-1">{payment.notes}</div>
-                                  )}
-                                  <div className="text-xs text-muted-foreground mt-1">
-                                    Référence: {payment.reference}
+                          {/* Détails */}
+                          <div className="flex-1 p-4 sm:p-6">
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-start gap-3">
+                                  <EventIcon className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
+                                  <div className="flex-1">
+                                    <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
+                                      {event.title}
+                                    </h3>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                        {event.type}
+                                      </span>
+                                    </div>
+                                    {event.description && (
+                                      <p className="text-gray-600 mt-2 text-sm">{event.description}</p>
+                                    )}
+                                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
+                                      <div className="flex items-center gap-2">
+                                        <MapPin className="h-4 w-4" /> {event.location}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <CalendarDays className="h-4 w-4" /> {event.time}
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
-                                <Badge variant={
-                                  payment.statut === 'complete' ? 'default' :
-                                  payment.statut === 'en_attente' ? 'secondary' : 'destructive'
-                                }>
-                                  {payment.statut === 'complete' ? 'Complet' :
-                                   payment.statut === 'en_attente' ? 'En attente' : 'Annulé'}
-                                </Badge>
-                                <Button variant="ghost" size="sm">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  event.badge === "Important" ? "bg-blue-100 text-blue-800 border border-blue-200" : ""
+                                } ${event.badge === "Congé" ? "bg-green-100 text-green-800 border border-green-200" : ""}
+                                  ${event.badge === "Optionnel" ? "bg-gray-100 text-gray-800 border border-gray-200" : ""}
+                                  ${event.badge === "Compétition" ? "bg-purple-100 text-purple-800 border border-purple-200" : ""}
+                                  ${event.badge === "Fête" ? "bg-yellow-100 text-yellow-800 border border-yellow-200" : ""}
+                                `}>
+                                  {event.badge}
+                                </span>
+                                <div className="flex gap-1">
+                                  <button 
+                                    onClick={() => handleEdit(event)}
+                                    className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDelete(event.id)}
+                                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ))
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 text-center py-12">
+              <div className="p-6">
+                <CalendarDays className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun événement trouvé</h3>
+                <p className="text-gray-500 mb-4">Aucun événement ne correspond à vos critères de recherche.</p>
+                <button 
+                  onClick={() => { setSearchTerm(""); setSelectedType("Tous"); }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Réinitialiser les filtres
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Modal d&apos;ajout/modification */}
+      {isDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* En-tête */}
+            <div className="bg-white p-6 border-b border-gray-200 sticky top-0 z-10">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">
+                  {editingEvent ? 'Modifier l&apos;événement' : 'Nouvel événement'}
+                </h2>
+                <button 
+                  onClick={() => setIsDialogOpen(false)} 
+                  className="text-gray-500 hover:text-gray-700 text-xl"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenu */}
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Titre de l&apos;événement"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={formData.type}
+                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Sélectionnez un type</option>
+                      {eventTypes.filter(type => type !== 'Tous').map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={formData.type}
+                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Ou écrivez un nouveau type"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Choisissez un type existant ou écrivez un nouveau type personnalisé.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Lieu *</label>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Lieu de l&apos;événement"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                  <input
+                    type="text"
+                    value={formData.date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ex: 24 Octobre"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Heure *</label>
+                  <input
+                    type="text"
+                    value={formData.time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ex: 18:00 - 20:00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priorité</label>
+                  <select
+                    value={formData.badge}
+                    onChange={(e) => setFormData(prev => ({ ...prev, badge: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="Important">Important</option>
+                    <option value="Optionnel">Optionnel</option>
+                    <option value="Congé">Congé</option>
+                    <option value="Compétition">Compétition</option>
+                    <option value="Fête">Fête</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Description de l&apos;événement (optionnel)"
+                />
+              </div>
+            </div>
+
+            {/* Pied de page */}
+            <div className="bg-white p-4 border-t border-gray-200 sticky bottom-0">
+              <div className="flex gap-2 justify-end">
+                <button 
+                  onClick={() => setIsDialogOpen(false)} 
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors"
+                >
+                  <Save className="h-4 w-4" />
+                  {editingEvent ? 'Modifier' : 'Créer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -77,7 +77,7 @@ export default function StatistiquesCenseurPage() {
   ];
 
   return (
-    <div className="min-h-screen overflow-y-auto bg-gray-50/30">
+    <div className="min-h-screen overflow-y-auto bg-gray-50/30 lg:pl-5 pt-20 lg:pt-6">
       <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
         {/* En-tête */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

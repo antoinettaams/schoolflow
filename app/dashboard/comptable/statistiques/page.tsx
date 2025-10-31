@@ -231,7 +231,7 @@ export default function StatistiquesFinancieresPage() {
     `${value.toFixed(1)}%`;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 overflow-y-auto">
+    <div className="min-h-screen bg-gray-50 p-6 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* En-tête */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">

@@ -164,7 +164,7 @@ const AdminProfilePage = () => {
         className="hidden"
       />
 
-      <div className="h-screen overflow-y-auto">
+      <div className="h-screen overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
         <div className="max-w-6xl mx-auto p-6 space-y-6">
           {/* ✅ Carte de profil */}
           <Card className="rounded-2xl shadow-xl overflow-hidden border border-gray-100 relative">

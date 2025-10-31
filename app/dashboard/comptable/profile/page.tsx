@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface OperationAutomatique {
-  id: string;
+  id: string; 
   numero: string;
   date: string;
   type: 'inscription_eleve' | 'paiement_scolarite' | 'paiement_inscription';
@@ -164,7 +164,7 @@ export default function JournalOperationsPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6ss">
       {/* Header */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
