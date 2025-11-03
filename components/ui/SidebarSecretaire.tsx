@@ -1,4 +1,3 @@
-// components/SidebarSecretaire.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -23,6 +22,7 @@ import {
   FaCog,
   FaExclamationTriangle,
   FaBell,
+  FaCreditCard,
   FaMoneyBillWave,
   FaListAlt,
 } from "react-icons/fa";
@@ -75,7 +75,6 @@ const SidebarSecretaire = () => {
     return isActive ? "text-white text-base" : "text-principal text-base";
   };
 
-  // ✅ CORRIGÉ : Wrapper pour les icônes
   const IconWrapper = ({ 
     icon, 
     href, 
@@ -106,7 +105,8 @@ const SidebarSecretaire = () => {
     
     // === PAIEMENTS ===
     { label: "Paiements Inscriptions", href: "/dashboard/secretaire/paiements", icon: <FaMoneyBillWave />, category: "FINANCES" },
-    
+    { label: "Paiements Scolarité", href: "/dashboard/comptable/paiements", icon: <FaCreditCard />, category: "FINANCES" },
+        
     // === ÉVÉNEMENTS ===
     { label: "Événements", href: "/dashboard/secretaire/evenements", icon: <FaCalendarAlt />, category: "ÉVÉNEMENTS" },
     
@@ -254,7 +254,6 @@ const SidebarSecretaire = () => {
           >
             <div className="flex items-center gap-2">
               {user?.imageUrl ? (
-                // ✅ CORRIGÉ : Utilisation de Image
                 <div className="h-7 w-7 rounded-full overflow-hidden">
                   <Image 
                     src={user.imageUrl} 
@@ -304,7 +303,7 @@ const SidebarSecretaire = () => {
                     <span>Mon Profil</span>
                   </Link>
 
-                  {/* NOUVEAU MENU NOTIFICATIONS AJOUTÉ */}
+                  {/* MENU NOTIFICATIONS */}
                   <Link
                     href="/dashboard/secretaire/notifications"
                     className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium"

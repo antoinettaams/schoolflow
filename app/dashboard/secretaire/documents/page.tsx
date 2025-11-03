@@ -71,7 +71,7 @@ export default function DocumentsPage() {
     administration: { label: "Administration", variant: "default" as const },
     pedagogique: { label: "Pédagogique", variant: "secondary" as const },
     financier: { label: "Financier", variant: "outline" as const },
-    divers: { label: "Divers", variant: "destructive" as const } // Remplace "success" par "destructive"
+    divers: { label: "Divers", variant: "destructive" as const }
   };
   
   const config = categories[categorie as keyof typeof categories] || categories.divers;

@@ -168,11 +168,11 @@ export default function BalancePage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 lg:pl-5 pt-20 lg:pt-6">
+    <div className="p-6 max-w-7xl mx-auto overflow-y-auto overflow-x-auto space-y-6 lg:pl-5 pt-20 lg:pt-6">
       {/* Tableau principal */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center gap-4 sm:flex flex-col lg:flex flex-row">
             <div>
               <CardTitle>Balance Comptable par Vague</CardTitle>
               <CardDescription>
@@ -186,7 +186,7 @@ export default function BalancePage() {
                   Ajouter Opération
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-white max-w-md">
+              <DialogContent className="max-h-screen overflow-y-auto bg-white max-w-md">
               <DialogHeader>
                 <DialogTitle>Nouvelle Opération Comptable</DialogTitle>
                 <DialogDescription>
@@ -199,7 +199,7 @@ export default function BalancePage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="date-operation" className="text-sm font-medium text-gray-700">
-                      Date de l&apos;opération *
+                      Date de l&apos;opération 
                     </Label>
                     <Input
                       id="date-operation"
@@ -211,7 +211,7 @@ export default function BalancePage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="reference" className="text-sm font-medium text-gray-700">
-                      Référence
+                      Référence 
                     </Label>
                     <Input
                       id="reference"
@@ -234,7 +234,7 @@ export default function BalancePage() {
                       onValueChange={(value) => setNewOperation({...newOperation, vague: value})}
                     >
                     <SelectTrigger id="vague">
-                      <SelectValue placeholder="Choisir une vague" />
+                      <SelectValue placeholder="Vague" />
                     </SelectTrigger>
                       <SelectContent>
                         {vagues.map((vague) => (
@@ -255,7 +255,7 @@ export default function BalancePage() {
                       onValueChange={(value) => setNewOperation({...newOperation, filiere: value})}
                     >
                       <SelectTrigger id="filiere">
-                        <SelectValue placeholder="Choisir une filière" />
+                        <SelectValue placeholder="Filière" />
                       </SelectTrigger>
                       <SelectContent>
                         {filieres.map((filiere) => (
@@ -341,7 +341,7 @@ export default function BalancePage() {
                 {/* Bouton de soumission */}
                 <Button 
                   onClick={handleAddOperation} 
-                  className="w-full bg-blue-600 hover:bg-blue-700 mt-2"
+                  className="w-64 bg-blue-600 hover:bg-blue-700 mt-2"
                   disabled={!newOperation.vague || !newOperation.filiere || !newOperation.libelle}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -358,7 +358,7 @@ export default function BalancePage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-6">
+          <div className="flex flex-col sm:flex-col sm:items-center sm:gap-4 mb-6 md: flex flex-row lg: flex flex-row">
             <Select
   value={selectedVague}
   onValueChange={setSelectedVague}
@@ -366,7 +366,7 @@ export default function BalancePage() {
   <SelectTrigger className="w-full sm:w-[250px]">
     <SelectValue placeholder="Toutes les vagues" />
   </SelectTrigger>
-  <SelectContent>
+  <SelectContent className="bg-white">
     <SelectItem value="all">Toutes les vagues</SelectItem>
     {vagues.map((vague) => (
       <SelectItem key={vague} value={vague}>
@@ -401,7 +401,7 @@ export default function BalancePage() {
               />
             </div>
 
-            <Button onClick={exportPDF} variant="outline" className="ml-auto sm:ml-4">
+            <Button onClick={exportPDF} variant="outline" className="mt-2 ml-auto sm:ml-4">
               <Download className="mr-2 h-4 w-4" />
               Exporter PDF
             </Button>

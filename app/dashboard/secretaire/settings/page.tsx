@@ -223,53 +223,53 @@ const SecretaireSettingsPage = () => {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-pink-600 border-opacity-75"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col lg:pl-5 pt-20 lg:pt-6">
+    <div className="min-h-screen bg-white flex flex-col lg:pl-5 pt-20 lg:pt-6">
       {/* En-tête */}
-      <div className="bg-white border-b border-gray-200 p-6 flex-shrink-0">
+      <div className="bg-white border-b border-gray-200 p-4 sm:p-6 flex-shrink-0">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-gray-900">Paramètres Secrétaire</h1>
-          <p className="text-gray-500 mt-1">Gérez votre compte secrétaire</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Paramètres Secrétaire</h1>
+          <p className="text-gray-500 mt-1 text-sm sm:text-base">Gérez votre compte secrétaire</p>
         </div>
       </div>
 
       {/* Modal ré-authentification */}
       <Dialog open={needsReauth} onOpenChange={setNeedsReauth}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-md mx-2 sm:mx-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
               Vérification requise
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm sm:text-base">
               Une vérification de sécurité est nécessaire pour continuer.
             </DialogDescription>
           </DialogHeader>
           
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
+            <AlertDescription className="text-sm">
               Pour des raisons de sécurité, veuillez vous ré-authentifier.
             </AlertDescription>
           </Alert>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <Button
               variant="outline"
               onClick={() => setNeedsReauth(false)}
-              className="flex-1"
+              className="flex-1 text-sm sm:text-base"
             >
               Annuler
             </Button>
             <Button
               onClick={triggerReauthentication}
-              className="flex-1 bg-pink-600 hover:bg-pink-700"
+              className="flex-1 bg-pink-600 hover:bg-pink-700 text-sm sm:text-base"
             >
               Se ré-authentifier
             </Button>
@@ -279,50 +279,51 @@ const SecretaireSettingsPage = () => {
 
       {/* Contenu principal */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto p-6 flex flex-col gap-6">
+        <div className="max-w-4xl mx-auto p-3 sm:p-4 md:p-6 flex flex-col gap-4 sm:gap-6">
           
           {/* Section Profil Secrétaire */}
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-pink-50 rounded-lg">
-                  <User className="w-5 h-5 text-pink-600" />
+                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600" />
                 </div>
-                <div>
-                  <CardTitle>Profil Secrétaire</CardTitle>
-                  <CardDescription>Modifiez vos informations personnelles</CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-base sm:text-lg">Profil Secrétaire</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Modifiez vos informations personnelles</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="space-y-3 sm:space-y-4">
                 {/* Section profil dépliante */}
                 <div className="border border-gray-200 rounded-lg">
                   <Button
                     variant="ghost"
                     onClick={() => setProfileOpen(!profileOpen)}
-                    className="w-full h-auto px-4 py-4 flex items-center justify-between hover:bg-gray-50"
+                    className="w-full h-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between hover:bg-gray-50"
                   >
-                    <div className="text-left">
-                      <span className="font-medium text-gray-900">Informations personnelles</span>
-                      <p className="text-sm text-gray-500 mt-1">
+                    <div className="text-left min-w-0 flex-1">
+                      <span className="font-medium text-gray-900 text-sm sm:text-base block truncate">
+                        Informations personnelles
+                      </span>
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">
                         Modifiez votre nom, prénom, nom d&apos;utilisateur et email
                       </p>
                     </div>
                     {profileOpen ? (
-                      <ChevronUp className="w-5 h-5 text-gray-400" />
+                      <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 ml-2" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                      <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 ml-2" />
                     )}
                   </Button>
 
                   {profileOpen && (
-                    <div className="px-4 pb-4">
-                      <form onSubmit={handleProfileUpdate} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Prénom */}
+                    <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+                      <form onSubmit={handleProfileUpdate} className="space-y-3 sm:space-y-4">
+                        <div className="grid grid-cols-1 gap-3 sm:gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="firstName">Prénom</Label>
+                            <Label htmlFor="firstName" className="text-sm sm:text-base">Prénom</Label>
                             <Input
                               id="firstName"
                               type="text"
@@ -330,12 +331,11 @@ const SecretaireSettingsPage = () => {
                               onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
                               placeholder="Votre prénom"
                               required
+                              className="text-sm sm:text-base"
                             />
                           </div>
-
-                          {/* Nom */}
                           <div className="space-y-2">
-                            <Label htmlFor="lastName">Nom</Label>
+                            <Label htmlFor="lastName" className="text-sm sm:text-base">Nom</Label>
                             <Input
                               id="lastName"
                               type="text"
@@ -343,26 +343,28 @@ const SecretaireSettingsPage = () => {
                               onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
                               placeholder="Votre nom"
                               required
+                              className="text-sm sm:text-base"
                             />
                           </div>
                         </div>
 
                         {/* Nom d'utilisateur */}
                         <div className="space-y-2">
-                          <Label htmlFor="username">Nom d&apos;utilisateur</Label>
+                          <Label htmlFor="username" className="text-sm sm:text-base">Nom d&apos;utilisateur</Label>
                           <Input
                             id="username"
                             type="text"
                             value={formData.username}
                             onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
                             placeholder="Votre nom d&apos;utilisateur"
+                            className="text-sm sm:text-base"
                           />
                         </div>
 
                         {/* Email */}
                         <div className="space-y-2">
-                          <Label htmlFor="email" className="flex items-center gap-2">
-                            <Mail className="w-4 h-4" />
+                          <Label htmlFor="email" className="flex items-center gap-2 text-sm sm:text-base">
+                            <Mail className="w-3 h-3 sm:w-4 sm:h-4" />
                             Adresse email
                           </Label>
                           <Input
@@ -372,8 +374,9 @@ const SecretaireSettingsPage = () => {
                             onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                             placeholder="votre@email.com"
                             required
+                            className="text-sm sm:text-base"
                           />
-                          <p className="text-sm text-gray-500">
+                          <p className="text-xs text-gray-500">
                             Un email de vérification sera envoyé si vous changez d&apos;adresse
                           </p>
                         </div>
@@ -384,10 +387,10 @@ const SecretaireSettingsPage = () => {
                           <Button
                             type="submit"
                             disabled={isLoading}
-                            className="bg-pink-600 hover:bg-pink-700"
+                            className="bg-pink-600 hover:bg-pink-700 text-sm sm:text-base w-full sm:w-auto"
                           >
-                            <Save className="w-4 h-4 mr-2" />
-                            {isLoading ? "Mise à jour..." : "Enregistrer les modifications"}
+                            <Save className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                            {isLoading ? "Mise à jour..." : "Enregistrer"}
                           </Button>
                         </div>
                       </form>
@@ -400,23 +403,23 @@ const SecretaireSettingsPage = () => {
 
           {/* Section Apparence */}
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-pink-50 rounded-lg">
-                  <Sun className="w-5 h-5 text-pink-600" />
+                  <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600" />
                 </div>
-                <div>
-                  <CardTitle>Apparence</CardTitle>
-                  <CardDescription>Personnalisez l&apos;apparence de votre interface</CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-base sm:text-lg">Apparence</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Personnalisez l&apos;apparence de votre interface</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="space-y-4 sm:space-y-6">
                 <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="dark-mode">Mode sombre</Label>
-                    <p className="text-sm text-gray-500">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <Label htmlFor="dark-mode" className="text-sm sm:text-base">Mode sombre</Label>
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">
                       {darkMode ? "Interface en mode sombre" : "Interface en mode clair"}
                     </p>
                   </div>
@@ -424,6 +427,7 @@ const SecretaireSettingsPage = () => {
                     id="dark-mode"
                     checked={darkMode}
                     onCheckedChange={setDarkMode}
+                    className="flex-shrink-0"
                   />
                 </div>
               </div>
@@ -432,33 +436,33 @@ const SecretaireSettingsPage = () => {
 
           {/* Section Général */}
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-gray-100 rounded-lg">
-                  <Globe className="w-5 h-5 text-pink-600" />
+                  <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600" />
                 </div>
-                <div>
-                  <CardTitle>Général</CardTitle>
-                  <CardDescription>Paramètres généraux de l&apos;application</CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-base sm:text-lg">Général</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Paramètres généraux de l&apos;application</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="language">Langue</Label>
-                    <p className="text-sm text-gray-500">Définir la langue d&apos;affichage</p>
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <Label htmlFor="language" className="text-sm sm:text-base">Langue</Label>
+                    <p className="text-xs sm:text-sm text-gray-500">Définir la langue d&apos;affichage</p>
                   </div>
                   <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px] text-sm sm:text-base">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fr">Français</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Español</SelectItem>
-                      <SelectItem value="de">Deutsch</SelectItem>
+                      <SelectItem value="fr" className="text-sm sm:text-base">Français</SelectItem>
+                      <SelectItem value="en" className="text-sm sm:text-base">English</SelectItem>
+                      <SelectItem value="es" className="text-sm sm:text-base">Español</SelectItem>
+                      <SelectItem value="de" className="text-sm sm:text-base">Deutsch</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -466,14 +470,17 @@ const SecretaireSettingsPage = () => {
                 <Separator />
 
                 <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="notifications">Notifications</Label>
-                    <p className="text-sm text-gray-500">Recevoir des notifications importantes</p>
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <Label htmlFor="notifications" className="text-sm sm:text-base">Notifications</Label>
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">
+                      Recevoir des notifications importantes
+                    </p>
                   </div>
                   <Switch
                     id="notifications"
                     checked={notificationsEnabled}
                     onCheckedChange={setNotificationsEnabled}
+                    className="flex-shrink-0"
                   />
                 </div>
               </div>
@@ -482,52 +489,55 @@ const SecretaireSettingsPage = () => {
 
           {/* Section Sécurité */}
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-red-50 rounded-lg">
-                  <Lock className="w-5 h-5 text-red-600" />
+                  <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                 </div>
-                <div>
-                  <CardTitle>Sécurité</CardTitle>
-                  <CardDescription>Protégez votre compte secrétaire</CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-base sm:text-lg">Sécurité</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Protégez votre compte secrétaire</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="space-y-3 sm:space-y-4">
                 <div className="border border-gray-200 rounded-lg">
                   <Button
                     variant="ghost"
                     onClick={() => setPasswordOpen(!passwordOpen)}
-                    className="w-full h-auto px-4 py-4 flex items-center justify-between hover:bg-gray-50"
+                    className="w-full h-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between hover:bg-gray-50"
                   >
-                    <div className="text-left">
-                      <span className="font-medium text-gray-900">Modifier le mot de passe</span>
-                      <p className="text-sm text-gray-500 mt-1">
+                    <div className="text-left min-w-0 flex-1">
+                      <span className="font-medium text-gray-900 text-sm sm:text-base block truncate">
+                        Modifier le mot de passe
+                      </span>
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">
                         Mettez à jour votre mot de passe régulièrement
                       </p>
                     </div>
                     {passwordOpen ? (
-                      <ChevronUp className="w-5 h-5 text-gray-400" />
+                      <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 ml-2" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                      <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 ml-2" />
                     )}
                   </Button>
 
                   {passwordOpen && (
-                    <div className="px-4 pb-4">
-                      <form onSubmit={handlePasswordChange} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+                      <form onSubmit={handlePasswordChange} className="space-y-3 sm:space-y-4">
+                        <div className="grid grid-cols-1 gap-3 sm:gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="currentPassword">Mot de passe actuel</Label>
+                            <Label htmlFor="currentPassword" className="text-sm sm:text-base">Mot de passe actuel</Label>
                             <div className="relative">
                               <Input
                                 id="currentPassword"
                                 type={showOldPassword ? "text" : "password"}
                                 value={formData.currentPassword}
                                 onChange={(e) => setFormData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                                placeholder="Entrez votre mot de passe actuel"
+                                placeholder="Mot de passe actuel"
                                 required
+                                className="text-sm sm:text-base pr-10"
                               />
                               <Button
                                 type="button"
@@ -536,22 +546,26 @@ const SecretaireSettingsPage = () => {
                                 onClick={() => setShowOldPassword(!showOldPassword)}
                                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                               >
-                                {showOldPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {showOldPassword ? (
+                                  <EyeOff className="w-3 h-3 sm:w-4 sm:h-4" />
+                                ) : (
+                                  <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+                                )}
                               </Button>
                             </div>
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="newPassword">Nouveau mot de passe</Label>
+                            <Label htmlFor="newPassword" className="text-sm sm:text-base">Nouveau mot de passe</Label>
                             <div className="relative">
                               <Input
                                 id="newPassword"
                                 type={showNewPassword ? "text" : "password"}
                                 value={formData.newPassword}
                                 onChange={(e) => setFormData(prev => ({ ...prev, newPassword: e.target.value }))}
-                                placeholder="Choisissez un nouveau mot de passe"
+                                placeholder="Nouveau mot de passe"
                                 required
-                                minLength={8}
+                                className="text-sm sm:text-base pr-10"
                               />
                               <Button
                                 type="button"
@@ -560,21 +574,26 @@ const SecretaireSettingsPage = () => {
                                 onClick={() => setShowNewPassword(!showNewPassword)}
                                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                               >
-                                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {showNewPassword ? (
+                                  <EyeOff className="w-3 h-3 sm:w-4 sm:h-4" />
+                                ) : (
+                                  <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+                                )}
                               </Button>
                             </div>
                             <p className="text-xs text-gray-500 mt-1">Minimum 8 caractères</p>
                           </div>
                         </div>
-                        
+
                         <div className="flex justify-end">
                           <Button
                             type="submit"
                             disabled={isLoading}
                             variant="destructive"
+                            className="bg-red-500 text-sm sm:text-base w-full sm:w-auto"
                           >
-                            <Key className="w-4 h-4 mr-2" />
-                            {isLoading ? "Changement..." : "Mettre à jour le mot de passe"}
+                            <Key className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                            {isLoading ? "Changement..." : "Mettre à jour"}
                           </Button>
                         </div>
                       </form>
@@ -587,31 +606,31 @@ const SecretaireSettingsPage = () => {
 
           {/* Informations du compte */}
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-green-50 rounded-lg">
-                  <FileText className="w-5 h-5 text-green-600" />
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                 </div>
-                <div>
-                  <CardTitle>Informations du Compte</CardTitle>
-                  <CardDescription>Détails de votre compte secrétaire</CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-base sm:text-lg">Informations du Compte</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Détails de votre compte secrétaire</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                <div className="space-y-2">
-                  <p className="text-gray-500">ID Utilisateur</p>
-                  <p className="font-mono text-gray-900">{user?.id}</p>
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 text-xs sm:text-sm">
+                <div className="space-y-1 sm:space-y-2">
+                  <p className="text-gray-500 text-xs sm:text-sm">ID Utilisateur</p>
+                  <p className="font-mono text-gray-900 text-xs sm:text-sm break-all">{user?.id}</p>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-gray-500">Rôle</p>
-                  <p className="font-medium text-pink-600">Secrétaire</p>
+                <div className="space-y-1 sm:space-y-2">
+                  <p className="text-gray-500 text-xs sm:text-sm">Rôle</p>
+                  <p className="font-medium text-pink-600 text-xs sm:text-sm">Secrétaire</p>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-gray-500">Membre depuis</p>
-                  <p className="text-gray-900">
-                    {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('fr-FR') : 'N/A'}
+                <div className="space-y-1 sm:space-y-2">
+                  <p className="text-gray-500 text-xs sm:text-sm">Membre depuis</p>
+                  <p className="text-gray-900 text-xs sm:text-sm">
+                    {user?.createdAt ? new Date(user.createdAt).toLocaleDateString("fr-FR") : "N/A"}
                   </p>
                 </div>
               </div>

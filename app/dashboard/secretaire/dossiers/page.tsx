@@ -53,7 +53,7 @@ export default function DossiersPage() {
     }
   });
 
-  // Liste des élèves avec compte actif (paiement payé)
+  // Liste des élèves avec compte actif
   const [eleves] = useState<Eleve[]>([
     {
       id: "1",
@@ -159,7 +159,7 @@ export default function DossiersPage() {
     return matchesSearch && matchesFiliere && matchesVague && matchesStatut;
   });
 
-  // Élèves éligibles pour nouveau dossier (paiement payé)
+  // Élèves éligibles pour nouveau dossier
   const elevesEligibles = eleves.filter(eleve => eleve.statutPaiement === "paye");
 
   const handleFileUpload = (documentType: keyof typeof nouveauDossier.documents, file: File) => {
@@ -193,7 +193,7 @@ export default function DossiersPage() {
       filiere: eleve.filiere,
       vague: eleve.vague,
       dateInscription: new Date().toISOString().split('T')[0],
-      statut: "complet", // Tous les documents sont requis pour créer le dossier
+      statut: "complet",
       documents: nouveauDossier.documents
     };
 

@@ -59,7 +59,6 @@ const AdminSettingsPage = () => {
     newPassword: "",
   });
 
-  // Sync form data if user changes outside component
   useEffect(() => {
     setFormData(prev => ({
       ...prev,
@@ -72,7 +71,7 @@ const AdminSettingsPage = () => {
 
   // Gestion du mode sombre
   useEffect(() => {
-    // Vérifier la préférence stockée ou le préférence système
+    // Vérifier la préférence stockée
     const savedDarkMode = localStorage.getItem('darkMode');
     if (savedDarkMode) {
       setDarkMode(JSON.parse(savedDarkMode));
@@ -230,44 +229,44 @@ const AdminSettingsPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col lg:pl-5 pt-20 lg:pt-6">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex-shrink-0">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6 flex-shrink-0">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Paramètres Administrateur</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Gérez votre compte administrateur</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Paramètres Administrateur</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm sm:text-base">Gérez votre compte administrateur</p>
         </div>
       </div>
 
       {/* Modal re-authentication */}
       <Dialog open={needsReauth} onOpenChange={setNeedsReauth}>
-        <DialogContent className="bg-white dark:bg-gray-800">
+        <DialogContent className="bg-white dark:bg-gray-800 max-w-[95vw] sm:max-w-md mx-2 sm:mx-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 dark:text-white">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            <DialogTitle className="flex items-center gap-2 dark:text-white text-base sm:text-lg">
+              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
               Vérification requise
             </DialogTitle>
-            <DialogDescription className="dark:text-gray-400">
+            <DialogDescription className="dark:text-gray-400 text-sm sm:text-base">
               Une vérification de sécurité est nécessaire pour continuer.
             </DialogDescription>
           </DialogHeader>
           
           <Alert className="bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
             <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
-            <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+            <AlertDescription className="text-yellow-800 dark:text-yellow-200 text-sm">
               Pour des raisons de sécurité, vous devez vous ré-authentifier pour effectuer cette action.
             </AlertDescription>
           </Alert>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <Button
               variant="outline"
               onClick={() => setNeedsReauth(false)}
-              className="flex-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              className="flex-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 text-sm sm:text-base"
             >
               Annuler
             </Button>
             <Button
               onClick={triggerReauthentication}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-sm sm:text-base"
             >
               Se ré-authentifier
             </Button>
@@ -277,44 +276,48 @@ const AdminSettingsPage = () => {
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto p-6 flex flex-col gap-6">
+        <div className="max-w-4xl mx-auto p-3 sm:p-4 md:p-6 flex flex-col gap-4 sm:gap-6">
           {/* Profile Section */}
           <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div>
-                  <CardTitle className="dark:text-white">Profil Administrateur</CardTitle>
-                  <CardDescription className="dark:text-gray-400">Modifiez vos informations personnelles</CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="dark:text-white text-base sm:text-lg">Profil Administrateur</CardTitle>
+                  <CardDescription className="dark:text-gray-400 text-xs sm:text-sm">Modifiez vos informations personnelles</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="space-y-3 sm:space-y-4">
                 <div className="border border-gray-200 dark:border-gray-600 rounded-lg">
                   <Button
                     variant="ghost"
                     onClick={() => setProfileOpen(!profileOpen)}
-                    className="w-full h-auto px-4 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
+                    className="w-full h-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
                   >
-                    <div className="text-left">
-                      <span className="font-medium text-gray-900 dark:text-white">Informations personnelles</span>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Modifiez votre nom, prénom, nom d&apos;utilisateur et email</p>
+                    <div className="text-left min-w-0 flex-1">
+                      <span className="font-medium text-gray-900 dark:text-white text-sm sm:text-base block truncate">
+                        Informations personnelles
+                      </span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                        Modifiez votre nom, prénom, nom d&apos;utilisateur et email
+                      </p>
                     </div>
                     {profileOpen ? (
-                      <ChevronUp className="w-5 h-5 text-gray-400" />
+                      <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 ml-2" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                      <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 ml-2" />
                     )}
                   </Button>
                   {profileOpen && (
-                    <div className="px-4 pb-4">
-                      <form onSubmit={handleProfileUpdate} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+                      <form onSubmit={handleProfileUpdate} className="space-y-3 sm:space-y-4">
+                        <div className="grid grid-cols-1 gap-3 sm:gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="firstName" className="dark:text-white">Prénom</Label>
+                            <Label htmlFor="firstName" className="dark:text-white text-sm sm:text-base">Prénom</Label>
                             <Input
                               id="firstName"
                               type="text"
@@ -322,11 +325,11 @@ const AdminSettingsPage = () => {
                               onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
                               placeholder="Votre prénom"
                               required
-                              className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                              className="dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm sm:text-base"
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="lastName" className="dark:text-white">Nom</Label>
+                            <Label htmlFor="lastName" className="dark:text-white text-sm sm:text-base">Nom</Label>
                             <Input
                               id="lastName"
                               type="text"
@@ -334,26 +337,26 @@ const AdminSettingsPage = () => {
                               onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
                               placeholder="Votre nom"
                               required
-                              className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                              className="dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm sm:text-base"
                             />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="username" className="dark:text-white">Nom d&apos;utilisateur</Label>
+                          <Label htmlFor="username" className="dark:text-white text-sm sm:text-base">Nom d&apos;utilisateur</Label>
                           <Input
                             id="username"
                             type="text"
                             value={formData.username}
                             onChange={(e) => setFormData((prev) => ({ ...prev, username: e.target.value }))}
                             placeholder="Votre nom d&apos;utilisateur"
-                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm sm:text-base"
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="email" className="flex items-center gap-2 dark:text-white">
-                            <Mail className="w-4 h-4" />
+                          <Label htmlFor="email" className="flex items-center gap-2 dark:text-white text-sm sm:text-base">
+                            <Mail className="w-3 h-3 sm:w-4 sm:h-4" />
                             Adresse email
                           </Label>
                           <Input
@@ -363,9 +366,9 @@ const AdminSettingsPage = () => {
                             onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                             placeholder="Votre email"
                             required
-                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm sm:text-base"
                           />
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             Un email de vérification sera envoyé si vous changez d&apos;adresse
                           </p>
                         </div>
@@ -376,10 +379,10 @@ const AdminSettingsPage = () => {
                           <Button
                             type="submit"
                             disabled={isLoading}
-                            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+                            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-sm sm:text-base w-full sm:w-auto"
                           >
-                            <Save className="w-4 h-4 mr-2" />
-                            {isLoading ? "Mise à jour..." : "Enregistrer les modifications"}
+                            <Save className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                            {isLoading ? "Mise à jour..." : "Enregistrer"}
                           </Button>
                         </div>
                       </form>
@@ -392,23 +395,23 @@ const AdminSettingsPage = () => {
 
           {/* Section Apparence */}
           <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <Sun className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div>
-                  <CardTitle className="dark:text-white">Apparence</CardTitle>
-                  <CardDescription className="dark:text-gray-400">Personnalisez l&apos;apparence de votre interface</CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="dark:text-white text-base sm:text-lg">Apparence</CardTitle>
+                  <CardDescription className="dark:text-gray-400 text-xs sm:text-sm">Personnalisez l&apos;apparence de votre interface</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="space-y-4 sm:space-y-6">
                 <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="dark-mode" className="dark:text-white">Mode sombre</Label>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <Label htmlFor="dark-mode" className="dark:text-white text-sm sm:text-base">Mode sombre</Label>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
                       {darkMode ? "Interface en mode sombre" : "Interface en mode clair"}
                     </p>
                   </div>
@@ -416,6 +419,7 @@ const AdminSettingsPage = () => {
                     id="dark-mode"
                     checked={darkMode}
                     onCheckedChange={setDarkMode}
+                    className="flex-shrink-0"
                   />
                 </div>
               </div>
@@ -424,41 +428,45 @@ const AdminSettingsPage = () => {
 
           {/* Security Section */}
           <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                  <Lock className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400" />
                 </div>
-                <div>
-                  <CardTitle className="dark:text-white">Sécurité</CardTitle>
-                  <CardDescription className="dark:text-gray-400">Protégez votre compte administrateur</CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="dark:text-white text-base sm:text-lg">Sécurité</CardTitle>
+                  <CardDescription className="dark:text-gray-400 text-xs sm:text-sm">Protégez votre compte administrateur</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="space-y-3 sm:space-y-4">
                 <div className="border border-gray-200 dark:border-gray-600 rounded-lg">
                   <Button
                     variant="ghost"
                     onClick={() => setPasswordOpen(!passwordOpen)}
-                    className="w-full h-auto px-4 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
+                    className="w-full h-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
                   >
-                    <div className="text-left">
-                      <span className="font-medium text-gray-900 dark:text-white">Modifier le mot de passe</span>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Mettez à jour votre mot de passe régulièrement</p>
+                    <div className="text-left min-w-0 flex-1">
+                      <span className="font-medium text-gray-900 dark:text-white text-sm sm:text-base block truncate">
+                        Modifier le mot de passe
+                      </span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                        Mettez à jour votre mot de passe régulièrement
+                      </p>
                     </div>
                     {passwordOpen ? (
-                      <ChevronUp className="w-5 h-5 text-gray-400" />
+                      <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 ml-2" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                      <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 ml-2" />
                     )}
                   </Button>
                   {passwordOpen && (
-                    <div className="px-4 pb-4">
-                      <form onSubmit={handlePasswordChange} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+                      <form onSubmit={handlePasswordChange} className="space-y-3 sm:space-y-4">
+                        <div className="grid grid-cols-1 gap-3 sm:gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="currentPassword" className="dark:text-white">Mot de passe actuel</Label>
+                            <Label htmlFor="currentPassword" className="dark:text-white text-sm sm:text-base">Mot de passe actuel</Label>
                             <div className="relative">
                               <Input
                                 id="currentPassword"
@@ -470,9 +478,9 @@ const AdminSettingsPage = () => {
                                     currentPassword: e.target.value,
                                   }))
                                 }
-                                placeholder="Entrez votre mot de passe actuel"
+                                placeholder="Mot de passe actuel"
                                 required
-                                className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                className="dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm sm:text-base pr-10"
                               />
                               <Button
                                 type="button"
@@ -481,13 +489,13 @@ const AdminSettingsPage = () => {
                                 onClick={() => setShowOldPassword(!showOldPassword)}
                                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent dark:text-gray-400 dark:hover:bg-gray-600"
                               >
-                                {showOldPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {showOldPassword ? <EyeOff className="w-3 h-3 sm:w-4 sm:h-4" /> : <Eye className="w-3 h-3 sm:w-4 sm:h-4" />}
                               </Button>
                             </div>
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="newPassword" className="dark:text-white">Nouveau mot de passe</Label>
+                            <Label htmlFor="newPassword" className="dark:text-white text-sm sm:text-base">Nouveau mot de passe</Label>
                             <div className="relative">
                               <Input
                                 id="newPassword"
@@ -499,10 +507,10 @@ const AdminSettingsPage = () => {
                                     newPassword: e.target.value,
                                   }))
                                 }
-                                placeholder="Choisissez un nouveau mot de passe"
+                                placeholder="Nouveau mot de passe"
                                 required
                                 minLength={8}
-                                className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                className="dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm sm:text-base pr-10"
                               />
                               <Button
                                 type="button"
@@ -511,7 +519,7 @@ const AdminSettingsPage = () => {
                                 onClick={() => setShowNewPassword(!showNewPassword)}
                                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent dark:text-gray-400 dark:hover:bg-gray-600"
                               >
-                                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {showNewPassword ? <EyeOff className="w-3 h-3 sm:w-4 sm:h-4" /> : <Eye className="w-3 h-3 sm:w-4 sm:h-4" />}
                               </Button>
                             </div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Minimum 8 caractères</p>
@@ -521,10 +529,10 @@ const AdminSettingsPage = () => {
                           <Button
                             type="submit"
                             disabled={isLoading}
-                            className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                            className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-sm sm:text-base w-full sm:w-auto"
                           >
-                            <Key className="w-4 h-4 mr-2" />
-                            {isLoading ? "Changement..." : "Mettre à jour le mot de passe"}
+                            <Key className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                            {isLoading ? "Changement..." : "Mettre à jour"}
                           </Button>
                         </div>
                       </form>
@@ -537,30 +545,30 @@ const AdminSettingsPage = () => {
 
           {/* Account Information */}
           <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader>
+            <CardHeader className="p-4 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <User className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
                 </div>
-                <div>
-                  <CardTitle className="dark:text-white">Informations du Compte</CardTitle>
-                  <CardDescription className="dark:text-gray-400">Détails de votre compte administrateur</CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="dark:text-white text-base sm:text-lg">Informations du Compte</CardTitle>
+                  <CardDescription className="dark:text-gray-400 text-xs sm:text-sm">Détails de votre compte administrateur</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                <div className="space-y-2">
-                  <p className="text-gray-500 dark:text-gray-400">ID Utilisateur</p>
-                  <p className="font-mono text-gray-900 dark:text-white">{user?.id}</p>
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 text-xs sm:text-sm">
+                <div className="space-y-1 sm:space-y-2">
+                  <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">ID Utilisateur</p>
+                  <p className="font-mono text-gray-900 dark:text-white text-xs sm:text-sm break-all">{user?.id}</p>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-gray-500 dark:text-gray-400">Rôle</p>
-                  <p className="font-medium text-green-600 dark:text-green-400">Administrateur</p>
+                <div className="space-y-1 sm:space-y-2">
+                  <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Rôle</p>
+                  <p className="font-medium text-green-600 dark:text-green-400 text-xs sm:text-sm">Administrateur</p>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-gray-500 dark:text-gray-400">Membre depuis</p>
-                  <p className="text-gray-900 dark:text-white">{user?.createdAt ? new Date(user.createdAt).toLocaleDateString("fr-FR") : "N/A"}</p>
+                <div className="space-y-1 sm:space-y-2">
+                  <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Membre depuis</p>
+                  <p className="text-gray-900 dark:text-white text-xs sm:text-sm">{user?.createdAt ? new Date(user.createdAt).toLocaleDateString("fr-FR") : "N/A"}</p>
                 </div>
               </div>
             </CardContent>

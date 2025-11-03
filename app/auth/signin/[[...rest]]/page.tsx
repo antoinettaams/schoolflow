@@ -30,19 +30,19 @@ export default function SigninPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // 🔥 REDIRECTION SI DÉJÀ CONNECTÉ
+  // REDIRECTION SI DÉJÀ CONNECTÉ
   useEffect(() => {
     if (isSignedIn && user) {
-      console.log("✅ Utilisateur déjà connecté, détermination du dashboard...");
+      console.log("Utilisateur déjà connecté, détermination du dashboard...");
       redirectToDashboard(user);
     }
   }, [isSignedIn, user]);
 
-  // 🔥 FONCTION DE REDIRECTION BASÉE SUR LE RÔLE
+  // FONCTION DE REDIRECTION BASÉE SUR LE RÔLE
   const redirectToDashboard = (user: ClerkUser) => {
     const userRole = user.publicMetadata?.role;
     
-    console.log("🔍 Rôle utilisateur:", userRole);
+    console.log("Rôle utilisateur:", userRole);
     
     const roleRoutes: Record<string, string> = {
       'Administrateur': '/dashboard/admin',
@@ -56,7 +56,7 @@ export default function SigninPage() {
 
     const redirectPath = userRole ? roleRoutes[userRole] : '/not-found';
     
-    console.log('🎯 Redirection directe vers:', redirectPath);
+    console.log('Redirection directe vers:', redirectPath);
     window.location.href = redirectPath;
   };
 
@@ -68,7 +68,7 @@ export default function SigninPage() {
     setError("");
 
     try {
-      // Étape 1: Tentative de connexion
+      // Étape 1: Connexion
       const result = await signIn.create({
         identifier: email,
         password,
@@ -76,14 +76,13 @@ export default function SigninPage() {
 
       // Étape 2: Vérifier le statut
       if (result.status === "complete") {
-        console.log("✅ Connexion réussie, activation de la session...");
+        console.log("Connexion réussie, activation de la session...");
         
         // Étape 3: Activer la session
         await setActive({ session: result.createdSessionId });
         window.location.reload();
-        // Redirection automatique via useEffect après que isSignedIn soit true
       } else {
-        console.log("❌ Statut de connexion:", result.status);
+        console.log("Statut de connexion:", result.status);
         
         if (result.status === "needs_second_factor") {
           setError("Vérification à deux facteurs requise");
@@ -94,7 +93,7 @@ export default function SigninPage() {
         }
       }
     } catch (err) {
-      console.error("❌ Erreur détaillée:", err);
+      console.error("Erreur détaillée:", err);
       
       const clerkError = err as ClerkError;
       

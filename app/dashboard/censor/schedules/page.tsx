@@ -195,7 +195,7 @@ export default function EmploiDuTempsPage() {
   }
 
   const formatTime = (time: string) => {
-    return time.slice(0, 5) // Format HH:MM
+    return time.slice(0, 5)
   }
 
   // Gestion des actions
@@ -259,7 +259,7 @@ export default function EmploiDuTempsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 lg:pl-5 pt-20 lg:pt-6">
+    <div className="min-h-screen overflow-y-auto bg-gray-50 p-6 lg:pl-5 pt-20 lg:pt-6">
       <div className="max-w-7xl mx-auto">
         {/* En-tête */}
         <div className="mb-8">
@@ -366,7 +366,7 @@ export default function EmploiDuTempsPage() {
             </p>
             <button 
               onClick={handleAddNew}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mx-auto"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-2 py-2 rounded-lg mx-auto"
             >
               <Plus className="h-4 w-4" />
               Créer le premier emploi du temps
@@ -460,7 +460,7 @@ export default function EmploiDuTempsPage() {
           </div>
         )}
 
-        {/* Modal de modification uniquement (pas de création) */}
+        {/* Modal de modification */}
         {isDialogOpen && editingSchedule && (
           <EditScheduleModal
             schedule={editingSchedule}
@@ -481,7 +481,7 @@ export default function EmploiDuTempsPage() {
   )
 }
 
-// Composant Modal pour l'édition uniquement
+// Composant Modal pour l'édition
 function EditScheduleModal({ 
   schedule, 
   isOpen, 
@@ -634,7 +634,7 @@ function EditScheduleModal({
             </div>
           </div>
 
-          {/* Créneaux horaires existants en lecture seule */}
+          {/* Créneaux horaires existants */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="flex items-center gap-2 mb-3">
               <Clock className="h-4 w-4" />

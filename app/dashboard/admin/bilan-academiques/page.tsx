@@ -77,7 +77,7 @@ export default function NotesPage() {
   }, []);
 
   const loadData = () => {
-    // Données simulées (identique à votre code original)
+    // Données simulées
     const mockVagues: Vague[] = [
       { id: '1', name: 'Vague Janvier-Juin 2024', startDate: '2024-01-15', endDate: '2024-06-30' },
       { id: '2', name: 'Vague Septembre 2024', startDate: '2024-09-01', endDate: '2025-01-31' }
@@ -226,7 +226,7 @@ export default function NotesPage() {
   const getStatusBadge = (statut: Student['statut']) => {
   const config = {
     excellent: { variant: "default" as const, text: 'Excellent', icon: Award },
-    tres_bien: { variant: "default" as const, text: 'Très bien', icon: CheckCircle }, // Changé de "success" à "default"
+    tres_bien: { variant: "default" as const, text: 'Très bien', icon: CheckCircle },
     bien: { variant: "secondary" as const, text: 'Bien', icon: Target },
     moyen: { variant: "outline" as const, text: 'Moyen', icon: Star },
     insuffisant: { variant: "destructive" as const, text: 'Insuffisant', icon: AlertCircle },
@@ -307,75 +307,6 @@ export default function NotesPage() {
                 className="pl-10"
               />
             </div>
-            
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  Filtres
-                </Button>
-              </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>Filtres</SheetTitle>
-                </SheetHeader>
-                <div className="mt-6 space-y-6">
-                  {/* Sélection Vague */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Vague</label>
-                    <Select value={selectedVague} onValueChange={setSelectedVague}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Toutes les vagues" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Toutes les vagues</SelectItem>
-                        {vagues.map(vague => (
-                          <SelectItem key={vague.id} value={vague.id}>
-                            {vague.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Filtre filière */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Filière</label>
-                    <Select value={selectedFiliere} onValueChange={setSelectedFiliere}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Toutes les filières" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Toutes les filières</SelectItem>
-                        {filieres.map(filiere => (
-                          <SelectItem key={filiere.id} value={filiere.name}>
-                            {filiere.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Statistiques rapides */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">Aperçu</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Étudiants:</span>
-                        <span className="font-medium">{filteredStudents.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Moyenne générale:</span>
-                        <span className="font-medium text-primary">{formatNote(stats.moyenneGenerale)}/20</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </SheetContent>
-            </Sheet>
-
             <Button className="flex items-center gap-2">
               <Download className="h-4 w-4" />
               Exporter

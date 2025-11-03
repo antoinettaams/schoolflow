@@ -1,12 +1,10 @@
 // app/dashboard/absences/page.tsx
 "use client";
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { 
-  Search, Calendar, Clock, Users,
-  AlertTriangle, CheckCircle, XCircle, 
-  Download, Eye, FileText, Filter, ChevronDown,
-  BarChart3, UserCheck, School
+  Search, Calendar, CheckCircle, XCircle, 
+  Download, FileText, Filter, ChevronDown,
+  BarChart3, BookOpen, School, Users
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,36 +23,23 @@ interface Absence {
   duree: number;
   type: 'justifiee' | 'non_justifiee';
   motif?: string;
-  heureCours: string;
   filiere: string;
+  semestre: string;
   vague: string;
-}
-
-interface Student {
-  id: string;
-  nom: string;
-  prenom: string;
-  email: string;
-  filiere: string;
-  vague: string;
-  absences: Absence[];
-  totalHeuresAbsences: number;
-  tauxAbsentéisme: number;
-  statut: 'critique' | 'eleve' | 'bon';
+  etudiant: string;
+  emailEtudiant: string;
 }
 
 export default function AbsencesPage() {
-  const router = useRouter();
   const [absences, setAbsences] = useState<Absence[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Filtres
   const [selectedFiliere, setSelectedFiliere] = useState<string>('all');
   const [selectedModule, setSelectedModule] = useState<string>('all');
+  const [selectedSemestre, setSelectedSemestre] = useState<string>('all');
   const [selectedVague, setSelectedVague] = useState<string>('all');
-  const [selectedDate, setSelectedDate] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -62,177 +47,212 @@ export default function AbsencesPage() {
   }, []);
 
   const loadData = () => {
-    // Données simulées des absences remplies par les professeurs
+    // Données simulées des absences avec semestres ET vagues
     const mockAbsences: Absence[] = [
       {
         id: 'a1',
         date: '2024-03-15',
-        matiere: 'Programmation Java',
-        module: 'Développement Web',
+        matiere: 'Programmation Java Avancée',
+        module: 'Développement Web Fullstack',
         professeur: 'Dr. Martin',
         duree: 2,
         type: 'justifiee',
-        motif: 'Maladie',
-        heureCours: '08:00-10:00',
+        motif: 'Certificat médical',
         filiere: 'Informatique',
-        vague: 'Vague Janvier 2024'
+        semestre: 'Semestre 1',
+        vague: 'Vague Janvier 2024',
+        etudiant: 'Marie Dupont',
+        emailEtudiant: 'marie.dupont@email.com'
       },
       {
         id: 'a2',
         date: '2024-03-15',
-        matiere: 'Base de données',
-        module: 'Systèmes d information',
+        matiere: 'Base de données NoSQL',
+        module: 'Systèmes d information Avancés',
         professeur: 'Prof. Bernard',
         duree: 3,
         type: 'non_justifiee',
-        heureCours: '10:30-13:30',
         filiere: 'Informatique',
-        vague: 'Vague Janvier 2024'
+        semestre: 'Semestre 1',
+        vague: 'Vague Janvier 2024',
+        etudiant: 'Pierre Martin',
+        emailEtudiant: 'pierre.martin@email.com'
       },
       {
         id: 'a3',
         date: '2024-03-14',
-        matiere: 'Comptabilité générale',
+        matiere: 'Comptabilité analytique',
         module: 'Finance d entreprise',
         professeur: 'Dr. Leroy',
         duree: 2,
         type: 'justifiee',
-        motif: 'Rendez-vous médical',
-        heureCours: '14:00-16:00',
+        motif: 'Rendez-vous administratif',
         filiere: 'Gestion',
-        vague: 'Vague Janvier 2024'
+        semestre: 'Semestre 1',
+        vague: 'Vague Janvier 2024',
+        etudiant: 'Sophie Bernard',
+        emailEtudiant: 'sophie.bernard@email.com'
       },
       {
         id: 'a4',
         date: '2024-03-13',
-        matiere: 'Marketing digital',
-        module: 'Communication',
+        matiere: 'Marketing digital SEO',
+        module: 'Communication Digitale',
         professeur: 'Dr. Blanc',
         duree: 3,
         type: 'non_justifiee',
-        heureCours: '09:00-12:00',
         filiere: 'Marketing',
-        vague: 'Vague Mars 2024'
+        semestre: 'Semestre 2',
+        vague: 'Vague Mars 2024',
+        etudiant: 'Luc Dubois',
+        emailEtudiant: 'luc.dubois@email.com'
       },
       {
         id: 'a5',
         date: '2024-03-12',
-        matiere: 'Algorithmique',
-        module: 'Informatique fondamentale',
+        matiere: 'Algorithmique avancée',
+        module: 'Informatique Fondamentale',
         professeur: 'Dr. Moreau',
         duree: 4,
         type: 'non_justifiee',
-        heureCours: '08:00-12:00',
         filiere: 'Informatique',
-        vague: 'Vague Janvier 2024'
-      }
-    ];
-
-    // Données simulées des étudiants avec leurs absences
-    const mockStudents: Student[] = [
-      {
-        id: 's1',
-        nom: 'Dupont',
-        prenom: 'Marie',
-        email: 'marie.dupont@email.com',
-        filiere: 'Informatique',
+        semestre: 'Semestre 1',
         vague: 'Vague Janvier 2024',
-        totalHeuresAbsences: 12,
-        tauxAbsentéisme: 8.5,
-        statut: 'eleve',
-        absences: [mockAbsences[0], mockAbsences[1]]
+        etudiant: 'Jean Petit',
+        emailEtudiant: 'jean.petit@email.com'
       },
       {
-        id: 's2',
-        nom: 'Martin',
-        prenom: 'Pierre',
-        email: 'pierre.martin@email.com',
+        id: 'a6',
+        date: '2024-03-11',
+        matiere: 'Développement Mobile',
+        module: 'Développement Web Fullstack',
+        professeur: 'Dr. Martin',
+        duree: 2,
+        type: 'justifiee',
+        motif: 'Problème de transport',
         filiere: 'Informatique',
+        semestre: 'Semestre 2',
         vague: 'Vague Janvier 2024',
-        totalHeuresAbsences: 25,
-        tauxAbsentéisme: 18.2,
-        statut: 'critique',
-        absences: [mockAbsences[4]]
+        etudiant: 'Alice Durand',
+        emailEtudiant: 'alice.durand@email.com'
       },
       {
-        id: 's3',
-        nom: 'Bernard',
-        prenom: 'Sophie',
-        email: 'sophie.bernard@email.com',
+        id: 'a7',
+        date: '2024-03-11',
+        matiere: 'Gestion de projet',
+        module: 'Management',
+        professeur: 'Mme. Lambert',
+        duree: 3,
+        type: 'justifiee',
+        motif: 'Congé exceptionnel',
         filiere: 'Gestion',
+        semestre: 'Semestre 2',
         vague: 'Vague Janvier 2024',
-        totalHeuresAbsences: 5,
-        tauxAbsentéisme: 3.2,
-        statut: 'bon',
-        absences: [mockAbsences[2]]
+        etudiant: 'Thomas Morel',
+        emailEtudiant: 'thomas.morel@email.com'
       },
       {
-        id: 's4',
-        nom: 'Dubois',
-        prenom: 'Luc',
-        email: 'luc.dubois@email.com',
-        filiere: 'Marketing',
+        id: 'a8',
+        date: '2024-01-20',
+        matiere: 'Réseaux et Télécommunications',
+        module: 'Infrastructure IT',
+        professeur: 'Dr. Garcia',
+        duree: 2,
+        type: 'justifiee',
+        motif: 'Rendez-vous médical',
+        filiere: 'Informatique',
+        semestre: 'Semestre 1',
+        vague: 'Vague Septembre 2023',
+        etudiant: 'Emma Laurent',
+        emailEtudiant: 'emma.laurent@email.com'
+      },
+      {
+        id: 'a9',
+        date: '2024-02-10',
+        matiere: 'Analyse Financière',
+        module: 'Finance Avancée',
+        professeur: 'Dr. Petit',
+        duree: 3,
+        type: 'non_justifiee',
+        filiere: 'Gestion',
+        semestre: 'Semestre 2',
         vague: 'Vague Mars 2024',
-        totalHeuresAbsences: 8,
-        tauxAbsentéisme: 4.8,
-        statut: 'bon',
-        absences: [mockAbsences[3]]
+        etudiant: 'Nicolas Roy',
+        emailEtudiant: 'nicolas.roy@email.com'
       }
     ];
 
     setAbsences(mockAbsences);
-    setStudents(mockStudents);
     setIsLoading(false);
   };
 
   // Obtenir les valeurs uniques pour les filtres
-  const filieres = [...new Set(students.map(s => s.filiere))];
+  const filieres = [...new Set(absences.map(a => a.filiere))];
   const modules = [...new Set(absences.map(a => a.module))];
-  const vagues = [...new Set(students.map(s => s.vague))];
-  const dates = [...new Set(absences.map(a => a.date))].sort().reverse();
+  const semestres = [...new Set(absences.map(a => a.semestre))].sort();
+  const vagues = [...new Set(absences.map(a => a.vague))].sort();
 
   // Filtrer les absences selon les critères
   const filteredAbsences = absences.filter(absence => {
     const matchesFiliere = selectedFiliere === 'all' || absence.filiere === selectedFiliere;
     const matchesModule = selectedModule === 'all' || absence.module === selectedModule;
+    const matchesSemestre = selectedSemestre === 'all' || absence.semestre === selectedSemestre;
     const matchesVague = selectedVague === 'all' || absence.vague === selectedVague;
-    const matchesDate = selectedDate === 'all' || absence.date === selectedDate;
-    
-    return matchesFiliere && matchesModule && matchesVague && matchesDate;
-  });
-
-  // Filtrer les étudiants selon les critères
-  const filteredStudents = students.filter(student => {
-    const matchesFiliere = selectedFiliere === 'all' || student.filiere === selectedFiliere;
-    const matchesVague = selectedVague === 'all' || student.vague === selectedVague;
     const matchesSearch = searchTerm === '' || 
-      student.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.prenom.toLowerCase().includes(searchTerm.toLowerCase());
+      absence.etudiant.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      absence.matiere.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      absence.module.toLowerCase().includes(searchTerm.toLowerCase());
     
-    return matchesFiliere && matchesVague && matchesSearch;
+    return matchesFiliere && matchesModule && matchesSemestre && matchesVague && matchesSearch;
   });
 
   // Statistiques globales
   const stats = {
-    totalStudents: students.length,
     totalAbsences: absences.length,
     totalHeuresAbsences: absences.reduce((sum, a) => sum + a.duree, 0),
-    studentsCritiques: students.filter(s => s.statut === 'critique').length,
     absencesJustifiees: absences.filter(a => a.type === 'justifiee').length,
-    absencesNonJustifiees: absences.filter(a => a.type === 'non_justifiee').length
+    absencesNonJustifiees: absences.filter(a => a.type === 'non_justifiee').length,
+    totalModules: modules.length,
+    totalFilieres: filieres.length,
+    totalSemestres: semestres.length,
+    totalVagues: vagues.length
   };
+
+  // Statistiques par semestre
+  const statsParSemestre = semestres.map(semestre => {
+    const absencesSemestre = absences.filter(a => a.semestre === semestre);
+    const tauxJustification = absencesSemestre.length > 0 
+      ? (absencesSemestre.filter(a => a.type === 'justifiee').length / absencesSemestre.length) * 100 
+      : 0;
+    
+    return {
+      semestre,
+      totalAbsences: absencesSemestre.length,
+      totalHeures: absencesSemestre.reduce((sum, a) => sum + a.duree, 0),
+      tauxJustification: Math.round(tauxJustification),
+      absencesJustifiees: absencesSemestre.filter(a => a.type === 'justifiee').length,
+      absencesNonJustifiees: absencesSemestre.filter(a => a.type === 'non_justifiee').length
+    };
+  });
+
+  // Statistiques par vague
+  const statsParVague = vagues.map(vague => {
+    const absencesVague = absences.filter(a => a.vague === vague);
+    const tauxJustification = absencesVague.length > 0 
+      ? (absencesVague.filter(a => a.type === 'justifiee').length / absencesVague.length) * 100 
+      : 0;
+    
+    return {
+      vague,
+      totalAbsences: absencesVague.length,
+      totalHeures: absencesVague.reduce((sum, a) => sum + a.duree, 0),
+      tauxJustification: Math.round(tauxJustification),
+      absencesJustifiees: absencesVague.filter(a => a.type === 'justifiee').length,
+      absencesNonJustifiees: absencesVague.filter(a => a.type === 'non_justifiee').length
+    };
+  });
 
   // Fonctions utilitaires
-  const getStatutBadge = (statut: Student['statut']) => {
-    const config = {
-      critique: { variant: 'destructive' as const, text: 'Critique' },
-      eleve: { variant: 'default' as const, text: 'Élevé' },
-      bon: { variant: 'secondary' as const, text: 'Bon' }
-    };
-    const { variant, text } = config[statut];
-    return <Badge variant={variant}>{text}</Badge>;
-  };
-
   const getTypeAbsenceBadge = (type: Absence['type']) => {
     const config = {
       justifiee: { variant: 'secondary' as const, text: 'Justifiée', icon: CheckCircle },
@@ -240,18 +260,11 @@ export default function AbsencesPage() {
     };
     const { variant, text, icon: Icon } = config[type];
     return (
-      <Badge variant={variant} className="flex items-center gap-1">
+      <Badge variant={variant} className="flex items-center gap-1 text-xs">
         <Icon className="h-3 w-3" />
         {text}
       </Badge>
     );
-  };
-
-  const getTauxColor = (taux: number) => {
-    if (taux > 15) return 'text-red-600';
-    if (taux > 10) return 'text-orange-600';
-    if (taux > 5) return 'text-yellow-600';
-    return 'text-green-600';
   };
 
   const formatDate = (dateString: string) => {
@@ -262,6 +275,22 @@ export default function AbsencesPage() {
       day: 'numeric'
     });
   };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const absencesParModule = modules.map(module => {
+    const absencesModule = absences.filter(a => a.module === module);
+    const tauxJustification = absencesModule.length > 0 
+      ? (absencesModule.filter(a => a.type === 'justifiee').length / absencesModule.length) * 100 
+      : 0;
+    
+    return {
+      module,
+      totalAbsences: absencesModule.length,
+      tauxJustification: Math.round(tauxJustification),
+      filiere: absencesModule[0]?.filiere || 'Non spécifiée',
+      semestre: absencesModule[0]?.semestre || 'Non spécifié'
+    };
+  });
 
   if (isLoading) {
     return (
@@ -275,88 +304,120 @@ export default function AbsencesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
+    <div className="min-h-screen bg-gray-50 overflow-auto lg:pl-5 pt-20 lg:pt-6">
       <ScrollArea className="h-screen">
-        <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+        <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
           
           {/* Header avec Actions */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="space-y-2">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
+            <div className="space-y-1 sm:space-y-2">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-gray-900">
                 Tableau de Bord des Absences
               </h1>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                Vue consolidée des absences remplies par les professeurs
+              <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
+                Vue des absences par semestre et vagues
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Exporter</span>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <Button variant="outline" size="sm" className="flex items-center gap-2 text-xs sm:text-sm">
+                <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span>Exporter</span>
               </Button>
-              <Button size="sm" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                <span className="hidden sm:inline">Rapport Complet</span>
+              <Button size="sm" className="flex items-center gap-2 text-xs sm:text-sm">
+                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span>Rapport</span>
               </Button>
             </div>
           </div>
 
-          {/* Cartes de Statistiques en Grid Responsive */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {/* Cartes de Statistiques */}
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
             <Card className="bg-white border-l-4 border-l-blue-500">
-              <CardContent className="p-4 sm:p-6">
+              <CardContent className="p-3 sm:p-4 md:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Étudiants</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalStudents}</p>
-                  </div>
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Users className="h-4 w-4 text-blue-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border-l-4 border-l-orange-500">
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Absences</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalAbsences}</p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Total Absences</p>
+                    <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{stats.totalAbsences}</p>
                     <p className="text-xs text-gray-500">{stats.totalHeuresAbsences}h total</p>
                   </div>
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <FileText className="h-4 w-4 text-orange-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border-l-4 border-l-red-500">
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Cas Critiques</p>
-                    <p className="text-2xl font-bold text-red-600">{stats.studentsCritiques}</p>
-                  </div>
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <div className="p-1 sm:p-2 bg-blue-100 rounded-lg">
+                    <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-white border-l-4 border-l-green-500">
-              <CardContent className="p-4 sm:p-6">
+              <CardContent className="p-3 sm:p-4 md:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Taux Justification</p>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Absences Justifiées</p>
+                    <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-600">{stats.absencesJustifiees}</p>
+                    <p className="text-xs text-gray-500">
                       {stats.totalAbsences > 0 ? Math.round((stats.absencesJustifiees / stats.totalAbsences) * 100) : 0}%
                     </p>
                   </div>
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  <div className="p-1 sm:p-2 bg-green-100 rounded-lg">
+                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border-l-4 border-l-red-500">
+              <CardContent className="p-3 sm:p-4 md:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Absences Non Justifiées</p>
+                    <p className="text-lg sm:text-xl md:text-2xl font-bold text-red-600">{stats.absencesNonJustifiees}</p>
+                  </div>
+                  <div className="p-1 sm:p-2 bg-red-100 rounded-lg">
+                    <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border-l-4 border-l-purple-500">
+              <CardContent className="p-3 sm:p-4 md:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Modules</p>
+                    <p className="text-lg sm:text-xl md:text-2xl font-bold text-purple-600">{stats.totalModules}</p>
+                    <p className="text-xs text-gray-500">{stats.totalFilieres} filières</p>
+                  </div>
+                  <div className="p-1 sm:p-2 bg-purple-100 rounded-lg">
+                    <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border-l-4 border-l-orange-500">
+              <CardContent className="p-3 sm:p-4 md:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Semestres</p>
+                    <p className="text-lg sm:text-xl md:text-2xl font-bold text-orange-600">{stats.totalSemestres}</p>
+                    <p className="text-xs text-gray-500">Actifs</p>
+                  </div>
+                  <div className="p-1 sm:p-2 bg-orange-100 rounded-lg">
+                    <School className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border-l-4 border-l-indigo-500">
+              <CardContent className="p-3 sm:p-4 md:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Vagues</p>
+                    <p className="text-lg sm:text-xl md:text-2xl font-bold text-indigo-600">{stats.totalVagues}</p>
+                    <p className="text-xs text-gray-500">Promotions</p>
+                  </div>
+                  <div className="p-1 sm:p-2 bg-indigo-100 rounded-lg">
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
                   </div>
                 </div>
               </CardContent>
@@ -366,54 +427,69 @@ export default function AbsencesPage() {
           {/* Filtres Collapsibles */}
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-3 p-4 sm:p-6">
                 <CollapsibleTrigger asChild>
                   <div className="flex items-center justify-between cursor-pointer">
                     <div className="flex items-center gap-2">
-                      <Filter className="h-5 w-5 text-gray-600" />
-                      <CardTitle className="text-lg">Filtres et Recherche</CardTitle>
+                      <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+                      <CardTitle className="text-base sm:text-lg">Filtres des Absences</CardTitle>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary">
-                        {filteredStudents.length} étudiant(s)
+                      <Badge variant="secondary" className="text-xs sm:text-sm">
+                        {filteredAbsences.length} absence(s)
                       </Badge>
-                      <ChevronDown className={`h-4 w-4 transition-transform ${isFiltersOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`h-3 w-3 sm:h-4 sm:w-4 transition-transform ${isFiltersOpen ? 'rotate-180' : ''}`} />
                     </div>
                   </div>
                 </CollapsibleTrigger>
               </CardHeader>
               
               <CollapsibleContent>
-                <CardContent className="space-y-4 pt-0">
+                <CardContent className="space-y-3 sm:space-y-4 pt-0 p-4 sm:p-6">
                   {/* Filtres Principaux */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Filière</label>
+                      <label className="text-xs sm:text-sm font-medium text-gray-700">Filière</label>
                       <Select value={selectedFiliere} onValueChange={setSelectedFiliere}>
-                        <SelectTrigger>
+                        <SelectTrigger className="text-xs sm:text-sm">
                           <SelectValue placeholder="Toutes les filières" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Toutes les filières</SelectItem>
+                          <SelectItem value="all" className="text-xs sm:text-sm">Toutes les filières</SelectItem>
                           {filieres.map(filiere => (
-                            <SelectItem key={filiere} value={filiere}>
+                            <SelectItem key={filiere} value={filiere} className="text-xs sm:text-sm">
                               {filiere}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-
+                          <div className="space-y-2">
+                      <label className="text-xs sm:text-sm font-medium text-gray-700">Vague</label>
+                      <Select value={selectedVague} onValueChange={setSelectedVague}>
+                        <SelectTrigger className="text-xs sm:text-sm">
+                          <SelectValue placeholder="Toutes les vagues" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all" className="text-xs sm:text-sm">Toutes les vagues</SelectItem>
+                          {vagues.map(vague => (
+                            <SelectItem key={vague} value={vague} className="text-xs sm:text-sm">
+                              {vague}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Module</label>
+                      <label className="text-xs sm:text-sm font-medium text-gray-700">Module</label>
                       <Select value={selectedModule} onValueChange={setSelectedModule}>
-                        <SelectTrigger>
+                        <SelectTrigger className="text-xs sm:text-sm">
                           <SelectValue placeholder="Tous les modules" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Tous les modules</SelectItem>
+                          <SelectItem value="all" className="text-xs sm:text-sm">Tous les modules</SelectItem>
                           {modules.map(module => (
-                            <SelectItem key={module} value={module}>
+                            <SelectItem key={module} value={module} className="text-xs sm:text-sm">
                               {module}
                             </SelectItem>
                           ))}
@@ -422,33 +498,16 @@ export default function AbsencesPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Vague</label>
-                      <Select value={selectedVague} onValueChange={setSelectedVague}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Toutes les vagues" />
+                      <label className="text-xs sm:text-sm font-medium text-gray-700">Semestre</label>
+                      <Select value={selectedSemestre} onValueChange={setSelectedSemestre}>
+                        <SelectTrigger className="text-xs sm:text-sm">
+                          <SelectValue placeholder="Tous les semestres" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Toutes les vagues</SelectItem>
-                          {vagues.map(vague => (
-                            <SelectItem key={vague} value={vague}>
-                              {vague}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Date</label>
-                      <Select value={selectedDate} onValueChange={setSelectedDate}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Toutes les dates" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Toutes les dates</SelectItem>
-                          {dates.map(date => (
-                            <SelectItem key={date} value={date}>
-                              {formatDate(date)}
+                          <SelectItem value="all" className="text-xs sm:text-sm">Tous les semestres</SelectItem>
+                          {semestres.map(semestre => (
+                            <SelectItem key={semestre} value={semestre} className="text-xs sm:text-sm">
+                              {semestre}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -458,14 +517,14 @@ export default function AbsencesPage() {
 
                   {/* Recherche */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Recherche par étudiant</label>
+                    <label className="text-xs sm:text-sm font-medium text-gray-700">Recherche</label>
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4" />
                       <Input
-                        placeholder="Nom ou prénom de l'étudiant..."
+                        placeholder="Étudiant, matière ou module..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
+                        className="pl-8 sm:pl-10 text-xs sm:text-sm"
                       />
                     </div>
                   </div>
@@ -474,30 +533,30 @@ export default function AbsencesPage() {
             </Card>
           </Collapsible>
 
-          {/* Contenu Principal en Grid Responsive */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Contenu Principal en Grid */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
             
-            {/* Colonne 1: Absences Récentes */}
-            <div className="xl:col-span-2 space-y-6">
+            {/* Colonne 1: Liste des Absences */}
+            <div className="xl:col-span-2 space-y-4 sm:space-y-6">
               
-              {/* Carte Absences Récentes */}
+              {/* Carte Liste des Absences */}
               <Card>
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-3 p-4 sm:p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5 text-blue-600" />
-                      <CardTitle className="text-lg">Absences Récentes</CardTitle>
+                      <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                      <CardTitle className="text-base sm:text-lg">Liste des Absences</CardTitle>
                     </div>
-                    <Badge variant="outline">
+                    <Badge variant="outline" className="text-xs sm:text-sm">
                       {filteredAbsences.length} absence(s)
                     </Badge>
                   </div>
-                  <CardDescription>
-                    Dernières absences enregistrées par les professeurs
+                  <CardDescription className="text-xs sm:text-sm">
+                    Absences enregistrées par semestre et vagues
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[400px]">
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <ScrollArea className="h-[500px] sm:h-[600px]">
                     <div className="space-y-3">
                       {filteredAbsences.length === 0 ? (
                         <div className="text-center py-8">
@@ -506,113 +565,69 @@ export default function AbsencesPage() {
                           <p className="text-sm text-gray-400">Ajustez vos critères de filtrage</p>
                         </div>
                       ) : (
-                        filteredAbsences.map((absence) => {
-                          const student = students.find(s => s.absences.some(a => a.id === absence.id));
-                          return (
-                            <div key={absence.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                              <div className="flex items-start justify-between">
-                                <div className="space-y-2 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-sm">
-                                      {student ? `${student.prenom} ${student.nom}` : 'Étudiant non trouvé'}
-                                    </span>
-                                    <Badge variant="outline" className="text-xs">
-                                      {absence.filiere}
-                                    </Badge>
-                                  </div>
-                                  <div className="text-sm text-gray-600">
-                                    {absence.matiere} • {absence.module}
-                                  </div>
-                                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                                    <span className="flex items-center gap-1">
-                                      <Clock className="h-3 w-3" />
-                                      {absence.heureCours}
-                                    </span>
-                                    <span>{formatDate(absence.date)}</span>
-                                    <span>{absence.professeur}</span>
-                                  </div>
-                                  {absence.motif && (
-                                    <p className="text-xs text-gray-600 mt-1">
-                                      <span className="font-medium">Motif:</span> {absence.motif}
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="ml-4">
+                        filteredAbsences.map((absence) => (
+                          <div key={absence.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                              <div className="space-y-2 flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium text-sm truncate">
+                                    {absence.etudiant}
+                                  </span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {absence.filiere}
+                                  </Badge>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {absence.semestre}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    {absence.vague}
+                                  </Badge>
                                   {getTypeAbsenceBadge(absence.type)}
                                 </div>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-
-              {/* Carte Liste des Étudiants */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <UserCheck className="h-5 w-5 text-green-600" />
-                      <CardTitle className="text-lg">Synthèse par Étudiant</CardTitle>
-                    </div>
-                    <Badge variant="outline">
-                      {filteredStudents.length} étudiant(s)
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[400px]">
-                    <div className="space-y-3">
-                      {filteredStudents.map((student) => {
-                        const dernierAbsence = student.absences
-                          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-                        
-                        return (
-                          <div key={student.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                            <div className="flex items-center justify-between">
-                              <div className="space-y-1 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm">
-                                    {student.prenom} {student.nom}
-                                  </span>
-                                  {getStatutBadge(student.statut)}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {student.email}
-                                </div>
-                                <div className="flex items-center gap-4 text-xs">
-                                  <Badge variant="outline">{student.filiere}</Badge>
-                                  <span>{student.vague}</span>
-                                </div>
-                                {dernierAbsence && (
+                                
+                                <div className="space-y-1">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {absence.matiere}
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    Module: {absence.module}
+                                  </div>
                                   <div className="text-xs text-gray-500">
-                                    Dernière absence: {formatDate(dernierAbsence.date)} - {dernierAbsence.matiere}
+                                    Professeur: {absence.professeur}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {formatDate(absence.date)}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    Durée: {absence.duree}h
+                                  </span>
+                                </div>
+
+                                {absence.motif && (
+                                  <div className="text-xs text-gray-600 mt-1">
+                                    <span className="font-medium">Motif:</span> {absence.motif}
                                   </div>
                                 )}
                               </div>
-                              <div className="text-right space-y-1 ml-4">
-                                <div className={`text-lg font-bold ${getTauxColor(student.tauxAbsentéisme)}`}>
-                                  {student.tauxAbsentéisme}%
+                              
+                              <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                                <div className={`text-sm font-bold ${
+                                  absence.type === 'justifiee' ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {absence.duree}h
                                 </div>
-                                <div className="text-xs text-red-600">
-                                  {student.totalHeuresAbsences}h
+                                <div className="text-xs text-gray-500">
+                                  Absence
                                 </div>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => router.push(`/dashboard/absences/student/${student.id}`)}
-                                  className="mt-2"
-                                >
-                                  <Eye className="h-3 w-3" />
-                                </Button>
                               </div>
                             </div>
                           </div>
-                        );
-                      })}
+                        ))
+                      )}
                     </div>
                   </ScrollArea>
                 </CardContent>
@@ -620,108 +635,108 @@ export default function AbsencesPage() {
             </div>
 
             {/* Colonne 2: Statistiques et Analyses */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               
-              {/* Carte Statistiques par Filière */}
+              {/* Carte Statistiques par Semestre */}
               <Card>
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-3 p-4 sm:p-6">
                   <div className="flex items-center gap-2">
-                    <School className="h-5 w-5 text-purple-600" />
-                    <CardTitle className="text-lg">Par Filière</CardTitle>
+                    <School className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
+                    <CardTitle className="text-base sm:text-lg">Par Semestre</CardTitle>
                   </div>
-                  <CardDescription>
-                    Analyse comparative
+                  <CardDescription className="text-xs sm:text-sm">
+                    Répartition des absences par semestre
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6 pt-0">
                   <div className="space-y-4">
-                    {filieres.map(filiere => {
-                      const studentsFiliere = students.filter(s => s.filiere === filiere);
-                      const absencesFiliere = absences.filter(a => a.filiere === filiere);
-                      const tauxMoyen = studentsFiliere.length > 0 
-                        ? studentsFiliere.reduce((sum, s) => sum + s.tauxAbsentéisme, 0) / studentsFiliere.length 
-                        : 0;
-                      
-                      return (
-                        <div key={filiere} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-sm">{filiere}</span>
-                            <span className={`text-sm font-bold ${getTauxColor(tauxMoyen)}`}>
-                              {tauxMoyen.toFixed(1)}%
-                            </span>
+                    {statsParSemestre.map((item) => (
+                      <div key={item.semestre} className="space-y-3 p-3 border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs sm:text-sm font-medium text-gray-900">
+                              {item.semestre}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {item.totalAbsences} absences • {item.totalHeures}h
+                            </div>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full ${
-                                tauxMoyen > 15 ? 'bg-red-500' :
-                                tauxMoyen > 10 ? 'bg-orange-500' :
-                                tauxMoyen > 5 ? 'bg-yellow-500' : 'bg-green-500'
-                              }`}
-                              style={{ width: `${Math.min(tauxMoyen * 5, 100)}%` }}
-                            />
-                          </div>
-                          <div className="flex justify-between text-xs text-gray-500">
-                            <span>{studentsFiliere.length} étudiants</span>
-                            <span>{absencesFiliere.length} absences</span>
+                          <div className={`text-xs sm:text-sm font-bold ${
+                            item.tauxJustification > 70 ? 'text-green-600' :
+                            item.tauxJustification > 50 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {item.tauxJustification}%
                           </div>
                         </div>
-                      );
-                    })}
+                        
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${
+                              item.tauxJustification > 70 ? 'bg-green-500' :
+                              item.tauxJustification > 50 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${item.tauxJustification}%` }}
+                          />
+                        </div>
+                        
+                        <div className="flex justify-between text-xs text-gray-600">
+                          <span>✓ {item.absencesJustifiees} justifiées</span>
+                          <span>✗ {item.absencesNonJustifiees} non justifiées</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Carte Répartition des Types */}
+              {/* Carte Statistiques par Vague */}
               <Card>
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-3 p-4 sm:p-6">
                   <div className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-orange-600" />
-                    <CardTitle className="text-lg">Types d&apos;Absences</CardTitle>
+                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                    <CardTitle className="text-base sm:text-lg">Par Vague</CardTitle>
                   </div>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Performance des différentes promotions
+                  </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-sm">Justifiées</span>
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <div className="space-y-4">
+                    {statsParVague.map((item) => (
+                      <div key={item.vague} className="space-y-3 p-3 border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs sm:text-sm font-medium text-gray-900">
+                              {item.vague}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {item.totalAbsences} absences • {item.totalHeures}h
+                            </div>
+                          </div>
+                          <div className={`text-xs sm:text-sm font-bold ${
+                            item.tauxJustification > 70 ? 'text-green-600' :
+                            item.tauxJustification > 50 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {item.tauxJustification}%
+                          </div>
+                        </div>
+                        
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${
+                              item.tauxJustification > 70 ? 'bg-green-500' :
+                              item.tauxJustification > 50 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${item.tauxJustification}%` }}
+                          />
+                        </div>
+                        
+                        <div className="flex justify-between text-xs text-gray-600">
+                          <span>✓ {item.absencesJustifiees} justifiées</span>
+                          <span>✗ {item.absencesNonJustifiees} non justifiées</span>
+                        </div>
                       </div>
-                      <Badge variant="secondary">
-                        {stats.absencesJustifiees}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <XCircle className="h-4 w-4 text-red-600" />
-                        <span className="text-sm">Non justifiées</span>
-                      </div>
-                      <Badge variant="destructive">
-                        {stats.absencesNonJustifiees}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Carte Actions Rapides */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Actions Rapides</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <Button variant="outline" className="w-full justify-start" size="sm">
-                      <Download className="h-4 w-4 mr-2" />
-                      Exporter les données
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start" size="sm">
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      Voir les cas critiques
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start" size="sm">
-                      <BarChart3 className="h-4 w-4 mr-2" />
-                      Générer un rapport
-                    </Button>
+                    ))}
                   </div>
                 </CardContent>
               </Card>

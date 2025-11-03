@@ -1,4 +1,3 @@
-// components/SidebarComptable.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -20,7 +19,6 @@ import {
   FaTimes,
   FaUser,
   FaChevronDown,
-  FaReceipt,
   FaBalanceScale,
   FaExclamationTriangle,
   FaBell,
@@ -74,7 +72,6 @@ const SidebarComptable = () => {
     return isActive ? "text-white text-base" : "text-principal text-base";
   };
 
-  // ✅ CORRIGÉ : Wrapper pour les icônes
   const IconWrapper = ({ 
     icon, 
     href, 
@@ -102,8 +99,7 @@ const SidebarComptable = () => {
     { label: "Frais de Formation", href: "/dashboard/comptable/frais-formation", icon: <FaMoneyBillWave />, category: "FINANCES" },
     { label: "Paiements", href: "/dashboard/comptable/paiements", icon: <FaCreditCard />, category: "FINANCES" },
     { label: "Facturation", href: "/dashboard/comptable/facturation", icon: <FaFileInvoiceDollar />, category: "FINANCES" },
-    { label: "Reçus & Quittances", href: "/dashboard/comptable/recus", icon: <FaReceipt />, category: "FINANCES" },
-  
+    
     // COMPTABILITÉ
     { label: "Balance Comptable", href: "/dashboard/comptable/balance", icon: <FaBalanceScale />, category: "COMPTABILITÉ" },
     { label: "Journal des Opérations", href: "/dashboard/comptable/journal", icon: <FaFileAlt />, category: "COMPTABILITÉ" },
@@ -196,7 +192,7 @@ const SidebarComptable = () => {
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
       >
         <div className="p-3 border-b border-gray-200 flex justify-between text-tertiary items-center">
-          <h1 className="text-lg font-bold text-principal">SchoolFlow</h1>
+          <h1 className="text-lg font-bold">SchoolFlow</h1>
           <Button 
             variant="ghost" 
             size="icon" 
@@ -247,7 +243,6 @@ const SidebarComptable = () => {
           >
             <div className="flex items-center gap-2">
               {user?.imageUrl ? (
-                // ✅ CORRIGÉ : Utilisation de Image
                 <div className="h-7 w-7 rounded-full overflow-hidden">
                   <Image 
                     src={user.imageUrl} 
@@ -297,7 +292,6 @@ const SidebarComptable = () => {
                     <span>Mon Profil</span>
                   </Link>
 
-                  {/* NOUVEAU MENU NOTIFICATIONS AJOUTÉ */}
                   <Link
                     href="/dashboard/comptable/notifications"
                     className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium"

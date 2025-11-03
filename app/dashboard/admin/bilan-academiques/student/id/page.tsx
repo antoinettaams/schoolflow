@@ -193,11 +193,11 @@ export default function StudentNotesDetailsPage() {
 
     setStudent(mockStudent);
     setIsLoading(false);
-  }, [params.id]); // Ajouter params.id comme dépendance
+  }, [params.id]); 
 
   useEffect(() => {
     loadStudentData();
-  }, [loadStudentData]); // Maintenant loadStudentData est stable grâce à useCallback
+  }, [loadStudentData]);
 
   // Fonctions utilitaires
   const getNoteColor = (note: number) => {
@@ -305,21 +305,18 @@ const getAppreciationVariant = (appreciation: string): "default" | "secondary" |
         <div className="p-6 space-y-6 max-w-7xl mx-auto">
           
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col">
+            <div className="flex  items-center gap-4">
               <Button variant="outline" size="icon" onClick={() => router.back()}>
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <div>
+              <div className="flex flex-col">
                 <h1 className="text-3xl font-bold tracking-tight">
                   {student.prenom} {student.nom}
                 </h1>
-                <p className="text-muted-foreground">
-                  Détails académiques et notes par matière - {student.filiere}
-                </p>
               </div>
             </div>
-            <Button>
+            <Button className="mt-4 w-48">
               <Download className="h-4 w-4 mr-2" />
               Relevé de notes
             </Button>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useSignIn } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
-// Définition du type pour les erreurs Clerk
+// les erreurs Clerk
 interface ClerkError {
   errors: Array<{
     code: string;
@@ -23,7 +23,6 @@ function isClerkError(error: unknown): error is ClerkError {
   );
 }
 
-// Fonction utilitaire pour extraire le message d'erreur
 function getErrorMessage(error: unknown): string {
   if (isClerkError(error)) {
     return error.errors[0]?.message || "Une erreur est survenue";
@@ -62,7 +61,7 @@ export default function ForgotPasswordPage() {
         identifier: email,
       });
 
-      setMessage("📩 Un code de réinitialisation a été envoyé à votre email.");
+      setMessage("Un code de réinitialisation a été envoyé à votre email.");
       setStage("reset");
     } catch (err) {
       console.error("Erreur lors de l'envoi du code:", err);
@@ -88,7 +87,7 @@ export default function ForgotPasswordPage() {
       });
 
       if (res.status === "complete") {
-        setMessage("✅ Mot de passe réinitialisé avec succès !");
+        setMessage("Mot de passe réinitialisé avec succès !");
         setTimeout(() => router.push("/auth/signin"), 2000);
       } else {
         setError("Erreur : code invalide ou expiré.");

@@ -13,6 +13,38 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Download, FileText, BookOpen, School, UserCog, Filter, MessageSquare, Trash2, Plus, Clock, Edit, Search } from 'lucide-react';
 
+// Interface pour les rapports
+interface Rapport {
+  id: number;
+  module: string;
+  formateur: string;
+  vague: string;
+  date: string;
+  chapitre: string;
+  objectif: string;
+  dureePlanifiee: string;
+  dureeReelle: string;
+  progression: string;
+  difficulte: string;
+  correctionTemps: string;
+  evaluation: number;
+  commentaireProf: string;
+  commentaireCenseur: string;
+}
+
+interface FiliereData {
+  nom: string;
+  formateurs: string[];
+  rapports: Rapport[];
+}
+
+interface StatsData {
+  module: string;
+  progression: number;
+  evaluation: number;
+  respectDelais: number;
+}
+
 export default function RapportsPersonnelsPage() {
   const [selectedFiliere, setSelectedFiliere] = useState('developpement-web');
   const [selectedVague, setSelectedVague] = useState('all');
@@ -21,9 +53,11 @@ export default function RapportsPersonnelsPage() {
   const [editingRapport, setEditingRapport] = useState<number | null>(null);
   const [isNewRapportOpen, setIsNewRapportOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [rapportToDelete, setRapportToDelete] = useState<number | null>(null);
 
   // Données organisées par filière
-  const filieresData = {
+  const filieresData: Record<string, FiliereData> = {
     'developpement-web': {
       nom: 'Développement Web',
       formateurs: ['M. Diallo', 'M. Sanogo'],
@@ -33,7 +67,7 @@ export default function RapportsPersonnelsPage() {
           module: 'React.js Avancé',
           formateur: 'M. Diallo',
           vague: 'WAVE-2024-01',
-          date: new Date().toISOString().split('T')[0], // Aujourd'hui
+          date: new Date().toISOString().split('T')[0],
           chapitre: 'Hooks Avancés',
           objectif: 'Maîtriser useReducer et useContext',
           dureePlanifiee: '2h',
@@ -50,7 +84,7 @@ export default function RapportsPersonnelsPage() {
           module: 'Node.js & Express',
           formateur: 'M. Sanogo',
           vague: 'WAVE-2024-01',
-          date: new Date(Date.now() - 86400000).toISOString().split('T')[0], // Hier
+          date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
           chapitre: 'Création API REST',
           objectif: 'Implémenter un CRUD complet',
           dureePlanifiee: '3h',
@@ -73,7 +107,7 @@ export default function RapportsPersonnelsPage() {
           module: 'Machine Learning',
           formateur: 'Mme. Traoré',
           vague: 'WAVE-2024-01',
-          date: new Date(Date.now() - 172800000).toISOString().split('T')[0], // Avant-hier
+          date: new Date(Date.now() - 172800000).toISOString().split('T')[0],
           chapitre: 'Algorithmes de Classification',
           objectif: 'Implémenter Random Forest',
           dureePlanifiee: '3h',
@@ -96,7 +130,7 @@ export default function RapportsPersonnelsPage() {
           module: 'Sécurité Réseaux',
           formateur: 'M. Ndiaye',
           vague: 'WAVE-2024-02',
-          date: new Date(Date.now() - 259200000).toISOString().split('T')[0], // Il y a 3 jours
+          date: new Date(Date.now() - 259200000).toISOString().split('T')[0],
           chapitre: 'Tests de Penetration',
           objectif: 'Utilisation de Nmap et Wireshark',
           dureePlanifiee: '3h',
@@ -119,7 +153,7 @@ export default function RapportsPersonnelsPage() {
           module: 'UI/UX Design',
           formateur: 'Mme. Koné',
           vague: 'WAVE-2024-01',
-          date: new Date(Date.now() - 345600000).toISOString().split('T')[0], // Il y a 4 jours
+          date: new Date(Date.now() - 345600000).toISOString().split('T')[0],
           chapitre: 'Design System',
           objectif: 'Créer un système de design cohérent',
           dureePlanifiee: '2h30',
@@ -142,7 +176,7 @@ export default function RapportsPersonnelsPage() {
           module: 'SEO Avancé',
           formateur: 'M. Keita',
           vague: 'WAVE-2024-02',
-          date: new Date(Date.now() - 432000000).toISOString().split('T')[0], // Il y a 5 jours
+          date: new Date(Date.now() - 432000000).toISOString().split('T')[0],
           chapitre: 'Optimisation On-Page',
           objectif: 'Maîtriser les techniques de référencement',
           dureePlanifiee: '2h',
@@ -159,7 +193,7 @@ export default function RapportsPersonnelsPage() {
   };
 
   // Données pour les graphiques par filière
-  const statsFiliereData = {
+  const statsFiliereData: Record<string, StatsData[]> = {
     'developpement-web': [
       { module: 'React.js', progression: 85, evaluation: 4.5, respectDelais: 90 },
       { module: 'Node.js', progression: 78, evaluation: 4.2, respectDelais: 85 },
@@ -206,18 +240,43 @@ export default function RapportsPersonnelsPage() {
     commentaireCenseur: ''
   });
 
+  // État pour l'édition
+  const [editRapportData, setEditRapportData] = useState<Rapport | null>(null);
+
   const handleDeleteRapport = (rapportId: number) => {
-    console.log(`Deleting report ${rapportId}`);
-    // Implémentation de la suppression
+    setRapportToDelete(rapportId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteRapport = () => {
+    if (rapportToDelete) {
+      console.log(`Deleting report ${rapportToDelete}`);
+      // Implémentation de la suppression
+      setDeleteDialogOpen(false);
+      setRapportToDelete(null);
+    }
   };
 
   const handleEditRapport = (rapportId: number) => {
-    setEditingRapport(rapportId);
+    const rapport = selectedFiliereData.rapports.find(r => r.id === rapportId);
+    if (rapport) {
+      setEditRapportData(rapport);
+      setEditingRapport(rapportId);
+    }
   };
 
   const handleSaveRapport = () => {
+    if (editRapportData) {
+      console.log('Saving report:', editRapportData);
+      // Sauvegarde des modifications
+      setEditingRapport(null);
+      setEditRapportData(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
     setEditingRapport(null);
-    // Sauvegarde des modifications
+    setEditRapportData(null);
   };
 
   const handleCreateRapport = () => {
@@ -259,8 +318,8 @@ export default function RapportsPersonnelsPage() {
     });
   };
 
-  const selectedFiliereData = filieresData[selectedFiliere as keyof typeof filieresData];
-  const selectedStatsData = statsFiliereData[selectedFiliere as keyof typeof statsFiliereData];
+  const selectedFiliereData = filieresData[selectedFiliere];
+  const selectedStatsData = statsFiliereData[selectedFiliere];
 
   // Tous les formateurs disponibles
   const allFormateurs = Array.from(
@@ -571,14 +630,10 @@ export default function RapportsPersonnelsPage() {
                     Formateurs: {selectedFiliereData.formateurs.join(', ')}
                   </CardDescription>
                 </div>
-                <div className="flex gap-2 mt-4 sm:mt-0">
+                <div className="flex gap-2 mt-4 sm:mt-0 flex items-center justify-center">
                   <Button variant="outline">
                     <Download className="h-4 w-4 mr-2" />
                     Exporter Filière
-                  </Button>
-                  <Button variant="outline">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Synthèse PDF
                   </Button>
                 </div>
               </div>
@@ -722,106 +777,136 @@ export default function RapportsPersonnelsPage() {
                       </div>
                     </div>
 
-                    {/* Informations du cours */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 text-sm">
-                      <div>
-                        <span className="font-medium">Chapitre:</span>
-                        <p className="text-gray-600">{rapport.chapitre}</p>
-                      </div>
-                      <div>
-                        <span className="font-medium">Objectif:</span>
-                        <p className="text-gray-600">{rapport.objectif}</p>
-                      </div>
-                      <div>
-                        <span className="font-medium">Durée:</span>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-gray-400" />
-                          <span className="text-gray-600">
-                            {rapport.dureeReelle} ({rapport.dureePlanifiee} prévu)
-                          </span>
-                          <Badge 
-                            variant="outline" 
-                            className={getCorrectionTempsColor(rapport.correctionTemps)}
-                          >
-                            {rapport.correctionTemps}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div>
-                        <span className="font-medium">Progression:</span>
-                        <Badge 
-                          variant="outline"
-                          className={
-                            rapport.progression === 'Terminé' ? 'text-green-600 border-green-600' :
-                            rapport.progression === 'Partiel' ? 'text-orange-600 border-orange-600' :
-                            'text-red-600 border-red-600'
-                          }
-                        >
-                          {rapport.progression}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Commentaires */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Commentaire Formateur</h4>
-                        <div className="bg-blue-50 p-3 rounded-lg">
-                          <p className="text-sm text-blue-800">{rapport.commentaireProf}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Commentaire Censeur</h4>
-                        <div className="bg-green-50 p-3 rounded-lg">
-                          <p className="text-sm text-green-800">{rapport.commentaireCenseur}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Difficultés rencontrées */}
-                    <div className="mt-4">
-                      <h4 className="font-medium text-gray-900 mb-2">Difficultés Rencontrées</h4>
-                      <div className="bg-orange-50 p-3 rounded-lg">
-                        <p className="text-sm text-orange-800">{rapport.difficulte}</p>
-                      </div>
-                    </div>
-
-                    {/* Ajout de commentaire */}
-                    {editingRapport === rapport.id && (
-                      <div className="mt-4 p-4 border border-blue-200 rounded-lg bg-blue-50">
-                        <h4 className="font-medium text-gray-900 mb-2">Modifier le rapport</h4>
-                        <div className="space-y-3">
-                          <div>
-                            <label className="text-sm font-medium">Évaluation</label>
+                    {/* Mode édition */}
+                    {editingRapport === rapport.id && editRapportData && (
+                      <div className="mb-4 p-4 border border-blue-200 rounded-lg bg-blue-50">
+                        <h4 className="font-medium text-gray-900 mb-3">Modifier le rapport</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm">Évaluation</Label>
                             <Input 
                               type="number" 
                               step="0.1" 
                               min="1" 
                               max="5" 
-                              defaultValue={rapport.evaluation}
-                              className="mt-1 bg-white"
+                              value={editRapportData.evaluation}
+                              onChange={(e) => setEditRapportData(prev => prev ? {...prev, evaluation: parseFloat(e.target.value)} : null)}
+                              className="bg-white"
                             />
                           </div>
-                          <div>
-                            <label className="text-sm font-medium">Commentaire Censeur</label>
-                            <Textarea 
-                              defaultValue={rapport.commentaireCenseur}
-                              className="mt-1 bg-white"
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <Button onClick={handleSaveRapport}>
-                              Sauvegarder
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              onClick={() => setEditingRapport(null)}
+                          <div className="space-y-2">
+                            <Label className="text-sm">Progression</Label>
+                            <Select 
+                              value={editRapportData.progression}
+                              onValueChange={(value) => setEditRapportData(prev => prev ? {...prev, progression: value} : null)}
                             >
-                              Annuler
-                            </Button>
+                              <SelectTrigger className="bg-white">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Terminé">Terminé</SelectItem>
+                                <SelectItem value="Partiel">Partiel</SelectItem>
+                                <SelectItem value="Non terminé">Non terminé</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <Label className="text-sm">Commentaire Censeur</Label>
+                            <Textarea 
+                              value={editRapportData.commentaireCenseur}
+                              onChange={(e) => setEditRapportData(prev => prev ? {...prev, commentaireCenseur: e.target.value} : null)}
+                              className="bg-white"
+                            />
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <Label className="text-sm">Difficultés Rencontrées</Label>
+                            <Textarea 
+                              value={editRapportData.difficulte}
+                              onChange={(e) => setEditRapportData(prev => prev ? {...prev, difficulte: e.target.value} : null)}
+                              className="bg-white"
+                            />
                           </div>
                         </div>
+                        <div className="flex gap-2 mt-4">
+                          <Button onClick={handleSaveRapport}>
+                            Sauvegarder
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={handleCancelEdit}
+                          >
+                            Annuler
+                          </Button>
+                        </div>
                       </div>
+                    )}
+
+                    {/* Informations du cours (affichage normal) */}
+                    {editingRapport !== rapport.id && (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 text-sm">
+                          <div>
+                            <span className="font-medium">Chapitre:</span>
+                            <p className="text-gray-600">{rapport.chapitre}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium">Objectif:</span>
+                            <p className="text-gray-600">{rapport.objectif}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium">Durée:</span>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-gray-400" />
+                              <span className="text-gray-600">
+                                {rapport.dureeReelle} ({rapport.dureePlanifiee} prévu)
+                              </span>
+                              <Badge 
+                                variant="outline" 
+                                className={getCorrectionTempsColor(rapport.correctionTemps)}
+                              >
+                                {rapport.correctionTemps}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div>
+                            <span className="font-medium">Progression:</span>
+                            <Badge 
+                              variant="outline"
+                              className={
+                                rapport.progression === 'Terminé' ? 'text-green-600 border-green-600' :
+                                rapport.progression === 'Partiel' ? 'text-orange-600 border-orange-600' :
+                                'text-red-600 border-red-600'
+                              }
+                            >
+                              {rapport.progression}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Commentaires */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-2">Commentaire Formateur</h4>
+                            <div className="bg-blue-50 p-3 rounded-lg">
+                              <p className="text-sm text-blue-800">{rapport.commentaireProf}</p>
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-2">Commentaire Censeur</h4>
+                            <div className="bg-green-50 p-3 rounded-lg">
+                              <p className="text-sm text-green-800">{rapport.commentaireCenseur}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Difficultés rencontrées */}
+                        <div className="mt-4">
+                          <h4 className="font-medium text-gray-900 mb-2">Difficultés Rencontrées</h4>
+                          <div className="bg-orange-50 p-3 rounded-lg">
+                            <p className="text-sm text-orange-800">{rapport.difficulte}</p>
+                          </div>
+                        </div>
+                      </>
                     )}
                   </div>
                 ))}
@@ -856,6 +941,26 @@ export default function RapportsPersonnelsPage() {
           </Card>
         </div>
       </div>
+
+      {/* Modale de confirmation de suppression */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="bg-white">
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer ce rapport ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button className='bg-red-500' variant="destructive" onClick={confirmDeleteRapport}>
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

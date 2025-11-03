@@ -256,20 +256,20 @@ export default function RapportsMensuelsPage() {
               Analyse financière et performance mensuelle du centre
             </p>
           </div>
-          <div className="flex gap-3 mt-4 sm:mt-0">
+          <div className="sm:flex flex-col gap-4 lg:flex flex-row">
             <Select value={selectedMois} onValueChange={setSelectedMois}>
-              <SelectTrigger className="w-[200px] bg-white">
+              <SelectTrigger className="mb-4 w-[200px] bg-white">
                 <Calendar className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Sélectionner un mois" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="2024-04">Avril 2024</SelectItem>
                 <SelectItem value="2024-03">Mars 2024</SelectItem>
                 <SelectItem value="2024-02">Février 2024</SelectItem>
                 <SelectItem value="2024-01">Janvier 2024</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={printReport}>
+            <Button variant="outline" onClick={printReport} className="mb-4">
               <Printer className="h-4 w-4 mr-2" />
               Imprimer
             </Button>

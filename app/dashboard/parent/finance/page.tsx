@@ -9,13 +9,23 @@ import {
   FaSortDown, 
   FaDownload, 
   FaCreditCard, 
-  FaMobile, 
-  FaMoneyBillWave,
   FaHistory,
   FaChartBar,
-  FaReceipt
+  FaReceipt,
+  FaCheckCircle,
+  FaClock,
+  FaUserGraduate,
+  FaSchool,
+  FaUtensils,
+  FaRunning
 } from "react-icons/fa";
-import PaymentModal from "@/components/ui/payment-modal";
+import { useUser } from "@clerk/nextjs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Interfaces TypeScript
 interface Fee {
@@ -25,35 +35,79 @@ interface Fee {
   dueDate: string;
   status: "paid" | "pending" | "overdue";
   paymentDate: string;
-  type: "Scolarité" | "Cantine" | "Activités";
+  type: "Inscription" | "Scolarité" | "Cantine" | "Activités";
   reference: string;
 }
 
-interface PaymentMethod {
+interface Student {
   id: string;
   name: string;
-  icon: React.ComponentType;
-  description: string;
+  class: string;
+  program: string;
+  registrationStatus: "registered" | "pending";
+  registrationFee: number;
+  tuitionFee: number; // Frais de scolarité annuels
+  paidAmount: number;
+  remainingAmount: number;
+  totalSchoolFees: number; // Total des frais scolaires (scolarité + autres)
 }
 
 // Type pour les champs de tri valides
 type SortableField = "reference" | "description" | "amount" | "dueDate";
 
 export default function ParentFinancePage() {
+  const { user } = useUser();
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [sortField, setSortField] = useState<SortableField>("dueDate");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [selectedFee, setSelectedFee] = useState<Fee | null>(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
-  const [paymentStep, setPaymentStep] = useState("select");
+
+  // Données simulées de l'élève
+  const studentData: Student = {
+    id: "1",
+    name: "Jean Dupont",
+    class: "Terminale S",
+    program: "Scientifique",
+    registrationStatus: "registered",
+    registrationFee: 10000, // Frais d'inscription (une seule fois)
+    tuitionFee: 885000, // Frais de scolarité annuels (3 trimestres × 295000)
+    paidAmount: 523700, // Total déjà payé
+    remainingAmount: 461700, // Reste à payer
+    totalSchoolFees: 985000 // Total inscription + scolarité
+  };
 
   const feesData: Fee[] = [
-    { id: 1, description: "Frais de scolarité - Trimestre 1", amount: 295000, dueDate: "15/09/2024", status: "paid", paymentDate: "10/09/2024", type: "Scolarité", reference: "FSC-2024-T1" },
-    { id: 2, description: "Frais de cantine - Septembre", amount: 78700, dueDate: "05/10/2024", status: "paid", paymentDate: "01/10/2024", type: "Cantine", reference: "CAN-2024-09" },
-    { id: 3, description: "Frais de scolarité - Trimestre 2", amount: 295000, dueDate: "15/11/2024", status: "pending", paymentDate: "", type: "Scolarité", reference: "FSC-2024-T2" },
-    { id: 4, description: "Frais de cantine - Octobre", amount: 78700, dueDate: "05/11/2024", status: "overdue", paymentDate: "", type: "Cantine", reference: "CAN-2024-10" },
-    { id: 5, description: "Frais d'activités périscolaires", amount: 55700, dueDate: "20/11/2024", status: "pending", paymentDate: "", type: "Activités", reference: "ACT-2024-11" },
+    // Frais d'inscription (payable une seule fois)
+    { 
+      id: 1, 
+      description: "Frais d'inscription - Année scolaire 2024/2025", 
+      amount: 10000, 
+      dueDate: "01/09/2024", 
+      status: "paid", 
+      paymentDate: "28/08/2024", 
+      type: "Inscription", 
+      reference: "INS-2024-2025" 
+    },
+    // Frais de scolarité (trimestriels)
+    { 
+      id: 2, 
+      description: "Frais de scolarité - Trimestre 1", 
+      amount: 295000, 
+      dueDate: "15/09/2024", 
+      status: "paid", 
+      paymentDate: "10/09/2024", 
+      type: "Scolarité", 
+      reference: "SCO-2024-T1" 
+    },
+    { 
+      id: 3, 
+      description: "Frais de scolarité - Trimestre 2", 
+      amount: 295000, 
+      dueDate: "15/11/2024", 
+      status: "pending", 
+      paymentDate: "", 
+      type: "Scolarité", 
+      reference: "SCO-2024-T2" 
+    },
   ];
 
   const statusFilters = [
@@ -61,12 +115,6 @@ export default function ParentFinancePage() {
     { id: "paid", name: "Payés" },
     { id: "pending", name: "En attente" },
     { id: "overdue", name: "En retard" }
-  ];
-
-  const paymentMethods: PaymentMethod[] = [
-    { id: "momo", name: "Mobile Money", icon: FaMobile, description: "Payer avec Orange Money ou MTN Mobile Money" },
-    { id: "card", name: "Carte Bancaire", icon: FaCreditCard, description: "Payer par carte Visa, Mastercard" },
-    { id: "cash", name: "Espèces", icon: FaMoneyBillWave, description: "Payer en espèces à la comptabilité" }
   ];
 
   const downloadReceipt = (fee: Fee) => {
@@ -82,8 +130,9 @@ export default function ParentFinancePage() {
       Date de paiement: ${fee.paymentDate}
       Statut: Payé
       
-      Élève: Jean Dupont - Terminale S
-      Parent: Marie Dupont
+      Élève: ${studentData.name} - ${studentData.class}
+      Parent: ${user?.fullName || "Parent"}
+      Filière: ${studentData.program}
       Date d'émission: ${new Date().toLocaleDateString('fr-FR')}
       
       Merci pour votre confiance.
@@ -103,13 +152,6 @@ export default function ParentFinancePage() {
     URL.revokeObjectURL(url);
   };
 
-  const initiatePayment = (fee: Fee) => {
-    setSelectedFee(fee);
-    setShowPaymentModal(true);
-    setPaymentStep("select");
-    setSelectedPaymentMethod("");
-  };
-
   const handleSort = (field: SortableField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -120,15 +162,15 @@ export default function ParentFinancePage() {
   };
 
   const getSortIcon = (field: SortableField) => {
-    if (sortField !== field) return <FaSort className="text-gray-400" />;
-    return sortDirection === "asc" ? <FaSortUp className="text-blue-600" /> : <FaSortDown className="text-blue-600" />;
+    if (sortField !== field) return <FaSort className="text-muted-foreground" size={14} />;
+    return sortDirection === "asc" ? <FaSortUp className="text-primary" /> : <FaSortDown className="text-primary" />;
   };
 
   const filteredFees = feesData.filter(fee =>
     selectedStatus === "all" || fee.status === selectedStatus
   );
 
-  // Fonction de tri corrigée
+  // Fonction de tri
   const sortedFees = [...filteredFees].sort((a, b) => {
     let aValue: string | number;
     let bValue: string | number;
@@ -147,7 +189,6 @@ export default function ParentFinancePage() {
         bValue = b.description;
         break;
       case "dueDate":
-        // Conversion des dates pour un tri correct
         aValue = new Date(a.dueDate.split('/').reverse().join('-')).getTime();
         bValue = new Date(b.dueDate.split('/').reverse().join('-')).getTime();
         break;
@@ -163,211 +204,342 @@ export default function ParentFinancePage() {
     }
   });
 
-  const getStatusColor = (status: Fee["status"]) => {
+  const getStatusVariant = (status: Fee["status"]) => {
     switch (status) {
-      case "paid": return "bg-green-100 text-green-800 border-green-200";
-      case "pending": return "bg-blue-100 text-blue-800 border-blue-200";
-      case "overdue": return "bg-red-100 text-red-800 border-red-200";
-      default: return "bg-gray-100 text-gray-800 border-gray-200";
+      case "paid": return "default";
+      case "pending": return "secondary";
+      case "overdue": return "destructive";
+      default: return "outline";
     }
   };
 
-  const getTypeColor = (type: Fee["type"]) => {
+  const getTypeIcon = (type: Fee["type"]) => {
     switch (type) {
-      case "Scolarité": return "bg-purple-100 text-purple-800 border-purple-200";
-      case "Cantine": return "bg-orange-100 text-orange-800 border-orange-200";
-      case "Activités": return "bg-indigo-100 text-indigo-800 border-indigo-200";
-      default: return "bg-gray-100 text-gray-800 border-gray-200";
+      case "Inscription": return <FaUserGraduate className="mr-1" size={12} />;
+      case "Scolarité": return <FaSchool className="mr-1" size={12} />;
+      case "Cantine": return <FaUtensils className="mr-1" size={12} />;
+      case "Activités": return <FaRunning className="mr-1" size={12} />;
+      default: return <FaFileInvoice className="mr-1" size={12} />;
+    }
+  };
+
+  const getTypeVariant = (type: Fee["type"]) => {
+    switch (type) {
+      case "Inscription": return "default";
+      case "Scolarité": return "secondary";
+      case "Cantine": return "outline";
+      case "Activités": return "default";
+      default: return "outline";
     }
   };
 
   const formatFCFA = (amount: number) => new Intl.NumberFormat('fr-FR').format(amount) + ' FCFA';
 
+  // Calculs des totaux
   const totalPaid = feesData.filter(f => f.status === "paid").reduce((sum, fee) => sum + fee.amount, 0);
   const totalPending = feesData.filter(f => f.status === "pending").reduce((sum, fee) => sum + fee.amount, 0);
   const totalOverdue = feesData.filter(f => f.status === "overdue").reduce((sum, fee) => sum + fee.amount, 0);
   const totalAll = feesData.reduce((sum, fee) => sum + fee.amount, 0);
 
+  // Calculs par type
+  const inscriptionFees = feesData.filter(f => f.type === "Inscription");
+  const tuitionFees = feesData.filter(f => f.type === "Scolarité");
+
+  const paidInscription = inscriptionFees.filter(f => f.status === "paid").reduce((sum, fee) => sum + fee.amount, 0);
+  const paidTuition = tuitionFees.filter(f => f.status === "paid").reduce((sum, fee) => sum + fee.amount, 0);
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+    <div className="flex-1 flex flex-col min-h-0 bg-background lg:pl-5 pt-20 lg:pt-6">
       <div className="flex-1 overflow-y-auto">
-        <div className="p-6 max-w-7xl mx-auto">
+        <div className="p-4 lg:p-6 max-w-7xl mx-auto w-full">
           {/* En-tête */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Finance et Paiements</h1>
-              <p className="text-gray-600 mt-2">
-                Gestion des frais scolaires - <span className="font-semibold">Jean Dupont (Terminale S)</span>
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Solde total</p>
-                <p className="text-2xl font-bold text-gray-900">{formatFCFA(totalAll)}</p>
+              <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Vue des frais de formation</h1>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
+               
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{studentData.name}</span>
+                  <Badge variant={studentData.registrationStatus === "registered" ? "default" : "secondary"}>
+                    {studentData.registrationStatus === "registered" ? (
+                      <><FaCheckCircle className="mr-1" size={12} /> Inscrit</>
+                    ) : (
+                      <><FaClock className="mr-1" size={12} /> En attente</>
+                    )}
+                  </Badge>
+                </div>
+              </div>
+              <div className="mt-2">
+                <Badge variant="outline" className="text-sm">
+                  Filière: {studentData.program}
+                </Badge>
               </div>
             </div>
           </div>
 
-          {/* Cartes de résumé */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total des frais</p>
-                  <p className="text-2xl font-bold text-gray-900">{formatFCFA(totalAll)}</p>
+          {/* Section récapitulative des frais */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FaUserGraduate className="text-primary" />
+                  Frais d&apos;Inscription
+                </CardTitle>
+                <CardDescription>
+                  Frais d&apos;admission et d&apos;inscription
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Montant total:</span>
+                    <span className="font-semibold">{formatFCFA(studentData.registrationFee)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Payé:</span>
+                    <span className="font-semibold text-green-600">{formatFCFA(paidInscription)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Statut:</span>
+                    <Badge variant={paidInscription >= studentData.registrationFee ? "default" : "secondary"}>
+                      {paidInscription >= studentData.registrationFee ? "Complètement payé" : "Partiellement payé"}
+                    </Badge>
+                  </div>
                 </div>
-                <FaChartBar className="text-2xl text-blue-600" />
-              </div>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-green-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Frais payés</p>
-                  <p className="text-2xl font-bold text-green-600">{formatFCFA(totalPaid)}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FaSchool className="text-primary" />
+                  Frais de Scolarité
+                </CardTitle>
+                <CardDescription>
+                  Frais de scolarité annuels ({tuitionFees.length} trimestres)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Montant total:</span>
+                    <span className="font-semibold">{formatFCFA(studentData.tuitionFee)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Payé:</span>
+                    <span className="font-semibold text-green-600">{formatFCFA(paidTuition)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Reste à payer:</span>
+                    <span className="font-semibold text-orange-600">
+                      {formatFCFA(studentData.tuitionFee - paidTuition)}
+                    </span>
+                  </div>
                 </div>
-                <FaReceipt className="text-2xl text-green-600" />
-              </div>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-blue-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">En attente</p>
-                  <p className="text-2xl font-bold text-blue-600">{formatFCFA(totalPending)}</p>
-                </div>
-                <FaHistory className="text-2xl text-blue-600" />
-              </div>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-red-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">En retard</p>
-                  <p className="text-2xl font-bold text-red-600">{formatFCFA(totalOverdue)}</p>
-                </div>
-                <FaFileInvoice className="text-2xl text-red-600" />
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Filtres */}
-          <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
-            {statusFilters.map(filter => (
-              <button
-                key={filter.id}
-                onClick={() => setSelectedStatus(filter.id)}
-                className={`px-6 py-3 rounded-lg font-medium transition-all whitespace-nowrap min-w-[160px] text-center border ${
-                  selectedStatus === filter.id
-                    ? "bg-blue-600 text-white border-blue-600 shadow-md"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
-                }`}
-              >
-                {filter.name}
-              </button>
-            ))}
+          {/* Cartes de résumé global */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Total général</p>
+                    <p className="text-xl font-bold text-foreground">{formatFCFA(totalAll)}</p>
+                  </div>
+                  <FaChartBar className="text-2xl text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Total payé</p>
+                    <p className="text-xl font-bold text-green-600">{formatFCFA(totalPaid)}</p>
+                  </div>
+                  <FaReceipt className="text-2xl text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">En attente</p>
+                    <p className="text-xl font-bold text-blue-600">{formatFCFA(totalPending)}</p>
+                  </div>
+                  <FaHistory className="text-2xl text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">En retard</p>
+                    <p className="text-xl font-bold text-red-600">{formatFCFA(totalOverdue)}</p>
+                  </div>
+                  <FaFileInvoice className="text-2xl text-red-600" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filtres - Version mobile avec Select */}
+          <div className="block lg:hidden mb-6">
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrer par statut" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusFilters.map(filter => (
+                  <SelectItem key={filter.id} value={filter.id}>
+                    {filter.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Filtres - Version desktop avec Tabs */}
+          <div className="hidden lg:block mb-6">
+            <Tabs value={selectedStatus} onValueChange={setSelectedStatus} className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                {statusFilters.map(filter => (
+                  <TabsTrigger key={filter.id} value={filter.id}>
+                    {filter.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           </div>
 
           {/* Tableau des frais */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                  <FaFileInvoice className="text-blue-600" />
-                  Détail des Frais Scolaires
-                </h2>
-                <div className="text-sm text-gray-500">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <CardTitle className="flex items-center gap-2">
+                  <FaFileInvoice className="text-primary" />
+                  Détail de Tous les Frais
+                </CardTitle>
+                <div className="text-sm text-muted-foreground">
                   {sortedFees.length} frais trouvé(s)
                 </div>
               </div>
-
+            </CardHeader>
+            <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" onClick={() => handleSort("reference")}>
-                        Référence {getSortIcon("reference")}
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" onClick={() => handleSort("description")}>
-                        Description {getSortIcon("description")}
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900">Type</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" onClick={() => handleSort("amount")}>
-                        Montant {getSortIcon("amount")}
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-50" onClick={() => handleSort("dueDate")}>
-                        Échéance {getSortIcon("dueDate")}
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900">Statut</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-accent"
+                        onClick={() => handleSort("reference")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Référence {getSortIcon("reference")}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-accent"
+                        onClick={() => handleSort("description")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Description {getSortIcon("description")}
+                        </div>
+                      </TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-accent"
+                        onClick={() => handleSort("amount")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Montant {getSortIcon("amount")}
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-accent"
+                        onClick={() => handleSort("dueDate")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Échéance {getSortIcon("dueDate")}
+                        </div>
+                      </TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {sortedFees.map(fee => (
-                      <tr key={fee.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="py-4 px-4 font-mono text-sm text-gray-600">{fee.reference}</td>
-                        <td className="py-4 px-4 font-medium text-gray-900">{fee.description}</td>
-                        <td className="py-4 px-4">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getTypeColor(fee.type)}`}>
+                      <TableRow key={fee.id}>
+                        <TableCell className="font-mono text-sm">
+                          {fee.reference}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {fee.description}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getTypeVariant(fee.type)}>
+                            {getTypeIcon(fee.type)}
                             {fee.type}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 font-bold text-gray-900">{formatFCFA(fee.amount)}</td>
-                        <td className="py-4 px-4 text-gray-700">{fee.dueDate}</td>
-                        <td className="py-4 px-4">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(fee.status)}`}>
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-bold">
+                          {formatFCFA(fee.amount)}
+                        </TableCell>
+                        <TableCell>
+                          {fee.dueDate}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusVariant(fee.status)}>
                             {fee.status === "paid" ? "Payé" : fee.status === "pending" ? "En attente" : "En retard"}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4">
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
                           <div className="flex gap-2">
                             {fee.status === "paid" && (
-                              <button
+                              <Button
                                 onClick={() => downloadReceipt(fee)}
-                                className="flex items-center gap-2 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-2"
                               >
-                                <FaDownload className="text-xs" />
-                                Reçu
-                              </button>
+                                <FaDownload size={12} />
+                                <span className="hidden sm:inline">Reçu</span>
+                              </Button>
                             )}
                             {(fee.status === "pending" || fee.status === "overdue") && (
-                              <button
-                                onClick={() => initiatePayment(fee)}
-                                className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-2"
+                                disabled
                               >
-                                <FaCreditCard className="text-xs" />
-                                Payer
-                              </button>
+                                <FaCreditCard size={12} />
+                                <span className="hidden sm:inline">Payer à la comptabilité</span>
+                              </Button>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </TableBody>
+                </Table>
 
-              {sortedFees.length === 0 && (
-                <div className="text-center py-12">
-                  <FaFileInvoice className="text-5xl text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun frais trouvé</h3>
-                  <p className="text-gray-500">Aucun frais scolaire ne correspond aux critères sélectionnés.</p>
-                </div>
-              )}
-            </div>
-          </div>
+                {sortedFees.length === 0 && (
+                  <div className="text-center py-12">
+                    <FaFileInvoice className="text-5xl text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Aucun frais trouvé</h3>
+                    <p className="text-muted-foreground">Aucun frais scolaire ne correspond aux critères sélectionnés.</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-
-      {/* Modal de paiement */}
-      {showPaymentModal && selectedFee && (
-        <PaymentModal
-          fee={selectedFee}
-          paymentStep={paymentStep}
-          selectedPaymentMethod={selectedPaymentMethod}
-          onPaymentMethodSelect={setSelectedPaymentMethod}
-          onStepChange={setPaymentStep}
-          onClose={() => setShowPaymentModal(false)}
-          paymentMethods={paymentMethods}
-        />
-      )}
     </div>
   );
 }

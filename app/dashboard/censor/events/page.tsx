@@ -54,7 +54,7 @@ export default function CensorEventsPage() {
     } else {
       // Données par défaut
       const defaultEvents: SchoolEvent[] = [
-        { id: '1', date: "24 Octobre", day: "MER", title: "Réunion Parents-Professeurs", type: "Réunion", location: "Gymnase de l&apos;école", icon: "Users", color: "bg-blue-500", badge: "Important", month: "Octobre", time: "18:00 - 20:00" },
+        { id: '1', date: "24 Octobre", day: "MER", title: "Réunion Parents-Professeurs", type: "Réunion", location: "Gymnase de l'école", icon: "Users", color: "bg-blue-500", badge: "Important", month: "Octobre", time: "18:00 - 20:00" },
         { id: '2', date: "27 Octobre", day: "SAM", title: "Voyage Scolaire à Rome", type: "Voyage", location: "Départ à 8h00", icon: "Sun", color: "bg-indigo-500", badge: "Optionnel", month: "Octobre", time: "08:00 - 20:00" },
         { id: '3', date: "01 Novembre", day: "JEU", title: "Toussaint - Jour Férié", type: "Congé", location: "École Fermée", icon: "AlertCircle", color: "bg-green-500", badge: "Congé", month: "Novembre", time: "Toute la journée" },
       ];
@@ -117,7 +117,7 @@ export default function CensorEventsPage() {
     setEditingEvent(null);
     setFormData({
       title: '',
-      type: eventTypes[1] || '', // Premier type après "Tous"
+      type: eventTypes[1] || '',
       location: '',
       date: '',
       time: '',
@@ -154,7 +154,7 @@ export default function CensorEventsPage() {
       return;
     }
 
-    // Vérifier si le type existe, sinon l'ajouter
+    // Vérifier si le type existe
     if (formData.type && !eventTypes.includes(formData.type)) {
       addEventType(formData.type);
     }
@@ -197,7 +197,7 @@ export default function CensorEventsPage() {
   // Fonctions utilitaires
   const getDayAbbreviation = () => {
     const days = ['DIM', 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM'];
-    return days[Math.floor(Math.random() * days.length)]; // Simplifié pour l'exemple
+    return days[Math.floor(Math.random() * days.length)];
   };
 
   const getIconByType = (type: string) => {
@@ -240,126 +240,136 @@ export default function CensorEventsPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 overflow-hidden lg:pl-5 pt-20 lg:pt-6">
+    <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
       
       {/* Header */}
-      <header className="border-b border-gray-200 p-4 sm:p-6 sticky top-0 z-10 shadow-sm flex-shrink-0 bg-gray-50">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
-              Gestion des Événements Scolaires
-            </h1>
-            <p className="text-gray-500 text-sm sm:text-base">
-              {filteredEvents.length} événement(s) - Interface Censeur
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="text"
-                placeholder="Rechercher un événement..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+      <div className="border-b border-gray-200 p-4 sm:p-6 bg-gray-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 truncate">
+                Gestion des Événements Scolaires
+              </h1>
+              <p className="text-gray-500 text-sm sm:text-base mt-1">
+                {filteredEvents.length} événement(s)
+              </p>
             </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Filter className="h-4 w-4" />
-              Filtres
-              <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-            </button>
-            <button 
-              onClick={handleAddNew}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Nouvel événement
-            </button>
-          </div>
-        </div>
 
-        {showFilters && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
-            <div className="flex flex-col gap-4">
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Filtrer par type :</h4>
-                <div className="flex flex-wrap gap-2">
-                  {eventTypes.map(type => (
-                    <span
-                      key={type}
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition-colors ${
-                        selectedType === type 
-                          ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300'
-                      }`}
-                      onClick={() => setSelectedType(type)}
+            <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+              {/* Barre de recherche */}
+              <div className="relative flex-1 sm:flex-none sm:w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="Rechercher un événement..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                />
+              </div>
+              
+              {/* Bouton Filtres */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white"
+              >
+                <Filter className="h-4 w-4" />
+                <span className="hidden sm:inline">Filtres</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {/* Bouton Nouvel événement */}
+              <button 
+                onClick={handleAddNew}
+                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Nouvel événement</span>
+                <span className="sm:hidden">Nouveau</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Filtres dépliants */}
+          {showFilters && (
+            <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Filtrer par type :</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {eventTypes.map(type => (
+                      <button
+                        key={type}
+                        onClick={() => setSelectedType(type)}
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+                          selectedType === type 
+                            ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                            : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300'
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Ajout de type personnalisé */}
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Ajouter un type personnalisé :</h4>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={customType}
+                      onChange={(e) => setCustomType(e.target.value)}
+                      placeholder="Nouveau type d'événement"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <button
+                      onClick={() => {
+                        if (customType.trim()) {
+                          addEventType(customType.trim());
+                          setCustomType('');
+                        }
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors whitespace-nowrap"
                     >
-                      {type}
-                    </span>
-                  ))}
+                      Ajouter le type
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Les nouveaux types seront disponibles dans les filtres et lors de la création d'événements.
+                  </p>
                 </div>
-              </div>
-
-              {/* Ajout de type personnalisé */}
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Ajouter un type personnalisé :</h4>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={customType}
-                    onChange={(e) => setCustomType(e.target.value)}
-                    placeholder="Nouveau type d&apos;événement"
-                    className="flex-1 px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <button
-                    onClick={() => {
-                      if (customType.trim()) {
-                        addEventType(customType.trim());
-                        setCustomType('');
-                      }
-                    }}
-                    className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors"
-                  >
-                    Ajouter
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Les nouveaux types seront disponibles dans les filtres et lors de la création d&apos;événements.
-                </p>
               </div>
             </div>
-          </div>
-        )}
-      </header>
+          )}
+        </div>
+      </div>
 
-      {/* Zone scrollable */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4 sm:p-6 space-y-8 max-w-6xl mx-auto">
-
-          {/* Événements par mois */}
-          {Object.keys(eventsByMonth).length > 0 ? (
-            Object.entries(eventsByMonth).map(([month, monthEvents]) => (
+      {/* Contenu principal */}
+      <div className="max-w-7xl mx-auto p-4 sm:p-6">
+        {/* Événements par mois */}
+        {Object.keys(eventsByMonth).length > 0 ? (
+          <div className="space-y-8">
+            {Object.entries(eventsByMonth).map(([month, monthEvents]) => (
               <section key={month} className="space-y-4">
+                {/* En-tête du mois */}
                 <div className="flex items-center gap-3">
-                  <div className="w-1 h-8 bg-blue-600 rounded-full"></div>
+                  <div className="w-1 h-8 bg-blue-600 rounded-full flex-shrink-0"></div>
                   <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{month}</h2>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 ml-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                     {monthEvents.length} événement(s)
                   </span>
                 </div>
 
+                {/* Grille des événements */}
                 <div className="grid gap-4">
                   {monthEvents.map(event => {
                     const EventIcon = getIconComponent(event.icon);
                     return (
                       <div key={event.id} className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-blue-500/50 hover:shadow-lg transition-all duration-300">
                         <div className="flex flex-col sm:flex-row">
-                          {/* Date */}
+                          {/* Section Date */}
                           <div className={`${event.color} text-white p-4 flex items-center justify-between sm:justify-center sm:flex-col w-full sm:w-28 flex-shrink-0`}>
                             <div className="text-center">
                               <div className="text-2xl sm:text-3xl font-bold">{event.date.split(' ')[0]}</div>
@@ -368,36 +378,40 @@ export default function CensorEventsPage() {
                             </div>
                           </div>
 
-                          {/* Détails */}
+                          {/* Détails de l'événement */}
                           <div className="flex-1 p-4 sm:p-6">
                             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                               <div className="flex-1 space-y-2">
                                 <div className="flex items-start gap-3">
                                   <EventIcon className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
-                                  <div className="flex-1">
-                                    <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">
                                       {event.title}
                                     </h3>
-                                    <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                                         {event.type}
                                       </span>
                                     </div>
                                     {event.description && (
-                                      <p className="text-gray-600 mt-2 text-sm">{event.description}</p>
+                                      <p className="text-gray-600 mt-2 text-sm break-words">{event.description}</p>
                                     )}
-                                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
+                                    <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 mt-2 text-sm text-gray-600">
                                       <div className="flex items-center gap-2">
-                                        <MapPin className="h-4 w-4" /> {event.location}
+                                        <MapPin className="h-4 w-4 flex-shrink-0" />
+                                        <span className="break-words">{event.location}</span>
                                       </div>
                                       <div className="flex items-center gap-2">
-                                        <CalendarDays className="h-4 w-4" /> {event.time}
+                                        <CalendarDays className="h-4 w-4 flex-shrink-0" />
+                                        <span>{event.time}</span>
                                       </div>
                                     </div>
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
+                              
+                              {/* Actions et badge */}
+                              <div className="flex items-center justify-between sm:justify-end gap-2 sm:flex-col sm:items-end">
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                   event.badge === "Important" ? "bg-blue-100 text-blue-800 border border-blue-200" : ""
                                 } ${event.badge === "Congé" ? "bg-green-100 text-green-800 border border-green-200" : ""}
@@ -411,12 +425,14 @@ export default function CensorEventsPage() {
                                   <button 
                                     onClick={() => handleEdit(event)}
                                     className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                    aria-label="Modifier"
                                   >
                                     <Edit className="h-4 w-4" />
                                   </button>
                                   <button 
                                     onClick={() => handleDelete(event.id)}
                                     className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                                    aria-label="Supprimer"
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </button>
@@ -430,61 +446,78 @@ export default function CensorEventsPage() {
                   })}
                 </div>
               </section>
-            ))
-          ) : (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 text-center py-12">
-              <div className="p-6">
-                <CalendarDays className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun événement trouvé</h3>
-                <p className="text-gray-500 mb-4">Aucun événement ne correspond à vos critères de recherche.</p>
+            ))}
+          </div>
+        ) : (
+          /* État vide */
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 text-center py-12">
+            <div className="max-w-md mx-auto p-6">
+              <CalendarDays className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun événement trouvé</h3>
+              <p className="text-gray-500 mb-6">
+                {searchTerm || selectedType !== "Tous" 
+                  ? "Aucun événement ne correspond à vos critères de recherche." 
+                  : "Commencez par créer votre premier événement."}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button 
                   onClick={() => { setSearchTerm(""); setSelectedType("Tous"); }}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Réinitialiser les filtres
                 </button>
+                <button 
+                  onClick={handleAddNew}
+                  className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  Créer un événement
+                </button>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Modal d&apos;ajout/modification */}
+      {/* Modal d'ajout/modification */}
       {isDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             {/* En-tête */}
-            <div className="bg-white p-6 border-b border-gray-200 sticky top-0 z-10">
+            <div className="bg-white p-4 sm:p-6 border-b border-gray-200 sticky top-0 z-10">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold">
-                  {editingEvent ? 'Modifier l&apos;événement' : 'Nouvel événement'}
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {editingEvent ? "Modifier l'événement" : "Nouvel événement"}
                 </h2>
                 <button 
                   onClick={() => setIsDialogOpen(false)} 
-                  className="text-gray-500 hover:text-gray-700 text-xl"
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                  aria-label="Fermer"
                 >
                   <X className="h-6 w-6" />
                 </button>
               </div>
             </div>
 
-            {/* Contenu */}
-            <div className="p-6 space-y-4">
+            {/* Contenu du formulaire */}
+            <div className="p-4 sm:p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                {/* Titre */}
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
                   <input
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Titre de l&apos;événement"
+                    placeholder="Titre de l'événement"
                   />
                 </div>
 
-                <div>
+                {/* Type */}
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <select
                       value={formData.type}
                       onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
@@ -508,6 +541,7 @@ export default function CensorEventsPage() {
                   </p>
                 </div>
 
+                {/* Lieu */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Lieu *</label>
                   <input
@@ -515,10 +549,11 @@ export default function CensorEventsPage() {
                     value={formData.location}
                     onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Lieu de l&apos;événement"
+                    placeholder="Lieu de l'événement"
                   />
                 </div>
 
+                {/* Date */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
                   <input
@@ -530,6 +565,7 @@ export default function CensorEventsPage() {
                   />
                 </div>
 
+                {/* Heure */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Heure *</label>
                   <input
@@ -541,6 +577,7 @@ export default function CensorEventsPage() {
                   />
                 </div>
 
+                {/* Priorité */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Priorité</label>
                   <select
@@ -557,6 +594,7 @@ export default function CensorEventsPage() {
                 </div>
               </div>
 
+              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
@@ -564,23 +602,23 @@ export default function CensorEventsPage() {
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Description de l&apos;événement (optionnel)"
+                  placeholder="Description de l'événement (optionnel)"
                 />
               </div>
             </div>
 
             {/* Pied de page */}
-            <div className="bg-white p-4 border-t border-gray-200 sticky bottom-0">
-              <div className="flex gap-2 justify-end">
+            <div className="bg-white p-4 sm:p-6 border-t border-gray-200 sticky bottom-0">
+              <div className="flex flex-col sm:flex-row gap-2 justify-end">
                 <button 
                   onClick={() => setIsDialogOpen(false)} 
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={handleSave}
-                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors"
+                  className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors order-1 sm:order-2"
                 >
                   <Save className="h-4 w-4" />
                   {editingEvent ? 'Modifier' : 'Créer'}

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Filter, Download, Eye, FileText, 
-  CreditCard, Printer, Mail, CheckCircle
+  CreditCard, Printer, Mail, CheckCircle, Plus
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 interface Facture {
   id: string;
@@ -25,13 +26,14 @@ interface Facture {
   filiere: string;
   vague: string;
   typePaiement: 'inscription' | 'scolarite' | 'frais_divers';
-  methodePaiement: 'online' | 'especes' | 'cheque' | 'virement' | 'mobile_money';
+  methodePaiement: 'especes' | 'cheque' | 'virement' | 'mobile_money';
   datePaiement: string;
   dateFacturation: string;
   montant: number;
   statut: 'generee' | 'envoyee' | 'annulee';
   items: FactureItem[];
   notes?: string;
+  semester?: string;
 }
 
 interface FactureItem {
@@ -40,6 +42,23 @@ interface FactureItem {
   quantite: number;
   prixUnitaire: number;
   montant: number;
+}
+
+interface GenerateFactureForm {
+  studentId: string;
+  typePaiement: 'inscription' | 'scolarite' | 'frais_divers';
+  methodePaiement: 'especes' | 'cheque' | 'virement' | 'mobile_money';
+  datePaiement: string;
+  montant: number;
+  description: string;
+  notes: string;
+  semester?: string;
+  // Champs spécifiques
+  banque?: string;
+  numeroCheque?: string;
+  numeroCompte?: string;
+  operateurMobile?: string;
+  numeroTelephone?: string;
 }
 
 export default function FacturationsPage() {
@@ -51,6 +70,58 @@ export default function FacturationsPage() {
   const [selectedFacture, setSelectedFacture] = useState<Facture | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+
+  const [generateForm, setGenerateForm] = useState<GenerateFactureForm>({
+    studentId: '',
+    typePaiement: 'scolarite',
+    methodePaiement: 'especes',
+    datePaiement: new Date().toISOString().split('T')[0],
+    montant: 0,
+    description: '',
+    notes: '',
+    semester: ''
+  });
+
+  // Données simulées pour les élèves avec semestres
+  const students = [
+    { 
+      id: 's1', 
+      name: 'Marie Dupont', 
+      parent: 'M. Dupont', 
+      email: 'parent.dupont@email.com', 
+      filiere: 'Développement Web', 
+      vague: 'Vague Janvier 2024',
+      paidSemesters: ['Semestre 1'],
+      pendingSemesters: ['Semestre 2', 'Semestre 3'],
+      paidAmount: 345000,
+      remainingAmount: 590000
+    },
+    { 
+      id: 's2', 
+      name: 'Pierre Martin', 
+      parent: 'Mme. Martin', 
+      email: 'martin.parent@email.com', 
+      filiere: 'Data Science', 
+      vague: 'Vague Janvier 2024',
+      paidSemesters: [],
+      pendingSemesters: ['Semestre 1', 'Semestre 2', 'Semestre 3'],
+      paidAmount: 0,
+      remainingAmount: 935000
+    },
+    { 
+      id: 's3', 
+      name: 'Sophie Bernard', 
+      parent: 'M. Bernard', 
+      email: 'bernard.famille@email.com', 
+      filiere: 'Design Graphique', 
+      vague: 'Vague Janvier 2024',
+      paidSemesters: ['Semestre 1', 'Semestre 2'],
+      pendingSemesters: ['Semestre 3'],
+      paidAmount: 590000,
+      remainingAmount: 295000
+    },
+  ];
 
   // Données simulées - Factures générées automatiquement après paiement
   useEffect(() => {
@@ -66,7 +137,7 @@ export default function FacturationsPage() {
         filiere: 'Développement Web',
         vague: 'Vague Janvier 2024',
         typePaiement: 'inscription',
-        methodePaiement: 'online',
+        methodePaiement: 'especes',
         datePaiement: '2024-01-15',
         dateFacturation: '2024-01-15',
         montant: 50000,
@@ -80,34 +151,35 @@ export default function FacturationsPage() {
             montant: 50000
           }
         ],
-        notes: 'Paiement en ligne validé automatiquement'
+        notes: 'Paiement en espèces reçu à l\'accueil'
       },
       {
         id: '2',
         numero: 'FACT-2024-002',
         paymentId: 'PAY-002',
-        studentId: 's2',
-        studentName: 'Pierre Martin',
-        parentName: 'Mme. Martin',
-        parentEmail: 'martin.parent@email.com',
-        filiere: 'Data Science',
+        studentId: 's1',
+        studentName: 'Marie Dupont',
+        parentName: 'M. Dupont',
+        parentEmail: 'parent.dupont@email.com',
+        filiere: 'Développement Web',
         vague: 'Vague Janvier 2024',
         typePaiement: 'scolarite',
         methodePaiement: 'virement',
         datePaiement: '2024-01-20',
         dateFacturation: '2024-01-20',
-        montant: 200000,
+        montant: 295000,
         statut: 'generee',
+        semester: 'Semestre 1',
         items: [
           {
             id: '1',
-            description: 'Acompte sur frais de scolarité - Trimestre 1',
+            description: 'Frais de scolarité - Semestre 1',
             quantite: 1,
-            prixUnitaire: 200000,
-            montant: 200000
+            prixUnitaire: 295000,
+            montant: 295000
           }
         ],
-        notes: 'Premier versement pour le trimestre 1'
+        notes: 'Paiement par virement bancaire'
       },
       {
         id: '3',
@@ -121,73 +193,21 @@ export default function FacturationsPage() {
         vague: 'Vague Janvier 2024',
         typePaiement: 'scolarite',
         methodePaiement: 'mobile_money',
-        datePaiement: '2024-01-18',
-        dateFacturation: '2024-01-18',
-        montant: 250000,
-        statut: 'envoyee',
-        items: [
-          {
-            id: '1',
-            description: 'Frais de scolarité complet - Trimestre 1',
-            quantite: 1,
-            prixUnitaire: 250000,
-            montant: 250000
-          }
-        ]
-      },
-      {
-        id: '4',
-        numero: 'FACT-2024-004',
-        paymentId: 'PAY-004',
-        studentId: 's4',
-        studentName: 'Thomas Moreau',
-        parentName: 'M. Moreau',
-        parentEmail: 'moreau.t@email.com',
-        filiere: 'Réseaux & Sécurité',
-        vague: 'Vague Janvier 2024',
-        typePaiement: 'inscription',
-        methodePaiement: 'especes',
-        datePaiement: '2024-01-22',
-        dateFacturation: '2024-01-22',
-        montant: 50000,
+        datePaiement: '2024-02-15',
+        dateFacturation: '2024-02-15',
+        montant: 295000,
         statut: 'generee',
+        semester: 'Semestre 2',
         items: [
           {
             id: '1',
-            description: 'Frais d\'inscription - Réseaux & Sécurité',
+            description: 'Frais de scolarité - Semestre 2',
             quantite: 1,
-            prixUnitaire: 50000,
-            montant: 50000
+            prixUnitaire: 295000,
+            montant: 295000
           }
         ],
-        notes: 'Paiement en espèces reçu à l\'accueil'
-      },
-      {
-        id: '5',
-        numero: 'FACT-2024-005',
-        paymentId: 'PAY-005',
-        studentId: 's1',
-        studentName: 'Marie Dupont',
-        parentName: 'M. Dupont',
-        parentEmail: 'parent.dupont@email.com',
-        filiere: 'Développement Web',
-        vague: 'Vague Janvier 2024',
-        typePaiement: 'scolarite',
-        methodePaiement: 'online',
-        datePaiement: '2024-02-01',
-        dateFacturation: '2024-02-01',
-        montant: 150000,
-        statut: 'generee',
-        items: [
-          {
-            id: '1',
-            description: 'Solde frais de scolarité - Trimestre 1',
-            quantite: 1,
-            prixUnitaire: 150000,
-            montant: 150000
-          }
-        ],
-        notes: 'Deuxième versement pour compléter le trimestre'
+        notes: 'Paiement par Orange Money'
       }
     ];
     setFactures(mockFactures);
@@ -225,6 +245,10 @@ export default function FacturationsPage() {
     }).format(amount);
   };
 
+  const formatFCFA = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR').format(amount) + ' FCFA';
+  };
+
   const getStatusBadge = (statut: Facture['statut']) => {
     const config = {
       generee: { variant: 'secondary' as const, text: 'Générée', icon: FileText },
@@ -252,13 +276,17 @@ export default function FacturationsPage() {
 
   const getMethodBadge = (methode: Facture['methodePaiement']) => {
     const config = {
-      online: { variant: 'default' as const, text: 'En ligne' },
       especes: { variant: 'secondary' as const, text: 'Espèces' },
       cheque: { variant: 'outline' as const, text: 'Chèque' },
       virement: { variant: 'default' as const, text: 'Virement' },
       mobile_money: { variant: 'secondary' as const, text: 'Mobile Money' }
     };
-    return <Badge variant={config[methode].variant}>{config[methode].text}</Badge>;
+    
+    if (methode in config) {
+      return <Badge variant={config[methode].variant}>{config[methode].text}</Badge>;
+    }
+    
+    return <Badge variant="outline">{methode}</Badge>;
   };
 
   const handleViewDetails = (facture: Facture) => {
@@ -284,9 +312,183 @@ export default function FacturationsPage() {
   };
 
   const generateFacturePDF = (facture: Facture) => {
-    // Simulation de génération PDF
     console.log('Génération PDF pour:', facture.numero);
     alert(`PDF de la facture ${facture.numero} généré avec succès!`);
+  };
+
+  // Fonction pour obtenir les semestres disponibles pour un élève
+  const getAvailableSemesters = (studentId: string) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return [];
+    
+    return student.pendingSemesters;
+  };
+
+  // Fonction pour générer une nouvelle facture
+  const handleGenerateFacture = () => {
+    if (!generateForm.studentId || !generateForm.montant || !generateForm.description) {
+      alert('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    const student = students.find(s => s.id === generateForm.studentId);
+    if (!student) return;
+
+    // Générer un numéro de facture unique
+    const factureCount = factures.length + 1;
+    const numero = `FACT-2024-${factureCount.toString().padStart(3, '0')}`;
+    const paymentId = `PAY-${Date.now()}`;
+
+    const newFacture: Facture = {
+      id: `fact-${Date.now()}`,
+      numero,
+      paymentId,
+      studentId: generateForm.studentId,
+      studentName: student.name,
+      parentName: student.parent,
+      parentEmail: student.email,
+      filiere: student.filiere,
+      vague: student.vague,
+      typePaiement: generateForm.typePaiement,
+      methodePaiement: generateForm.methodePaiement,
+      datePaiement: generateForm.datePaiement,
+      dateFacturation: new Date().toISOString().split('T')[0],
+      montant: generateForm.montant,
+      statut: 'generee',
+      semester: generateForm.typePaiement === 'scolarite' ? generateForm.semester : undefined,
+      items: [
+        {
+          id: '1',
+          description: generateForm.description,
+          quantite: 1,
+          prixUnitaire: generateForm.montant,
+          montant: generateForm.montant
+        }
+      ],
+      notes: generateForm.notes
+    };
+
+    setFactures(prev => [newFacture, ...prev]);
+    setIsGenerateModalOpen(false);
+    
+    // Reset du formulaire
+    setGenerateForm({
+      studentId: '',
+      typePaiement: 'scolarite',
+      methodePaiement: 'especes',
+      datePaiement: new Date().toISOString().split('T')[0],
+      montant: 0,
+      description: '',
+      notes: '',
+      semester: ''
+    });
+  };
+
+  const handleFormChange = (field: keyof GenerateFactureForm, value: string | number) => {
+    const updatedForm = {
+      ...generateForm,
+      [field]: value
+    };
+
+    // Si l'élève ou le type change, réinitialiser le semestre
+    if (field === 'studentId' || field === 'typePaiement') {
+      updatedForm.semester = '';
+    }
+
+    setGenerateForm(updatedForm);
+  };
+
+  // Rendu des champs spécifiques selon la méthode de paiement
+  const renderMethodSpecificFields = () => {
+    switch (generateForm.methodePaiement) {
+      case 'cheque':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="banque">Banque</Label>
+              <Input 
+                id="banque"
+                placeholder="Nom de la banque"
+                value={generateForm.banque || ''}
+                onChange={(e) => handleFormChange('banque', e.target.value)}
+                className="bg-white border-gray-300"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="numeroCheque">Numéro de chèque</Label>
+              <Input 
+                id="numeroCheque"
+                placeholder="Numéro du chèque"
+                value={generateForm.numeroCheque || ''}
+                onChange={(e) => handleFormChange('numeroCheque', e.target.value)}
+                className="bg-white border-gray-300"
+              />
+            </div>
+          </>
+        );
+      
+      case 'virement':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="banque">Banque</Label>
+              <Input 
+                id="banque"
+                placeholder="Nom de la banque"
+                value={generateForm.banque || ''}
+                onChange={(e) => handleFormChange('banque', e.target.value)}
+                className="bg-white border-gray-300"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="numeroCompte">Numéro de compte</Label>
+              <Input 
+                id="numeroCompte"
+                placeholder="Numéro de compte"
+                value={generateForm.numeroCompte || ''}
+                onChange={(e) => handleFormChange('numeroCompte', e.target.value)}
+                className="bg-white border-gray-300"
+              />
+            </div>
+          </>
+        );
+      
+      case 'mobile_money':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="operateurMobile">Opérateur</Label>
+              <Select 
+                value={generateForm.operateurMobile || ''}
+                onValueChange={(value) => handleFormChange('operateurMobile', value)}
+              >
+                <SelectTrigger className="bg-white border-gray-300">
+                  <SelectValue placeholder="Sélectionner un opérateur" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="orange">Orange Money</SelectItem>
+                  <SelectItem value="mtn">MTN Mobile Money</SelectItem>
+                  <SelectItem value="moov">Moov Money</SelectItem>
+                  <SelectItem value="wave">Wave</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="numeroTelephone">Numéro de téléphone</Label>
+              <Input 
+                id="numeroTelephone"
+                placeholder="Numéro de téléphone"
+                value={generateForm.numeroTelephone || ''}
+                onChange={(e) => handleFormChange('numeroTelephone', e.target.value)}
+                className="bg-white border-gray-300"
+              />
+            </div>
+          </>
+        );
+      
+      default:
+        return null;
+    }
   };
 
   const stats = {
@@ -307,10 +509,14 @@ export default function FacturationsPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestion des Factures</h1>
             <p className="text-gray-600 mt-1">Factures générées automatiquement après paiement</p>
           </div>
-          <div className="flex gap-3 mt-4 sm:mt-0">
+          <div className="flex gap-3 mt-4 sm:mt-0 flex flex-col">
             <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Exporter
+            </Button>
+            <Button onClick={() => setIsGenerateModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Générer Facture
             </Button>
           </div>
         </div>
@@ -380,7 +586,7 @@ export default function FacturationsPage() {
                   </div>
                 </div>
                 
-                <div className="flex gap-3">
+                <div className="flex gap-3 sm:flex flex-col">
                   <Select value={selectedStatut} onValueChange={setSelectedStatut}>
                     <SelectTrigger className="w-[150px] bg-white border-gray-300">
                       <Filter className="h-4 w-4 mr-2" />
@@ -428,6 +634,7 @@ export default function FacturationsPage() {
                       <TableHead>Élève & Parent</TableHead>
                       <TableHead>Filière</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>Semestre</TableHead>
                       <TableHead>Méthode</TableHead>
                       <TableHead>Date Paiement</TableHead>
                       <TableHead>Montant</TableHead>
@@ -438,7 +645,7 @@ export default function FacturationsPage() {
                   <TableBody>
                     {filteredFactures.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8">
+                        <TableCell colSpan={10} className="text-center py-8">
                           <div className="text-gray-500">
                             Aucune facture trouvée
                           </div>
@@ -464,6 +671,15 @@ export default function FacturationsPage() {
                           </TableCell>
                           <TableCell>
                             {getTypeBadge(facture.typePaiement)}
+                          </TableCell>
+                          <TableCell>
+                            {facture.semester ? (
+                              <Badge variant="secondary" className="text-xs">
+                                {facture.semester}
+                              </Badge>
+                            ) : (
+                              <span className="text-gray-400 text-xs">-</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             {getMethodBadge(facture.methodePaiement)}
@@ -520,93 +736,258 @@ export default function FacturationsPage() {
         </div>
       </div>
 
-      {/* Modal de détail de facture */}
-      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-4xl bg-white">
+      {/* Modal de génération de facture */}
+      <Dialog open={isGenerateModalOpen} onOpenChange={setIsGenerateModalOpen}>
+        <DialogContent className="max-w-2xl bg-white h-screen overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Détails de la Facture</DialogTitle>
+            <DialogTitle>Générer une Nouvelle Facture</DialogTitle>
             <DialogDescription>
-              Facture générée automatiquement après paiement - Référence: {selectedFacture?.paymentId}
+              Créer une facture manuellement pour un paiement reçu
             </DialogDescription>
           </DialogHeader>
           
-          {selectedFacture && (
-            <div className="space-y-6 bg-white">
-              {/* En-tête */}
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-semibold text-lg">{selectedFacture.numero}</h3>
-                  <div className="mt-2 space-y-1 text-sm">
-                    <p><strong>Élève:</strong> {selectedFacture.studentName}</p>
-                    <p><strong>Parent:</strong> {selectedFacture.parentName}</p>
-                    <p><strong>Email:</strong> {selectedFacture.parentEmail}</p>
-                    <p><strong>Référence Paiement:</strong> {selectedFacture.paymentId}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="space-y-1 text-sm">
-                    <p><strong>Date de paiement:</strong> {new Date(selectedFacture.datePaiement).toLocaleDateString('fr-FR')}</p>
-                    <p><strong>Date de facturation:</strong> {new Date(selectedFacture.dateFacturation).toLocaleDateString('fr-FR')}</p>
-                    <p><strong>Filière:</strong> {selectedFacture.filiere}</p>
-                    <p><strong>Vague:</strong> {selectedFacture.vague}</p>
-                  </div>
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-4 bg-white">
+            <div className="space-y-2">
+              <Label htmlFor="student" className="text-gray-700">Élève *</Label>
+              <Select 
+                value={generateForm.studentId}
+                onValueChange={(value) => handleFormChange('studentId', value)}
+              >
+                <SelectTrigger className="bg-white border-gray-300">
+                  <SelectValue placeholder="Sélectionner" />
+                </SelectTrigger>
+                <SelectContent className="w-12 bg-white">
+                  {students.map(student => (
+                    <SelectItem key={student.id} value={student.id}>
+                      {student.name} - {student.filiere} ({student.parent})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {/* Informations paiement */}
-              <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <Label>Type de Paiement</Label>
-                  <p className="font-medium">{getTypeBadge(selectedFacture.typePaiement)}</p>
-                </div>
-                <div>
-                  <Label>Méthode de Paiement</Label>
-                  <p className="font-medium">{getMethodBadge(selectedFacture.methodePaiement)}</p>
-                </div>
-                <div>
-                  <Label>Montant Total</Label>
-                  <p className="font-bold text-green-600 text-lg">{formatMoney(selectedFacture.montant)}</p>
-                </div>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="typePaiement" className="text-gray-700">Type de Paiement *</Label>
+              <Select
+                value={generateForm.typePaiement}
+                onValueChange={(value: 'inscription' | 'scolarite' | 'frais_divers') => handleFormChange('typePaiement', value)}
+              >
+                <SelectTrigger className=" border-gray-300">
+                  <SelectValue placeholder="Type de paiement" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="inscription">Inscription</SelectItem>
+                  <SelectItem value="scolarite">Scolarité</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              {/* Items de la facture */}
-              <div>
-                <h4 className="font-semibold mb-3">Détail de la facture</h4>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Description</TableHead>
-                      <TableHead className="text-right">Quantité</TableHead>
-                      <TableHead className="text-right">Prix unitaire</TableHead>
-                      <TableHead className="text-right">Montant</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedFacture.items.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{item.description}</TableCell>
-                        <TableCell className="text-right">{item.quantite}</TableCell>
-                        <TableCell className="text-right">{formatMoney(item.prixUnitaire)}</TableCell>
-                        <TableCell className="text-right font-medium">{formatMoney(item.montant)}</TableCell>
-                      </TableRow>
+            {/* Champ Semestre - seulement pour les paiements de scolarité */}
+            {generateForm.typePaiement === 'scolarite' && generateForm.studentId && (
+              <div className="space-y-2">
+                <Label htmlFor="semester" className="text-gray-700">Semestre *</Label>
+                <Select 
+                  value={generateForm.semester || ''}
+                  onValueChange={(value) => handleFormChange('semester', value)}
+                >
+                  <SelectTrigger className="bg-white border-gray-300">
+                    <SelectValue placeholder="Sélectionner un semestre" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {getAvailableSemesters(generateForm.studentId).map(semester => (
+                      <SelectItem key={semester} value={semester}>
+                        {semester}
+                      </SelectItem>
                     ))}
-                  </TableBody>
-                </Table>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="montant" className="text-gray-700">Montant (FCFA) *</Label>
+              <Input 
+                type="number" 
+                placeholder="0"
+                value={generateForm.montant || ''}
+                onChange={(e) => handleFormChange('montant', parseInt(e.target.value) || 0)}
+                className="bg-white border-gray-300"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="methodePaiement" className="text-gray-700">Méthode de Paiement *</Label>
+              <Select 
+                value={generateForm.methodePaiement}
+                onValueChange={(value: 'especes' | 'cheque' | 'virement' | 'mobile_money') => handleFormChange('methodePaiement', value)}
+              >
+                <SelectTrigger className="bg-white border-gray-300">
+                  <SelectValue placeholder="Méthode de paiement" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="especes">Espèces</SelectItem>
+                  <SelectItem value="cheque">Chèque</SelectItem>
+                  <SelectItem value="virement">Virement</SelectItem>
+                  <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="datePaiement" className="text-gray-700">Date de Paiement *</Label>
+              <Input 
+                type="date" 
+                value={generateForm.datePaiement}
+                onChange={(e) => handleFormChange('datePaiement', e.target.value)}
+                className="bg-white border-gray-300"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description" className="text-gray-700">Description *</Label>
+              <Input 
+                placeholder="Description du paiement..."
+                value={generateForm.description}
+                onChange={(e) => handleFormChange('description', e.target.value)}
+                className="bg-white border-gray-300"
+              />
+            </div>
+
+            {/* Champs spécifiques selon la méthode de paiement */}
+            {renderMethodSpecificFields()}
+
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="notes" className="text-gray-700">Notes</Label>
+              <Textarea 
+                placeholder="Informations complémentaires..."
+                value={generateForm.notes}
+                onChange={(e) => handleFormChange('notes', e.target.value)}
+                className="bg-white border-gray-300"
+                rows={3}
+              />
+            </div>
+
+            {/* Aperçu de la facture */}
+            {generateForm.studentId && generateForm.montant > 0 && (
+              <div className="col-span-2 mt-4">
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Aperçu de la Facture</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <p><strong>Élève:</strong> {students.find(s => s.id === generateForm.studentId)?.name}</p>
+                        <p><strong>Parent:</strong> {students.find(s => s.id === generateForm.studentId)?.parent}</p>
+                        <p><strong>Type:</strong> {generateForm.typePaiement}</p>
+                        {generateForm.semester && <p><strong>Semestre:</strong> {generateForm.semester}</p>}
+                      </div>
+                      <div>
+                        <p><strong>Méthode:</strong> {generateForm.methodePaiement}</p>
+                        <p><strong>Date:</strong> {new Date(generateForm.datePaiement).toLocaleDateString('fr-FR')}</p>
+                        <p><strong>Montant:</strong> {formatMoney(generateForm.montant)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="bg-white">
+            <Button variant="outline" onClick={() => setIsGenerateModalOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleGenerateFacture}>
+              <FileText className="h-4 w-4 mr-2" />
+              Générer la Facture
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de détail de facture - Version simplifiée et professionnelle */}
+      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle>Détails de la Facture</DialogTitle>
+          </DialogHeader>
+          
+          {selectedFacture && (
+            <div className="space-y-4 bg-white">
+              {/* Informations essentielles */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">N° Facture:</span>
+                  <span className="font-mono">{selectedFacture.numero}</span>
+                </div>
                 
-                <div className="flex justify-end mt-4">
-                  <div className="text-right space-y-1">
-                    <p className="text-lg font-bold">
-                      Total: {formatMoney(selectedFacture.montant)}
-                    </p>
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Élève:</span>
+                  <span>{selectedFacture.studentName}</span>
+                </div>
+
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Filière:</span>
+                  <span>{selectedFacture.filiere}</span>
+                </div>
+
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Type:</span>
+                  {getTypeBadge(selectedFacture.typePaiement)}
+                </div>
+
+                {selectedFacture.semester && (
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-medium text-gray-700">Semestre:</span>
+                    <Badge variant="secondary">{selectedFacture.semester}</Badge>
                   </div>
+                )}
+
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Montant payé:</span>
+                  <span className="font-bold text-green-600 text-lg">
+                    {formatFCFA(selectedFacture.montant)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Méthode:</span>
+                  {getMethodBadge(selectedFacture.methodePaiement)}
+                </div>
+
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Date:</span>
+                  <span>{new Date(selectedFacture.datePaiement).toLocaleDateString('fr-FR')}</span>
+                </div>
+
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Statut:</span>
+                  {getStatusBadge(selectedFacture.statut)}
                 </div>
               </div>
 
-              {selectedFacture.notes && (
-                <div>
-                  <h4 className="font-semibold mb-2">Notes</h4>
-                  <p className="text-sm bg-gray-50 p-3 rounded">{selectedFacture.notes}</p>
-                </div>
+              {/* Situation financière de l'élève */}
+              {selectedFacture.studentId && (
+                <Card className="mt-4">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3">Situation Financière</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total payé:</span>
+                        <span className="font-semibold text-green-600">
+                          {formatFCFA(students.find(s => s.id === selectedFacture.studentId)?.paidAmount || 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Reste à payer:</span>
+                        <span className="font-semibold text-orange-600">
+                          {formatFCFA(students.find(s => s.id === selectedFacture.studentId)?.remainingAmount || 0)}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
 
               {/* Actions */}
@@ -617,14 +998,7 @@ export default function FacturationsPage() {
                   onClick={() => generateFacturePDF(selectedFacture)}
                 >
                   <Printer className="h-4 w-4 mr-2" />
-                  Imprimer PDF
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="flex-1"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Télécharger
+                  PDF
                 </Button>
                 {selectedFacture.statut === 'generee' && (
                   <Button 
@@ -632,7 +1006,7 @@ export default function FacturationsPage() {
                     className="flex-1"
                   >
                     <Mail className="h-4 w-4 mr-2" />
-                    Envoyer au Parent
+                    Envoyer
                   </Button>
                 )}
               </div>
@@ -664,6 +1038,9 @@ export default function FacturationsPage() {
                 <p><strong>N°:</strong> {selectedFacture.numero}</p>
                 <p><strong>Montant:</strong> {formatMoney(selectedFacture.montant)}</p>
                 <p><strong>Type:</strong> {selectedFacture.typePaiement}</p>
+                {selectedFacture.semester && (
+                  <p><strong>Semestre:</strong> {selectedFacture.semester}</p>
+                )}
                 <p><strong>Date:</strong> {new Date(selectedFacture.datePaiement).toLocaleDateString('fr-FR')}</p>
               </div>
 
@@ -676,7 +1053,7 @@ export default function FacturationsPage() {
                   className="w-full p-3 border border-gray-300 rounded-md bg-white resize-none"
                   defaultValue={`Bonjour ${selectedFacture.parentName},
 
-Veuillez trouver ci-joint la facture n°${selectedFacture.numero} pour le paiement de ${selectedFacture.typePaiement} de ${selectedFacture.studentName}.
+Veuillez trouver ci-joint la facture n°${selectedFacture.numero} pour le paiement de ${selectedFacture.typePaiement}${selectedFacture.semester ? ` - ${selectedFacture.semester}` : ''} de ${selectedFacture.studentName}.
 
 Montant: ${formatMoney(selectedFacture.montant)}
 Date de paiement: ${new Date(selectedFacture.datePaiement).toLocaleDateString('fr-FR')}

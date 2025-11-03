@@ -192,13 +192,13 @@ export default function TeacherAttendancePage() {
     ]
   });
 
-  // Obtenir les horaires de cours pour la classe sélectionnée
+  // Horaires de cours pour la classe sélectionnée
   const getCurrentClassSchedule = (): ClassSchedule[] => {
     const currentClass = classesData.find(c => c.id === selectedClass);
     return currentClass?.teacherSchedule || [];
   };
 
-  // Obtenir le jour de la semaine pour une date
+  // Jour de la semaine pour une date
   const getDayOfWeek = (dateString: string): string => {
     const date = new Date(dateString);
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -224,6 +224,12 @@ export default function TeacherAttendancePage() {
     const semester = semesters.find(s => s.id === selectedSemester);
     if (!semester) return false;
     return selectedDate >= semester.start && selectedDate <= semester.end;
+  };
+
+  const getCurrentSubject = (): string => {
+    if (!selectedCourseTime) return "Sélectionnez un horaire";
+    const currentScheduleItem = availableTimeSlots.find(s => s.id === selectedCourseTime);
+    return currentScheduleItem?.subject || "Mathématiques";
   };
 
   // Obtenir le statut actuel pour la date, l'heure de cours et le semestre sélectionnés
@@ -322,8 +328,8 @@ export default function TeacherAttendancePage() {
 
   // Trier les données
   const sortedStudents = [...filteredStudents].sort((a, b) => {
-    let aValue = a[sortField as keyof Student];
-    let bValue = b[sortField as keyof Student];
+    let aValue: string | number = a[sortField as keyof Student] as string | number;
+    let bValue: string | number = b[sortField as keyof Student] as string | number;
 
     if (sortField === "name") {
       aValue = String(aValue).toLowerCase();
@@ -466,13 +472,6 @@ export default function TeacherAttendancePage() {
     }));
   };
 
-  // Obtenir la matière actuelle
-  const getCurrentSubject = (): string => {
-    if (!selectedCourseTime) return "Sélectionnez un horaire";
-    const currentScheduleItem = availableTimeSlots.find(s => s.id === selectedCourseTime);
-    return currentScheduleItem?.subject || "Mathématiques";
-  };
-
   // Obtenir le libellé de l'horaire actuel
   const getCurrentTimeLabel = (): string => {
     if (!selectedCourseTime) return "";
@@ -502,7 +501,7 @@ export default function TeacherAttendancePage() {
                   value={selectedDate}
                   onChange={(e) => {
                     setSelectedDate(e.target.value);
-                    setSelectedCourseTime(""); // Réinitialiser l&apos;horaire quand la date change
+                    setSelectedCourseTime("");
                   }}
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -548,7 +547,7 @@ export default function TeacherAttendancePage() {
                   value={selectedClass}
                   onChange={(e) => {
                     setSelectedClass(e.target.value);
-                    setSelectedCourseTime(""); // Réinitialiser l&apos;horaire quand la classe change
+                    setSelectedCourseTime("");
                   }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >

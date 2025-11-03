@@ -4,12 +4,11 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
-import { Download, TrendingUp, Users, UserCheck, Calendar, School, Award, Target, BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon, Eye, UserCog } from 'lucide-react';
+import { Download, TrendingUp, Users, UserCheck, Calendar, School, Award, Target, BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon, UserCog } from 'lucide-react';
 
 export default function StatistiquesCenseurPage() {
   const [periode, setPeriode] = useState('mois');
@@ -60,13 +59,6 @@ export default function StatistiquesCenseurPage() {
   ];
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-
-  // Alertes et points d&apos;attention
-  const alertes = [
-    { type: 'warning', message: '2 formateurs avec taux de présence < 85%', count: 2 },
-    { type: 'info', message: '3 modules nécessitent une révision pédagogique', count: 3 },
-    { type: 'success', message: '5 formateurs excellents à récompenser', count: 5 }
-  ];
 
   // Objectifs mensuels
   const objectifsMensuels = [
@@ -177,32 +169,6 @@ export default function StatistiquesCenseurPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Alertes et points d&apos;attention */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {alertes.map((alerte, index) => (
-            <Card key={index} className={`
-              bg-white border-l-4
-              ${alerte.type === 'warning' ? 'border-l-orange-500' : ''}
-              ${alerte.type === 'info' ? 'border-l-blue-500' : ''}
-              ${alerte.type === 'success' ? 'border-l-green-500' : ''}
-            `}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{alerte.message}</p>
-                    <Badge variant="secondary" className="mt-1">
-                      {alerte.count} élément(s)
-                    </Badge>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
         </div>
 
         {/* Tabs pour différentes vues */}

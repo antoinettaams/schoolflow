@@ -23,8 +23,8 @@ interface Payment {
   filiere: string;
   vague: string;
   montant: number;
-  type: 'inscription' | 'scolarite';
-  methode: 'online' | 'especes' | 'cheque' | 'virement' | 'mobile_money';
+  type: 'inscription' | 'scolarite' | 'cantine' | 'activites';
+  methode: 'especes' | 'cheque' | 'virement' | 'mobile_money';
   statut: 'en_attente' | 'approuve' | 'rejete' | 'saisi_manuel';
   datePaiement: string;
   dateValidation?: string;
@@ -32,16 +32,20 @@ interface Payment {
   reference: string;
   notes?: string;
   justificatif?: string;
+  semester?: string;
+  description: string;
 }
 
 interface ManualPaymentForm {
   studentId: string;
-  type: 'inscription' | 'scolarite';
+  type: 'inscription' | 'scolarite' | 'cantine' | 'activites';
   montant: number;
   methode: 'especes' | 'cheque' | 'virement' | 'mobile_money';
   date: string;
   reference: string;
   notes: string;
+  semester?: string;
+  description: string;
   // Champs spécifiques selon la méthode
   banque?: string;
   numeroCheque?: string;
@@ -51,11 +55,28 @@ interface ManualPaymentForm {
   justificatifFile?: File;
 }
 
+interface Student {
+  id: string;
+  name: string;
+  filiere: string;
+  vague: string;
+  parentName: string;
+  registrationFee: number;
+  tuitionFee: number;
+  paidAmount: number;
+  remainingAmount: number;
+  totalSchoolFees: number;
+  paidSemesters: string[];
+  pendingSemesters: string[];
+  currentSemester: string;
+}
+
 type ManualPaymentFormField = keyof ManualPaymentForm;
 
 export default function PaiementsComptablePage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [selectedStatut, setSelectedStatut] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,11 +91,46 @@ export default function PaiementsComptablePage() {
     methode: 'especes',
     date: new Date().toISOString().split('T')[0],
     reference: '',
-    notes: ''
+    notes: '',
+    semester: '',
+    description: ''
   });
 
-  // Données simulées
+  // Données simulées avec les bonnes structures
   useEffect(() => {
+    const mockStudents: Student[] = [
+      {
+        id: 's1',
+        name: 'Marie Dupont',
+        filiere: 'Développement Web',
+        vague: 'Vague Janvier 2024',
+        parentName: 'M. Dupont',
+        registrationFee: 50000,
+        tuitionFee: 885000,
+        paidAmount: 345000,
+        remainingAmount: 590000,
+        totalSchoolFees: 935000,
+        paidSemesters: ['Semestre 1'],
+        pendingSemesters: ['Semestre 2', 'Semestre 3'],
+        currentSemester: 'Semestre 2'
+      },
+      {
+        id: 's2',
+        name: 'Pierre Martin',
+        filiere: 'Data Science',
+        vague: 'Vague Janvier 2024',
+        parentName: 'Mme. Martin',
+        registrationFee: 50000,
+        tuitionFee: 885000,
+        paidAmount: 0,
+        remainingAmount: 935000,
+        totalSchoolFees: 935000,
+        paidSemesters: [],
+        pendingSemesters: ['Semestre 1', 'Semestre 2', 'Semestre 3'],
+        currentSemester: 'Semestre 1'
+      }
+    ];
+
     const mockPayments: Payment[] = [
       {
         id: '1',
@@ -83,60 +139,51 @@ export default function PaiementsComptablePage() {
         parentName: 'M. Dupont',
         filiere: 'Développement Web',
         vague: 'Vague Janvier 2024',
-        montant: 150000,
-        type: 'scolarite',
-        methode: 'online',
-        statut: 'en_attente',
-        datePaiement: '2024-01-20',
-        reference: 'PAY-001',
-        notes: 'Paiement partiel'
-      },
-      {
-        id: '2',
-        studentId: 's2',
-        studentName: 'Pierre Martin',
-        parentName: 'Mme. Martin',
-        filiere: 'Data Science',
-        vague: 'Vague Janvier 2024',
-        montant: 200000,
-        type: 'scolarite',
-        methode: 'online',
-        statut: 'en_attente',
-        datePaiement: '2024-01-19',
-        reference: 'PAY-002'
-      },
-      {
-        id: '3',
-        studentId: 's3',
-        studentName: 'Sophie Bernard',
-        parentName: 'M. Bernard',
-        filiere: 'Design Graphique',
-        vague: 'Vague Janvier 2024',
         montant: 50000,
         type: 'inscription',
         methode: 'especes',
-        statut: 'saisi_manuel',
-        datePaiement: '2024-01-18',
-        dateValidation: '2024-01-18',
-        reference: 'CASH-001',
-        notes: 'Paiement en espèces reçu'
+        statut: 'approuve',
+        datePaiement: '2024-01-15',
+        dateValidation: '2024-01-15',
+        reference: 'INS-001',
+        description: 'Frais d\'inscription - Année scolaire 2024/2025'
       },
       {
-        id: '4',
-        studentId: 's4',
-        studentName: 'Thomas Moreau',
-        parentName: 'M. Moreau',
-        filiere: 'Réseaux & Sécurité',
+        id: '2',
+        studentId: 's1',
+        studentName: 'Marie Dupont',
+        parentName: 'M. Dupont',
+        filiere: 'Développement Web',
         vague: 'Vague Janvier 2024',
-        montant: 300000,
+        montant: 295000,
         type: 'scolarite',
         methode: 'virement',
         statut: 'approuve',
-        datePaiement: '2024-01-17',
-        dateValidation: '2024-01-17',
-        reference: 'VIR-001'
+        datePaiement: '2024-01-20',
+        dateValidation: '2024-01-20',
+        reference: 'SCO-S1-001',
+        semester: 'Semestre 1',
+        description: 'Frais de scolarité - Semestre 1'
+      },
+      {
+        id: '3',
+        studentId: 's1',
+        studentName: 'Marie Dupont',
+        parentName: 'M. Dupont',
+        filiere: 'Développement Web',
+        vague: 'Vague Janvier 2024',
+        montant: 295000,
+        type: 'scolarite',
+        methode: 'mobile_money',
+        statut: 'en_attente',
+        datePaiement: '2024-02-15',
+        reference: 'SCO-S2-001',
+        semester: 'Semestre 2',
+        description: 'Frais de scolarité - Semestre 2'
       }
     ];
+
+    setStudents(mockStudents);
     setPayments(mockPayments);
     setFilteredPayments(mockPayments);
   }, []);
@@ -171,6 +218,10 @@ export default function PaiementsComptablePage() {
     }).format(amount);
   };
 
+  const formatFCFA = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR').format(amount) + ' FCFA';
+  };
+
   const getStatusBadge = (statut: Payment['statut']) => {
     const config = {
       en_attente: { variant: 'secondary' as const, text: 'En attente', icon: Clock },
@@ -190,21 +241,75 @@ export default function PaiementsComptablePage() {
 
   const getMethodBadge = (methode: Payment['methode']) => {
     const config = {
-      online: { variant: 'default' as const, text: 'En ligne' },
       especes: { variant: 'secondary' as const, text: 'Espèces' },
       cheque: { variant: 'outline' as const, text: 'Chèque' },
       virement: { variant: 'default' as const, text: 'Virement' },
       mobile_money: { variant: 'secondary' as const, text: 'Mobile Money' }
     };
-    return <Badge variant={config[methode].variant}>{config[methode].text}</Badge>;
+    
+    const methodConfig = config[methode];
+    
+    if (!methodConfig) {
+      return <Badge variant="outline">Inconnu</Badge>;
+    }
+    
+    return <Badge variant={methodConfig.variant}>{methodConfig.text}</Badge>;
+  };
+
+  const getTypeLabel = (type: Payment['type']) => {
+    switch (type) {
+      case 'inscription': return 'Inscription';
+      case 'scolarite': return 'Scolarité';
+      case 'cantine': return 'Cantine';
+      case 'activites': return 'Activités';
+      default: return type;
+    }
+  };
+
+  // Fonction pour mettre à jour les données de l'élève après approbation
+  const updateStudentPaymentData = (studentId: string, montant: number, semester?: string) => {
+    setStudents(prev => prev.map(student => {
+      if (student.id === studentId) {
+        const newPaidAmount = student.paidAmount + montant;
+        const newRemainingAmount = Math.max(0, student.totalSchoolFees - newPaidAmount);
+        
+        const newPaidSemesters = [...student.paidSemesters];
+        let newPendingSemesters = [...student.pendingSemesters];
+        
+        // Si c'est un paiement de scolarité avec semestre, mettre à jour les listes
+        if (semester && student.pendingSemesters.includes(semester)) {
+          newPaidSemesters.push(semester);
+          newPendingSemesters = newPendingSemesters.filter(s => s !== semester);
+        }
+        
+        return {
+          ...student,
+          paidAmount: newPaidAmount,
+          remainingAmount: newRemainingAmount,
+          paidSemesters: newPaidSemesters,
+          pendingSemesters: newPendingSemesters
+        };
+      }
+      return student;
+    }));
   };
 
   const handleApprovePayment = (paymentId: string) => {
-    setPayments(prev => prev.map(p => 
-      p.id === paymentId 
-        ? { ...p, statut: 'approuve', dateValidation: new Date().toISOString().split('T')[0] }
-        : p
-    ));
+    setPayments(prev => prev.map(p => {
+      if (p.id === paymentId) {
+        const updatedPayment: Payment = { 
+          ...p, 
+          statut: 'approuve', 
+          dateValidation: new Date().toISOString().split('T')[0] 
+        };
+        
+        // Mettre à jour les données de l'élève
+        updateStudentPaymentData(p.studentId, p.montant, p.semester);
+        
+        return updatedPayment;
+      }
+      return p;
+    }));
   };
 
   const handleRejectPayment = (paymentId: string) => {
@@ -220,27 +325,57 @@ export default function PaiementsComptablePage() {
     setIsDetailModalOpen(true);
   };
 
+  const generateDescription = (type: string, semester?: string): string => {
+    const currentYear = new Date().getFullYear();
+    const nextYear = currentYear + 1;
+    
+    switch (type) {
+      case 'inscription':
+        return `Frais d'inscription - Année scolaire ${currentYear}/${nextYear}`;
+      case 'scolarite':
+        return semester ? `Frais de scolarité - ${semester}` : `Frais de scolarité`;
+      case 'cantine':
+        return `Frais de cantine - ${new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
+      case 'activites':
+        return `Frais d'activités périscolaires`;
+      default:
+        return 'Paiement divers';
+    }
+  };
+
   const handleManualPaymentSubmit = () => {
+    const selectedStudent = students.find(s => s.id === manualPaymentForm.studentId);
+    if (!selectedStudent) return;
+
+    // Générer la description automatiquement
+    const description = manualPaymentForm.description || generateDescription(manualPaymentForm.type, manualPaymentForm.semester);
+    
     // Générer une référence automatique
-    const reference = `MAN-${Date.now()}`;
+    const reference = manualPaymentForm.reference || `MAN-${Date.now()}`;
     
     const newPayment: Payment = {
       id: `manual-${Date.now()}`,
       studentId: manualPaymentForm.studentId,
-      studentName: "Élève sélectionné", // Remplacer par les vraies données
-      parentName: "Parent sélectionné",
-      filiere: "Filière sélectionnée",
-      vague: "Vague sélectionnée",
+      studentName: selectedStudent.name,
+      parentName: selectedStudent.parentName,
+      filiere: selectedStudent.filiere,
+      vague: selectedStudent.vague,
       montant: manualPaymentForm.montant,
       type: manualPaymentForm.type,
       methode: manualPaymentForm.methode,
       statut: 'saisi_manuel',
       datePaiement: manualPaymentForm.date,
-      reference: manualPaymentForm.reference || reference,
-      notes: manualPaymentForm.notes
+      reference: reference,
+      notes: manualPaymentForm.notes,
+      semester: manualPaymentForm.type === 'scolarite' ? manualPaymentForm.semester : undefined,
+      description: description
     };
 
     setPayments(prev => [newPayment, ...prev]);
+    
+    // Si c'est un paiement manuel, on met à jour directement les données de l'élève
+    updateStudentPaymentData(manualPaymentForm.studentId, manualPaymentForm.montant, manualPaymentForm.semester);
+    
     setIsManualPaymentModalOpen(false);
     
     // Reset du formulaire
@@ -251,15 +386,51 @@ export default function PaiementsComptablePage() {
       methode: 'especes',
       date: new Date().toISOString().split('T')[0],
       reference: '',
-      notes: ''
+      notes: '',
+      semester: '',
+      description: ''
     });
   };
 
   const handleFormChange = (field: ManualPaymentFormField, value: string | number | File) => {
-    setManualPaymentForm(prev => ({
-      ...prev,
+    const updatedForm = {
+      ...manualPaymentForm,
       [field]: value
-    }));
+    };
+
+    // Si l'élève ou le type change, réinitialiser le semestre et regénérer la description
+    if (field === 'studentId' || field === 'type' || field === 'semester') {
+      updatedForm.semester = field === 'studentId' ? '' : updatedForm.semester;
+      updatedForm.description = generateDescription(updatedForm.type, updatedForm.semester);
+    }
+
+    setManualPaymentForm(updatedForm);
+  };
+
+  const getAvailableSemesters = (studentId: string) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return [];
+    
+    return student.pendingSemesters;
+  };
+
+  const getAmountSuggestions = (studentId: string, type: string): number => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return 0;
+
+    switch (type) {
+      case 'inscription':
+        return student.registrationFee;
+      case 'scolarite':
+        // Prix par semestre (total scolarité / nombre de semestres)
+        return Math.round(student.tuitionFee / 3);
+      case 'cantine':
+        return 25000; // Prix fixe pour la cantine
+      case 'activites':
+        return 50000; // Prix fixe pour les activités
+      default:
+        return 0;
+    }
   };
 
   const renderMethodSpecificFields = () => {
@@ -394,9 +565,9 @@ export default function PaiementsComptablePage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestion des Paiements</h1>
-            <p className="text-gray-600 mt-1">Validation des paiements en ligne et saisie manuelle</p>
+            <p className="text-gray-600 mt-1">Saisie et validation des paiements physiques</p>
           </div>
-          <div className="flex gap-3 mt-4 sm:mt-0">
+          <div className="flex gap-3 mt-4 sm:mt-0 flex flex-col">
             <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Exporter
@@ -473,7 +644,7 @@ export default function PaiementsComptablePage() {
                   </div>
                 </div>
                 
-                <div className="flex gap-3">
+                <div className="flex gap-3 sm:flex flex-col">
                   <Select value={selectedStatut} onValueChange={setSelectedStatut}>
                     <SelectTrigger className="w-[150px] bg-white border-gray-300">
                       <Filter className="h-4 w-4 mr-2" />
@@ -518,8 +689,10 @@ export default function PaiementsComptablePage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Élève & Parent</TableHead>
-                      <TableHead>Filière</TableHead>
+                      <TableHead>Filière & Vague</TableHead>
+                      <TableHead>Description</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>Semestre</TableHead>
                       <TableHead>Méthode</TableHead>
                       <TableHead>Montant</TableHead>
                       <TableHead>Date</TableHead>
@@ -530,7 +703,7 @@ export default function PaiementsComptablePage() {
                   <TableBody>
                     {filteredPayments.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">
+                        <TableCell colSpan={10} className="text-center py-8">
                           <div className="text-gray-500">
                             Aucun paiement trouvé
                           </div>
@@ -551,16 +724,30 @@ export default function PaiementsComptablePage() {
                               <div className="text-gray-600 text-xs">{payment.vague}</div>
                             </div>
                           </TableCell>
+                          <TableCell className="max-w-[200px]">
+                            <div className="text-sm truncate" title={payment.description}>
+                              {payment.description}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge variant="outline" className="capitalize">
-                              {payment.type}
+                              {getTypeLabel(payment.type)}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {payment.semester ? (
+                              <Badge variant="secondary" className="text-xs">
+                                {payment.semester}
+                              </Badge>
+                            ) : (
+                              <span className="text-gray-400 text-xs">-</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             {getMethodBadge(payment.methode)}
                           </TableCell>
                           <TableCell className="font-semibold text-green-600">
-                            {formatMoney(payment.montant)}
+                            {formatFCFA(payment.montant)}
                           </TableCell>
                           <TableCell>
                             <div className="text-sm">
@@ -613,79 +800,99 @@ export default function PaiementsComptablePage() {
         </div>
       </div>
 
-      {/* Modal de détail */}
+      {/* Modal de détail - Version simplifiée et professionnelle */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-2xl bg-white">
+        <DialogContent className="max-w-md bg-white">
           <DialogHeader>
             <DialogTitle>Détails du Paiement</DialogTitle>
-            <DialogDescription>
-              Informations complètes sur le paiement
-            </DialogDescription>
           </DialogHeader>
           
           {selectedPayment && (
-            <div className="space-y-4 bg-white  h-screen overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-700">Élève</Label>
-                  <p className="font-medium">{selectedPayment.studentName}</p>
+            <div className="space-y-4 bg-white">
+              {/* Informations de base */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Élève:</span>
+                  <span>{selectedPayment.studentName}</span>
                 </div>
-                <div>
-                  <Label className="text-gray-700">Parent</Label>
-                  <p className="font-medium">{selectedPayment.parentName}</p>
+                
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Filière:</span>
+                  <span>{selectedPayment.filiere}</span>
                 </div>
-                <div>
-                  <Label className="text-gray-700">Filière</Label>
-                  <p>{selectedPayment.filiere}</p>
+
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Vague:</span>
+                  <span>{selectedPayment.vague}</span>
                 </div>
-                <div>
-                  <Label className="text-gray-700">Vague</Label>
-                  <p>{selectedPayment.vague}</p>
-                </div>
-                <div>
-                  <Label className="text-gray-700">Type</Label>
+
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Type:</span>
                   <Badge variant="outline" className="capitalize">
-                    {selectedPayment.type}
+                    {getTypeLabel(selectedPayment.type)}
                   </Badge>
                 </div>
-                <div>
-                  <Label className="text-gray-700">Méthode</Label>
+
+                {selectedPayment.semester && (
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-medium text-gray-700">Semestre:</span>
+                    <Badge variant="secondary">{selectedPayment.semester}</Badge>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Montant:</span>
+                  <span className="font-bold text-green-600 text-lg">
+                    {formatFCFA(selectedPayment.montant)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Méthode:</span>
                   {getMethodBadge(selectedPayment.methode)}
                 </div>
-                <div>
-                  <Label className="text-gray-700">Montant</Label>
-                  <p className="font-bold text-green-600 text-lg">
-                    {formatMoney(selectedPayment.montant)}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-gray-700">Statut</Label>
+
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Statut:</span>
                   {getStatusBadge(selectedPayment.statut)}
                 </div>
-                <div>
-                  <Label className="text-gray-700">Date Paiement</Label>
-                  <p>{new Date(selectedPayment.datePaiement).toLocaleDateString('fr-FR')}</p>
+
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Date:</span>
+                  <span>{new Date(selectedPayment.datePaiement).toLocaleDateString('fr-FR')}</span>
                 </div>
-                {selectedPayment.dateValidation && (
-                  <div>
-                    <Label className="text-gray-700">Date Validation</Label>
-                    <p>{new Date(selectedPayment.dateValidation).toLocaleDateString('fr-FR')}</p>
-                  </div>
-                )}
-                <div className="col-span-2">
-                  <Label className="text-gray-700">Référence</Label>
-                  <p className="font-mono">{selectedPayment.reference}</p>
+
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium text-gray-700">Référence:</span>
+                  <span className="font-mono text-sm">{selectedPayment.reference}</span>
                 </div>
-                {selectedPayment.notes && (
-                  <div className="col-span-2">
-                    <Label className="text-gray-700">Notes</Label>
-                    <p className="text-sm bg-gray-50 p-2 rounded">{selectedPayment.notes}</p>
-                  </div>
-                )}
               </div>
 
+              {/* Résumé financier de l'élève */}
+              {selectedPayment.studentId && (
+                <Card className="mt-4">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3">Situation Financière</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total payé:</span>
+                        <span className="font-semibold text-green-600">
+                          {formatFCFA(students.find(s => s.id === selectedPayment.studentId)?.paidAmount || 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Reste à payer:</span>
+                        <span className="font-semibold text-orange-600">
+                          {formatFCFA(students.find(s => s.id === selectedPayment.studentId)?.remainingAmount || 0)}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {selectedPayment.statut === 'en_attente' && (
-                <div className="flex gap-3 pt-4 border-t ">
+                <div className="flex gap-3 pt-4 border-t">
                   <Button 
                     onClick={() => handleApprovePayment(selectedPayment.id)}
                     className="flex-1 bg-green-600 hover:bg-green-700"
@@ -710,7 +917,7 @@ export default function PaiementsComptablePage() {
 
       {/* Modal de saisie manuelle */}
       <Dialog open={isManualPaymentModalOpen} onOpenChange={setIsManualPaymentModalOpen}>
-        <DialogContent className="max-w-2xl bg-white">
+        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Saisir un Paiement Manuel</DialogTitle>
             <DialogDescription>
@@ -718,7 +925,7 @@ export default function PaiementsComptablePage() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="grid grid-cols-2 gap-4 bg-white ">
+          <div className="grid grid-cols-2 gap-4 bg-white">
             <div className="space-y-2">
               <Label htmlFor="student" className="text-gray-700">Élève *</Label>
               <Select 
@@ -729,9 +936,11 @@ export default function PaiementsComptablePage() {
                   <SelectValue placeholder="Sélectionner un élève" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="s1">Marie Dupont (Dev Web)</SelectItem>
-                  <SelectItem value="s2">Pierre Martin (Data Science)</SelectItem>
-                  <SelectItem value="s3">Sophie Bernard (Design)</SelectItem>
+                  {students.map(student => (
+                    <SelectItem key={student.id} value={student.id}>
+                      {student.name} - {student.filiere} ({student.vague})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -740,7 +949,7 @@ export default function PaiementsComptablePage() {
               <Label htmlFor="type" className="text-gray-700">Type *</Label>
               <Select 
                 value={manualPaymentForm.type}
-                onValueChange={(value: 'inscription' | 'scolarite') => handleFormChange('type', value)}
+                onValueChange={(value: 'inscription' | 'scolarite' | 'cantine' | 'activites') => handleFormChange('type', value)}
               >
                 <SelectTrigger className="bg-white border-gray-300">
                   <SelectValue placeholder="Type de paiement" />
@@ -748,9 +957,32 @@ export default function PaiementsComptablePage() {
                 <SelectContent>
                   <SelectItem value="inscription">Inscription</SelectItem>
                   <SelectItem value="scolarite">Scolarité</SelectItem>
+                  <SelectItem value="cantine">Cantine</SelectItem>
+                  <SelectItem value="activites">Activités</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {manualPaymentForm.type === 'scolarite' && manualPaymentForm.studentId && (
+              <div className="space-y-2">
+                <Label htmlFor="semester" className="text-gray-700">Semestre *</Label>
+                <Select 
+                  value={manualPaymentForm.semester || ''}
+                  onValueChange={(value) => handleFormChange('semester', value)}
+                >
+                  <SelectTrigger className="bg-white border-gray-300">
+                    <SelectValue placeholder="Sélectionner un semestre" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAvailableSemesters(manualPaymentForm.studentId).map(semester => (
+                      <SelectItem key={semester} value={semester}>
+                        {semester}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="montant" className="text-gray-700">Montant (FCFA) *</Label>
@@ -761,6 +993,11 @@ export default function PaiementsComptablePage() {
                 onChange={(e) => handleFormChange('montant', parseInt(e.target.value) || 0)}
                 className="bg-white border-gray-300"
               />
+              {manualPaymentForm.studentId && (
+                <p className="text-xs text-gray-500">
+                  Suggestion: {formatFCFA(getAmountSuggestions(manualPaymentForm.studentId, manualPaymentForm.type))}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -801,6 +1038,16 @@ export default function PaiementsComptablePage() {
               />
             </div>
 
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="description" className="text-gray-700">Description</Label>
+              <Input 
+                placeholder="Description du paiement"
+                value={manualPaymentForm.description}
+                onChange={(e) => handleFormChange('description', e.target.value)}
+                className="bg-white border-gray-300"
+              />
+            </div>
+
             {/* Champs spécifiques selon la méthode de paiement */}
             {renderMethodSpecificFields()}
 
@@ -814,6 +1061,28 @@ export default function PaiementsComptablePage() {
               />
             </div>
           </div>
+
+          {/* Résumé de l'élève sélectionné */}
+          {manualPaymentForm.studentId && (
+            <Card className="mt-4">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Total payé:</span>
+                    <p className="font-semibold text-green-600">
+                      {formatFCFA(students.find(s => s.id === manualPaymentForm.studentId)?.paidAmount || 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Reste à payer:</span>
+                    <p className="font-semibold text-orange-600">
+                      {formatFCFA(students.find(s => s.id === manualPaymentForm.studentId)?.remainingAmount || 0)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <DialogFooter className="bg-white">
             <Button variant="outline" onClick={() => setIsManualPaymentModalOpen(false)}>

@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------- USERS -------------------
+model User {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  email       String   @unique
+  role        UserRole
+  firstName   String
+  lastName    String
+  phone       String?
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdById String?
+  createdBy   User?    @relation("UserCreatedUsers", fields: [createdById], references: [id])
+  createdUsers User[]  @relation("UserCreatedUsers")
+
+  student     Student?
+  teacher     Teacher?
+  parent      Parent?
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  CENSEUR
+  SECRETAIRE
+  COMPTABLE
+  ENSEIGNANT
+  ETUDIANT
+  PARENT
+}
+
+// ------------------- STUDENT -------------------
+model Student {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  studentNumber String   @unique
+  vagueNumber   String
+  filiereId     Int?
+  filiere       Filiere? @relation(fields: [filiereId], references: [id])
+
+  vagueId       String?
+  vague         Vague?   @relation("VagueStudents", fields: [vagueId], references: [id])
+
+  createdAt     DateTime @default(now())
+
+  @@map("students")
+}
+
+// ------------------- TEACHER -------------------
+model Teacher {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  matiere     String
+  enseignements Enseignement[]
+
+  createdAt   DateTime @default(now())
+
+  @@map("teachers")
+}
+
+// ------------------- PARENT -------------------
+model Parent {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  enfantName  String
+  filiere     String
+  relation    String
+
+  createdAt   DateTime @default(now())
+
+  @@map("parents")
+}
+
+// ------------------- FILIERE -------------------
+model Filiere {
+  id            Int        @id @default(autoincrement())
+  nom           String
+  description   String?
+  dureeFormation String
+  semestres     Semestre[]
+  modules       Module[]
+  students      Student[]
+
+  vaguesPivot   VagueFiliere[]  // relation pivot avec Vague
+
+  createdAt     DateTime @default(now())
+}
+
+// ------------------- SEMESTRE -------------------
+model Semestre {
+  id        Int       @id @default(autoincrement())
+  nom       String
+  description String?
+  dateDebut DateTime
+  dateFin   DateTime
+  filiereId Int
+  filiere   Filiere   @relation(fields: [filiereId], references: [id])
+  modules   Module[]
+}
+
+// ------------------- MODULE -------------------
+model Module {
+  id          Int       @id @default(autoincrement())
+  nom         String
+  coefficient Int
+  typeModule  String
+  description String?
+  filiereId   Int
+  filiere     Filiere   @relation(fields: [filiereId], references: [id])
+  semestreId  Int?
+  semestre    Semestre? @relation(fields: [semestreId], references: [id])
+  enseignements Enseignement[]
+}
+
+// ------------------- ENSEIGNEMENT -------------------
+model Enseignement {
+  id          Int      @id @default(autoincrement())
+  professeurId String
+  teacher     Teacher  @relation(fields: [professeurId], references: [id])
+  moduleId    Int
+  module      Module   @relation(fields: [moduleId], references: [id])
+  jour        String
+  heureDebut  String
+  heureFin    String
+}
+
+// ------------------- VAGUE -------------------
+model Vague {
+  id          String     @id @default(cuid())
+  nom         String     @unique
+  description String?
+  semestres   String     // liste de semestres séparés par des virgules
+  dateDebut   DateTime
+  dateFin     DateTime
+  isActive    Boolean    @default(true)
+
+  filieresPivot VagueFiliere[]  // relation pivot
+  students      Student[]        @relation("VagueStudents")
+
+  createdAt   DateTime   @default(now())
+}
+
+// ------------------- VAGUE - FILIERE PIVOT -------------------
+model VagueFiliere {
+  vagueId   String
+  filiereId Int
+
+  vague     Vague   @relation(fields: [vagueId], references: [id])
+  filiere   Filiere @relation(fields: [filiereId], references: [id])
+
+  @@id([vagueId, filiereId])
+}

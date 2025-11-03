@@ -1,338 +1,517 @@
+// app/dashboard/comptable/profile/page.tsx
 "use client";
-import React, { useState, useEffect } from 'react';
-import { 
-  Filter, Download, RefreshCw,
-  Eye, Users, GraduationCap, CreditCard,
-} from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-interface OperationAutomatique {
-  id: string; 
-  numero: string;
-  date: string;
-  type: 'inscription_eleve' | 'paiement_scolarite' | 'paiement_inscription';
-  studentId?: string;
-  studentName?: string;
-  parentName?: string;
-  filiere?: string;
-  vague?: string;
-  compteDebit: string;
-  compteCredit: string;
-  libelle: string;
-  montant: number;
-  reference: string;
-  statut: 'comptabilise' | 'annule';
-  modePaiement?: 'especes' | 'cheque' | 'virement' | 'mobile_money' | 'carte';
-  source: 'paiement_auto' | 'inscription_auto';
-  dateComptabilisation: string;
-  notes?: string;
+import React, { useState, useRef, useEffect } from "react";
+import { useUser, useClerk } from "@clerk/nextjs";
+import {
+  User,
+  Mail,
+  Camera,
+  Trash2,
+  LogOut,
+  AlertCircle,
+  Calendar,
+  CheckCircle,
+  Shield,
+  CreditCard,
+  FileText,
+  Calculator,
+  LucideIcon,
+  X,
+} from "lucide-react";
+import Image from "next/image";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
+// Interface pour les activités utilisateur
+interface UserActivity {
+  id: number;
+  type: string;
+  description: string;
+  timestamp: Date;
+  icon: React.ReactNode;
 }
 
-export default function JournalOperationsPage() {
-  const [operations, setOperations] = useState<OperationAutomatique[]>([]);
-  const [filteredOperations, setFilteredOperations] = useState<OperationAutomatique[]>([]);
-  const [selectedType, setSelectedType] = useState<string>('all');
-  const [dateDebut, setDateDebut] = useState<string>('2024-01-01');
-  const [dateFin, setDateFin] = useState<string>('2024-01-31');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedOperation, setSelectedOperation] = useState<OperationAutomatique | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+const ComptableProfilePage = () => {
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
+  const [showImageOptions, setShowImageOptions] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [userActivity, setUserActivity] = useState<UserActivity[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 🔥 Activité simulée pour comptable
+  const getUserActivity = (): UserActivity[] => [
+    {
+      id: 1,
+      type: "login",
+      description: "Connexion réussie",
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      icon: <CheckCircle className="w-4 h-4 text-green-500" />,
+    },
+    {
+      id: 2,
+      type: "payment_processed",
+      description: "Lot de paiements traité",
+      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      icon: <CreditCard className="w-4 h-4 text-blue-500" />,
+    },
+    {
+      id: 3,
+      type: "invoice_generated",
+      description: "Factures mensuelles générées",
+      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      icon: <FileText className="w-4 h-4 text-purple-500" />,
+    },
+    {
+      id: 4,
+      type: "report_created",
+      description: "Rapport financier trimestriel",
+      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      icon: <Calculator className="w-4 h-4 text-orange-500" />,
+    },
+  ];
 
   useEffect(() => {
-    const mockOperationsAutomatiques: OperationAutomatique[] = [
-      {
-        id: '1',
-        numero: 'JOU-2024-001',
-        date: '2024-01-05',
-        type: 'paiement_inscription',
-        studentId: 's1',
-        studentName: 'Marie Dupont',
-        parentName: 'M. Dupont',
-        filiere: 'Développement Web',
-        vague: 'Vague Janvier 2024',
-        compteDebit: '101',
-        compteCredit: '702',
-        libelle: 'Inscription - Marie Dupont - Paiement espèces',
-        montant: 50000,
-        reference: 'INSC-001',
-        statut: 'comptabilise',
-        modePaiement: 'especes',
-        source: 'paiement_auto',
-        dateComptabilisation: '2024-01-05',
-        notes: 'Paiement en espèces enregistré automatiquement'
-      },
-      {
-        id: '2',
-        numero: 'JOU-2024-002',
-        date: '2024-01-05',
-        type: 'paiement_scolarite',
-        studentId: 's2',
-        studentName: 'Pierre Martin',
-        parentName: 'Mme. Martin',
-        filiere: 'Data Science',
-        vague: 'Vague Janvier 2024',
-        compteDebit: '102',
-        compteCredit: '701',
-        libelle: 'Scolarité - Pierre Martin - Virement bancaire',
-        montant: 300000,
-        reference: 'FACT-001',
-        statut: 'comptabilise',
-        modePaiement: 'virement',
-        source: 'paiement_auto',
-        dateComptabilisation: '2024-01-05'
-      },
-      {
-        id: '3',
-        numero: 'JOU-2024-003',
-        date: '2024-01-10',
-        type: 'paiement_inscription',
-        studentId: 's3',
-        studentName: 'Sophie Bernard',
-        parentName: 'M. Bernard',
-        filiere: 'Design Graphique',
-        vague: 'Vague Janvier 2024',
-        compteDebit: '102',
-        compteCredit: '702',
-        libelle: 'Inscription - Sophie Bernard - Mobile Money',
-        montant: 50000,
-        reference: 'INSC-002',
-        statut: 'comptabilise',
-        modePaiement: 'mobile_money',
-        source: 'paiement_auto',
-        dateComptabilisation: '2024-01-10'
-      }
-    ];
-    setOperations(mockOperationsAutomatiques);
-    setFilteredOperations(mockOperationsAutomatiques);
+    setUserActivity(getUserActivity());
   }, []);
 
-  useEffect(() => {
-    const filtered = operations.filter(op => 
-      op.date >= dateDebut &&
-      op.date <= dateFin &&
-      (selectedType === 'all' || op.type === selectedType) &&
-      (searchTerm === '' || 
-        op.libelle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        op.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (op.studentName && op.studentName.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
+  // ✅ Upload photo
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("Veuillez sélectionner une image valide");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("L'image ne doit pas dépasser 5MB");
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      await user?.setProfileImage({ file });
+      alert("✅ Photo de profil mise à jour avec succès !");
+      setShowImageOptions(false);
+
+      // Ajouter dans le journal d'activité
+      setUserActivity((prev) => [
+        {
+          id: Date.now(),
+          type: "profile_update",
+          description: "Photo de profil mise à jour",
+          timestamp: new Date(),
+          icon: <Camera className="w-4 h-4 text-blue-500" />,
+        },
+        ...prev,
+      ]);
+    } catch (error) {
+      console.error("Erreur upload:", error);
+      alert("Erreur lors du téléchargement de l'image");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  // ✅ Supprimer la photo
+  const handleDeleteImage = async (): Promise<void> => {
+    if (!confirm("Supprimer votre photo de profil ?")) return;
+    try {
+      await user?.setProfileImage({ file: null });
+      alert("✅ Photo supprimée avec succès !");
+      setShowImageOptions(false);
+    } catch (error) {
+      console.error(error);
+      alert("Erreur lors de la suppression");
+    }
+  };
+
+  // ✅ Télécharger l'image
+  const handleDownloadImage = (): void => {
+    const link = document.createElement("a");
+    link.href = user?.imageUrl || "";
+    link.download = `photo-profil-${user?.firstName}-${user?.lastName}.jpg`;
+    link.click();
+  };
+
+  // ✅ Déconnexion
+  const handleLogout = (): void => setIsLogoutModalOpen(true);
+  const handleConfirmLogout = async (): Promise<void> => await signOut({ redirectUrl: "/auth/signin" });
+  const handleCancelLogout = (): void => setIsLogoutModalOpen(false);
+
+  if (!isLoaded || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Chargement du profil...</p>
+        </div>
+      </div>
     );
-    setFilteredOperations(filtered);
-  }, [operations, dateDebut, dateFin, selectedType, searchTerm]);
+  }
 
-  const formatMoney = (amount: number) => new Intl.NumberFormat('fr-FR', {style: 'currency', currency: 'XOF'}).format(amount);
-
-  const getTypeBadge = (type: OperationAutomatique['type']) => {
-    const map = {
-      inscription_eleve: { text: 'Inscription', variant: 'default' as const, icon: Users },
-      paiement_scolarite: { text: 'Scolarité', variant: 'secondary' as const, icon: GraduationCap },
-      paiement_inscription: { text: 'Paiement Inscription', variant: 'outline' as const, icon: CreditCard }
-    };
-    const {text, variant, icon: Icon} = map[type];
-    return <Badge variant={variant} className="flex items-center gap-1"><Icon className="h-3 w-3" />{text}</Badge>;
-  };
-
-  const getSourceBadge = (source: OperationAutomatique['source']) => {
-    const map = {
-      paiement_auto: { text: 'Paiement Auto', variant: 'default' as const },
-      inscription_auto: { text: 'Inscription Auto', variant: 'secondary' as const }
-    };
-    return <Badge variant={map[source].variant}>{map[source].text}</Badge>;
-  };
-
-  const getModePaiementBadge = (mode?: string) => {
-    if (!mode) return null;
-    const map = {
-      especes: { text: 'Espèces', variant: 'secondary' as const },
-      cheque: { text: 'Chèque', variant: 'outline' as const },
-      virement: { text: 'Virement', variant: 'default' as const },
-      mobile_money: { text: 'Mobile Money', variant: 'secondary' as const },
-      carte: { text: 'Carte', variant: 'outline' as const }
-    };
-    return <Badge variant={map[mode as keyof typeof map]?.variant ?? 'default'}>{map[mode as keyof typeof map]?.text ?? mode}</Badge>;
-  };
-
-  const handleViewDetails = (operation: OperationAutomatique) => {
-    setSelectedOperation(operation);
-    setIsDetailModalOpen(true);
-  };
+  const profileImage = user.imageUrl || "https://placehold.co/150x150/3b82f6/ffffff?text=€";
+  const createdAt = user.createdAt ? new Date(user.createdAt) : new Date();
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6ss">
-      {/* Header */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Journal des Opérations</h1>
-            <p className="text-gray-600 mt-1">Opérations comptables liées aux inscriptions et scolarités</p>
-          </div>
-          <div className="flex gap-3 mt-4 sm:mt-0">
-            <Button variant="outline" onClick={() => alert('Export PDF en cours')}>
-              <Download className="h-4 w-4 mr-2" />
-              Exporter PDF
-            </Button>
-            <Button variant="outline" onClick={() => alert('Synchronisation en cours')}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Synchroniser
-            </Button>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImageUpload}
+        accept="image/*"
+        className="hidden"
+      />
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-6 space-y-6 max-w-7xl mx-auto">
-          {/* Stat cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader><CardTitle>Total Opérations</CardTitle></CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{operations.length}</div>
-                <p className="text-xs text-gray-600 mt-1">Opérations liées inscr./scolarité</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle>Encaissements</CardTitle></CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{formatMoney(operations.reduce((a, op) => ['paiement_inscription', 'paiement_scolarite'].includes(op.type) ? a + op.montant : a, 0))}</div>
-                <p className="text-xs text-gray-600 mt-1">Scolarité & Inscriptions</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle>Opérations Paiement Auto</CardTitle></CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">{operations.filter(op => op.source === 'paiement_auto').length}</div>
-                <p className="text-xs text-gray-600 mt-1">Depuis paiements automatique</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Filters */}
-          <Card>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Input 
-                  placeholder="Rechercher par libellé, référence, élève..."
-                  className="flex-grow"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                />
-                <Select value={selectedType} onValueChange={setSelectedType}>
-                  <SelectTrigger className="w-[160px]">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Tous types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous types</SelectItem>
-                    <SelectItem value="paiement_inscription">Paiements Inscription</SelectItem>
-                    <SelectItem value="paiement_scolarite">Paiements Scolarité</SelectItem>
-                    <SelectItem value="inscription_eleve">Inscriptions Élèves</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input type="date" value={dateDebut} onChange={e => setDateDebut(e.target.value)} />
-                <Input type="date" value={dateFin} onChange={e => setDateFin(e.target.value)} />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Journal des Opérations Automatiques</CardTitle>
-              <CardDescription>{filteredOperations.length} opération(s) trouvée(s)</CardDescription>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>N° Opération</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Élève</TableHead>
-                    <TableHead>Libellé</TableHead>
-                    <TableHead>Comptes</TableHead>
-                    <TableHead>Montant</TableHead>
-                    <TableHead>Référence</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOperations.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-gray-500">Aucune opération trouvée</TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredOperations.map(op => (
-                      <TableRow key={op.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleViewDetails(op)}>
-                        <TableCell className="font-mono font-medium">{op.numero}</TableCell>
-                        <TableCell>{new Date(op.date).toLocaleDateString('fr-FR')}</TableCell>
-                        <TableCell>{getTypeBadge(op.type)}</TableCell>
-                        <TableCell>{op.studentName || <span className="text-gray-400">Système</span>}</TableCell>
-                        <TableCell title={op.libelle} className="max-w-[200px] truncate">{op.libelle}</TableCell>
-                        <TableCell>
-                          <div>Débit: {op.compteDebit}</div>
-                          <div>Crédit: {op.compteCredit}</div>
-                        </TableCell>
-                        <TableCell className="font-semibold text-green-600">{formatMoney(op.montant)}</TableCell>
-                        <TableCell className="font-mono text-sm">{op.reference}</TableCell>
-                        <TableCell>{getSourceBadge(op.source)}</TableCell>
-                        <TableCell>
-                          <Button variant="outline" size="sm" onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewDetails(op);
-                          }}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Modal Details */}
-      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-2xl p-6 bg-white">
-          <DialogHeader>
-            <DialogTitle>Détails de l&apos;Opération</DialogTitle>
-            <DialogDescription>{selectedOperation?.numero} - Générée automatiquement</DialogDescription>
-          </DialogHeader>
-          {selectedOperation && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p><strong>Date:</strong> {new Date(selectedOperation.date).toLocaleDateString('fr-FR')}</p>
-                  <p><strong>Type:</strong> {getTypeBadge(selectedOperation.type)}</p>
-                  <p><strong>Référence:</strong> {selectedOperation.reference}</p>
-                  <p><strong>Statut:</strong> <Badge variant="default">Comptabilisé</Badge></p>
-                </div>
-                <div>
-                  <p><strong>Montant:</strong> <span className="text-green-600 font-bold">{formatMoney(selectedOperation.montant)}</span></p>
-                  {selectedOperation.modePaiement && <p><strong>Mode paiement:</strong> {getModePaiementBadge(selectedOperation.modePaiement)}</p>}
-                  <p><strong>Date comptabilisation:</strong> {new Date(selectedOperation.dateComptabilisation).toLocaleDateString('fr-FR')}</p>
+      <div className="h-screen overflow-y-auto">
+        <div className="max-w-6xl mx-auto p-6 space-y-6">
+          {/* ✅ Carte de profil principale - MÊME DESIGN QUE PARENT */}
+          <Card className="relative overflow-hidden border-0 shadow-xl">
+            {/* Bannière avec dégradé bleu-violet COMME PARENT */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-40 w-full relative">
+              <div className="absolute left-8 bottom-0 translate-y-1/2">
+                <div className="relative">
+                  <Image
+                    src={profileImage}
+                    alt="Photo de profil"
+                    width={128}
+                    height={128}
+                    className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-2xl cursor-pointer"
+                    onClick={() => setShowImageOptions(true)}
+                  />
+                  <Button
+                    onClick={() => setShowImageOptions(true)}
+                    disabled={isUploading}
+                    size="icon"
+                    className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full border-2 border-white shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-110 disabled:opacity-50 w-10 h-10"
+                  >
+                    {isUploading ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Camera className="w-4 h-4" />
+                    )}
+                  </Button>
                 </div>
               </div>
-              {selectedOperation.notes && (
-                <div>
-                  <h4 className="font-semibold">Notes</h4>
-                  <p className="bg-gray-50 p-4 rounded">{selectedOperation.notes}</p>
-                </div>
-              )}
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            {/* Menu des options d'image - EXACTEMENT COMME PARENT */}
+            {showImageOptions && (
+              <>
+                <div className="absolute left-8 top-48 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100"
+                  >
+                    <Camera className="w-5 h-5 text-blue-600" />
+                    <div>
+                      <p className="font-semibold text-gray-800">
+                        {isUploading ? "Téléchargement..." : "Changer la photo"}
+                      </p>
+                      <p className="text-sm text-gray-500">JPEG, PNG, max 5MB</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowImageModal(true);
+                      setShowImageOptions(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100"
+                  >
+                    <User className="w-5 h-5 text-green-600" />
+                    <div>
+                      <p className="font-semibold text-gray-800">Voir la photo</p>
+                      <p className="text-sm text-gray-500">Afficher en grand</p>
+                    </div>
+                  </button>
+
+                  {user.imageUrl && (
+                    <button
+                      onClick={handleDeleteImage}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-50"
+                    >
+                      <Trash2 className="w-5 h-5 text-red-600" />
+                      <div>
+                        <p className="font-semibold text-gray-800">Supprimer la photo</p>
+                        <p className="text-sm text-gray-500">Retirer la photo actuelle</p>
+                      </div>
+                    </button>
+                  )}
+                </div>
+
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowImageOptions(false)}
+                />
+              </>
+            )}
+
+            {/* Image Modal - EXACTEMENT COMME PARENT */}
+            {showImageModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div className="bg-white rounded-xl p-4 max-w-lg w-full relative">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowImageModal(false)}
+                    className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                  <Image
+                    src={user.imageUrl || profileImage}
+                    alt="Photo de profil"
+                    width={500}
+                    height={500}
+                    className="w-full h-auto rounded-xl object-cover"
+                  />
+                  <div className="flex justify-end gap-3 p-4 border-t border-gray-200 mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowImageModal(false)}
+                      className="px-4 py-2 bg-gray-500 text-white hover:bg-gray-600"
+                    >
+                      Fermer
+                    </Button>
+                    <Button
+                      onClick={handleDownloadImage}
+                      className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      Télécharger
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Nom et rôle */}
+            <CardHeader className="pt-16 pb-6">
+              <div className="flex flex-col">
+                <CardTitle className="text-2xl font-extrabold text-gray-900">
+                  {user.firstName} {user.lastName}
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  <Badge variant="secondary" className="text-blue-600 bg-blue-50 font-medium">
+                    Comptable
+                  </Badge>
+                  <span className="text-gray-500 text-sm ml-2">
+                    {user.primaryEmailAddress?.emailAddress}
+                  </span>
+                </CardDescription>
+              </div>
+            </CardHeader>
+
+            {/* Informations personnelles */}
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <User className="w-6 h-6 text-blue-600" />
+                <h3 className="text-xl font-bold text-gray-700">Informations Personnelles</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <InfoItem label="Prénom" value={user.firstName || ""} icon={User} />
+                <InfoItem label="Nom" value={user.lastName || ""} icon={User} />
+                <InfoItem
+                  label="E-mail"
+                  value={user.emailAddresses[0]?.emailAddress || ""}
+                  icon={Mail}
+                />
+                <InfoItem
+                  label="Compte créé le"
+                  value={createdAt.toLocaleDateString("fr-FR", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                  icon={Calendar}
+                />
+              </div>
+            </CardContent>
+
+            {/* Date création + bouton */}
+            <CardContent className="px-6 py-4 border-t bg-gray-50/50">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <p className="text-sm text-gray-500">
+                  Compte créé le{" "}
+                  {createdAt.toLocaleDateString("fr-FR", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+                <Button
+                  onClick={handleLogout}
+                  variant="destructive"
+                  className="w-full sm:w-64 flex items-center justify-center gap-3 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Se déconnecter
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section sécurité */}
+          <Card className="border-0 shadow-xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Shield className="w-6 h-6 text-blue-600" />
+                <CardTitle className="text-xl font-bold text-gray-700">Sécurité et Compte</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                onClick={() => window.open("https://accounts.clerk.com/user", "_blank")}
+                className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50 border border-gray-200 rounded-lg"
+              >
+                <Shield className="w-5 h-5 text-blue-600" />
+                <div className="flex-1 text-left">
+                  <p className="font-semibold text-gray-900">Gérer la sécurité</p>
+                  <p className="text-sm text-gray-600">Mot de passe, 2FA, sessions</p>
+                </div>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Activité récente */}
+          <Card className="border-0 shadow-xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Calendar className="w-6 h-6 text-blue-600" />
+                <CardTitle className="text-xl font-bold text-gray-700">Activité Récente</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {userActivity.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    {activity.icon}
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {activity.description}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {activity.timestamp.toLocaleDateString("fr-FR")} à{" "}
+                        {activity.timestamp.toLocaleTimeString("fr-FR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section compétences comptables */}
+          <Card className="border-0 shadow-xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Calculator className="w-6 h-6 text-blue-600" />
+                <CardTitle className="text-xl font-bold text-gray-700">Compétences Comptables</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                  <CreditCard className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Gestion des Paiements</p>
+                    <p className="text-sm text-gray-600">Validation et suivi</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                  <FileText className="w-5 h-5 text-purple-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Facturation</p>
+                    <p className="text-sm text-gray-600">Génération et envoi</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                  <Calculator className="w-5 h-5 text-orange-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Rapports Financiers</p>
+                    <p className="text-sm text-gray-600">Analyses et bilans</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                  <Shield className="w-5 h-5 text-red-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Contrôle Interne</p>
+                    <p className="text-sm text-gray-600">Audit et conformité</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Modale de déconnexion - EXACTEMENT COMME PARENT */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
+            <div className="flex justify-center mb-4">
+              <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+              Confirmer la déconnexion
+            </h3>
+            <p className="text-gray-600 text-sm text-center mb-6">
+              Êtes-vous sûr de vouloir vous déconnecter ?
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={handleCancelLogout}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmLogout}
+                className="flex-1 px-4 py-2 bg-red-600 text-white hover:bg-red-700"
+              >
+                Se déconnecter
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+};
+
+// ✅ Composant InfoItem - MÊME DESIGN QUE PARENT
+interface InfoProps {
+  icon: LucideIcon;
+  label: string;
+  value: string;
 }
+
+const InfoItem = ({ icon: Icon, label, value }: InfoProps) => (
+  <div className="flex items-center p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+    <Icon className="w-5 h-5 text-blue-600 mr-4" />
+    <div>
+      <p className="text-xs font-medium text-gray-500 uppercase">{label}</p>
+      <p className="text-gray-800 font-semibold mt-1">{value}</p>
+    </div>
+  </div>
+);
+
+export default ComptableProfilePage;

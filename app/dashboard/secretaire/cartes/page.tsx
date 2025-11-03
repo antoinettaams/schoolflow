@@ -56,7 +56,7 @@ export default function CartesPage() {
     particularites: ""
   });
 
-  // Liste des élèves éligibles (paiement validé)
+  // Liste des élèves 
   const [eleves] = useState<Eleve[]>([
     {
       id: "1",
@@ -139,7 +139,7 @@ export default function CartesPage() {
   return <Badge variant={variant}>{label}</Badge>;
 };
 
-  // Élèves éligibles pour une carte (paiement payé)
+  // Élèves éligibles pour une carte 
   const elevesEligibles = eleves.filter(eleve => eleve.statutPaiement === "paye");
 
   // Filtrage des cartes
@@ -157,7 +157,7 @@ export default function CartesPage() {
   });
 
   const genererNumeroCarte = () => {
-    const prefixe = "CF"; // Centre de Formation
+    const prefixe = "CF"; 
     const annee = new Date().getFullYear();
     const sequence = (cartes.length + 1).toString().padStart(3, '0');
     return `${prefixe}-${annee}-${sequence}`;

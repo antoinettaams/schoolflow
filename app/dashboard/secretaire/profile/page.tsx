@@ -18,7 +18,11 @@ import {
   Users,
   ClipboardList,
   LucideIcon,
+  X,
 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface UserActivity {
   id: number;
@@ -165,10 +169,10 @@ const SecretaireProfilePage = () => {
 
       <div className="h-screen overflow-y-auto">
         <div className="max-w-6xl mx-auto p-6 space-y-6">
-          {/* ✅ Carte de profil */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 relative">
-            {/* Bannière */}
-            <div className="bg-gradient-to-r from-pink-500 to-rose-600 h-40 w-full relative">
+          {/* ✅ Carte de profil principale - MÊME DESIGN QUE CENSEUR */}
+          <Card className="relative overflow-hidden border-0 shadow-xl">
+            {/* Bannière avec dégradé bleu-violet COMME CENSEUR */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-40 w-full relative">
               <div className="absolute left-8 bottom-0 translate-y-1/2">
                 <div className="relative">
                   <Image
@@ -179,31 +183,32 @@ const SecretaireProfilePage = () => {
                     className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-2xl cursor-pointer"
                     onClick={() => setShowImageOptions(true)}
                   />
-                  <button
+                  <Button
                     onClick={() => setShowImageOptions(true)}
                     disabled={isUploading}
-                    className="absolute bottom-0 right-0 p-2 bg-pink-600 text-white rounded-full border-2 border-white shadow-lg hover:bg-pink-700 transition-transform transform hover:scale-110 disabled:opacity-50"
+                    size="icon"
+                    className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full border-2 border-white shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-110 disabled:opacity-50 w-10 h-10"
                   >
                     {isUploading ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <Camera className="w-4 h-4" />
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
 
-            {/* Menu des options d'image */}
+            {/* Menu des options d'image - EXACTEMENT COMME CENSEUR */}
             {showImageOptions && (
               <>
                 <div className="absolute left-8 top-48 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-pink-50 border-b border-gray-100"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100"
                   >
-                    <Camera className="w-5 h-5 text-pink-600" />
+                    <Camera className="w-5 h-5 text-blue-600" />
                     <div>
                       <p className="font-semibold text-gray-800">
                         {isUploading ? "Téléchargement..." : "Changer la photo"}
@@ -217,7 +222,7 @@ const SecretaireProfilePage = () => {
                       setShowImageModal(true);
                       setShowImageOptions(false);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-pink-50 border-b border-gray-100"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100"
                   >
                     <User className="w-5 h-5 text-green-600" />
                     <div>
@@ -247,131 +252,213 @@ const SecretaireProfilePage = () => {
               </>
             )}
 
-            {/* Image Modal */}
+            {/* Image Modal - EXACTEMENT COMME CENSEUR */}
             {showImageModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                 <div className="bg-white rounded-xl p-4 max-w-lg w-full relative">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setShowImageModal(false)}
-                    className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl font-bold"
+                    className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
                   >
-                    ✕
-                  </button>
+                    <X className="w-5 h-5" />
+                  </Button>
                   <Image
-                    src={user.imageUrl}
+                    src={user.imageUrl || profileImage}
                     alt="Photo de profil"
                     width={500}
                     height={500}
                     className="w-full h-auto rounded-xl object-cover"
                   />
                   <div className="flex justify-end gap-3 p-4 border-t border-gray-200 mt-4">
-                    <button
+                    <Button
+                      variant="outline"
                       onClick={() => setShowImageModal(false)}
-                      className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                      className="px-4 py-2 bg-gray-500 text-white hover:bg-gray-600"
                     >
                       Fermer
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={handleDownloadImage}
-                      className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700"
+                      className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700"
                     >
                       Télécharger
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Nom et rôle */}
-            <div className="pt-16 pb-6 px-8 border-b border-gray-100">
-              <h2 className="text-2xl font-extrabold text-gray-900 mb-1">
-                {user.firstName} {user.lastName}
-              </h2>
-              <p className="text-pink-600 font-medium">Secrétaire</p>
-            </div>
+            <CardHeader className="pt-16 pb-6">
+              <div className="flex flex-col">
+                <CardTitle className="text-2xl font-extrabold text-gray-900">
+                  {user.firstName} {user.lastName}
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  <Badge variant="secondary" className="text-pink-600 bg-pink-50 font-medium">
+                    Secrétaire
+                  </Badge>
+                  <span className="text-gray-500 text-sm ml-2">
+                    {user.primaryEmailAddress?.emailAddress}
+                  </span>
+                </CardDescription>
+              </div>
+            </CardHeader>
 
             {/* Informations personnelles */}
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-gray-700 mb-6 flex items-center gap-3">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-6">
                 <User className="w-6 h-6 text-pink-600" />
-                Informations Personnelles
-              </h3>
+                <h3 className="text-xl font-bold text-gray-700">Informations Personnelles</h3>
+              </div>
+              
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Info label="Prénom" value={user.firstName || ""} icon={User} color="pink" />
-                <Info label="Nom" value={user.lastName || ""} icon={User} color="pink" />
-                <Info
+                <InfoItem label="Prénom" value={user.firstName || ""} icon={User} />
+                <InfoItem label="Nom" value={user.lastName || ""} icon={User} />
+                <InfoItem
                   label="E-mail"
                   value={user.emailAddresses[0]?.emailAddress || ""}
                   icon={Mail}
-                  color="pink"
                 />
-                <Info label="ID Utilisateur" value={user.id} icon={User} color="pink" />
+                <InfoItem
+                  label="Compte créé le"
+                  value={createdAt.toLocaleDateString("fr-FR", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                  icon={Calendar}
+                />
               </div>
-            </div>
+            </CardContent>
 
             {/* Date création + bouton */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex flex-col gap-4">
-              <p className="text-sm text-gray-500">
-                Compte créé le{" "}
-                {createdAt.toLocaleDateString("fr-FR", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-              <button
-                onClick={handleLogout}
-                className="w-64 flex items-center justify-center gap-3 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl"
-              >
-                <LogOut className="w-6 h-6" />
-                Se déconnecter
-              </button>
-            </div>
-          </div>
+            <CardContent className="px-6 py-4 border-t bg-gray-50/50">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <p className="text-sm text-gray-500">
+                  Compte créé le{" "}
+                  {createdAt.toLocaleDateString("fr-FR", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+                <Button
+                  onClick={handleLogout}
+                  variant="destructive"
+                  className="w-full sm:w-64 flex items-center justify-center gap-3 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Se déconnecter
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Section sécurité */}
-          <Section
-            title="Sécurité et Compte"
-            icon={<Shield className="w-6 h-6 text-pink-600" />}
-          >
-            <button
-              onClick={() => window.open("https://accounts.clerk.com/user", "_blank")}
-              className="text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-            >
-              <p className="font-semibold text-gray-900">Gérer la sécurité</p>
-              <p className="text-sm text-gray-600">Mot de passe, 2FA, sessions</p>
-            </button>
-          </Section>
+          <Card className="border-0 shadow-xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Shield className="w-6 h-6 text-pink-600" />
+                <CardTitle className="text-xl font-bold text-gray-700">Sécurité et Compte</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                onClick={() => window.open("https://accounts.clerk.com/user", "_blank")}
+                className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50 border border-gray-200 rounded-lg"
+              >
+                <Shield className="w-5 h-5 text-pink-600" />
+                <div className="flex-1 text-left">
+                  <p className="font-semibold text-gray-900">Gérer la sécurité</p>
+                  <p className="text-sm text-gray-600">Mot de passe, 2FA, sessions</p>
+                </div>
+              </Button>
+            </CardContent>
+          </Card>
 
-          {/* Activité */}
-          <Section
-            title="Activité Récente"
-            icon={<Calendar className="w-6 h-6 text-pink-600" />}
-          >
-            <div className="space-y-3">
-              {userActivity.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-                >
-                  {a.icon}
+          {/* Activité récente */}
+          <Card className="border-0 shadow-xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Calendar className="w-6 h-6 text-pink-600" />
+                <CardTitle className="text-xl font-bold text-gray-700">Activité Récente</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {userActivity.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    {activity.icon}
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {activity.description}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {activity.timestamp.toLocaleDateString("fr-FR")} à{" "}
+                        {activity.timestamp.toLocaleTimeString("fr-FR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section compétences secrétaire */}
+          <Card className="border-0 shadow-xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <FileText className="w-6 h-6 text-pink-600" />
+                <CardTitle className="text-xl font-bold text-gray-700">Compétences Secrétaire</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
+                  <Users className="w-5 h-5 text-green-600" />
                   <div>
-                    <p className="text-sm font-medium">{a.description}</p>
-                    <p className="text-xs text-gray-500">
-                      {a.timestamp.toLocaleDateString("fr-FR")} à{" "}
-                      {a.timestamp.toLocaleTimeString("fr-FR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                    <p className="font-medium text-gray-900">Gestion des Élèves</p>
+                    <p className="text-sm text-gray-600">Inscriptions et suivi</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </Section>
+                <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
+                  <FileText className="w-5 h-5 text-purple-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Documents Administratifs</p>
+                    <p className="text-sm text-gray-600">Traitement et archivage</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
+                  <ClipboardList className="w-5 h-5 text-orange-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Planification</p>
+                    <p className="text-sm text-gray-600">Réunions et événements</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
+                  <Shield className="w-5 h-5 text-red-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Confidentialité</p>
+                    <p className="text-sm text-gray-600">Protection des données</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
+      {/* Modale de déconnexion - EXACTEMENT COMME CENSEUR */}
       {isLogoutModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
@@ -387,18 +474,20 @@ const SecretaireProfilePage = () => {
               Êtes-vous sûr de vouloir vous déconnecter ?
             </p>
             <div className="flex gap-3">
-              <button
+              <Button
+                variant="outline"
                 onClick={handleCancelLogout}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 Annuler
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="destructive"
                 onClick={handleConfirmLogout}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="flex-1 px-4 py-2 bg-red-600 text-white hover:bg-red-700"
               >
                 Se déconnecter
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -407,37 +496,20 @@ const SecretaireProfilePage = () => {
   );
 };
 
-// ✅ Composants utilitaires
+// ✅ Composant InfoItem - MÊME DESIGN QUE CENSEUR
 interface InfoProps {
   icon: LucideIcon;
   label: string;
   value: string;
-  color?: string;
 }
 
-const Info = ({ icon: Icon, label, value, color = "pink" }: InfoProps) => (
+const InfoItem = ({ icon: Icon, label, value }: InfoProps) => (
   <div className="flex items-center p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
-    <Icon className={`w-5 h-5 text-${color}-600 mr-4`} />
+    <Icon className="w-5 h-5 text-pink-600 mr-4" />
     <div>
       <p className="text-xs font-medium text-gray-500 uppercase">{label}</p>
       <p className="text-gray-800 font-semibold mt-1">{value}</p>
     </div>
-  </div>
-);
-
-interface SectionProps {
-  title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}
-
-const Section = ({ title, icon, children }: SectionProps) => (
-  <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-    <h3 className="text-xl font-bold text-gray-700 mb-4 flex items-center gap-3">
-      {icon}
-      {title}
-    </h3>
-    {children}
   </div>
 );
 

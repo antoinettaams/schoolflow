@@ -2,7 +2,7 @@
 "use client"
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { Search, Filter, Clock, MapPin, User, Calendar} from 'lucide-react'
+import { Search, Clock, MapPin, User,} from 'lucide-react'
 
 // Import des composants shadcn
 import { Button } from "@/components/ui/button"
@@ -104,11 +104,11 @@ export default function EmploiDuTempsGlobalPage() {
         setVagues(vaguesData)
       }
 
-      // Charger les filières - CORRECTION ICI
+      // Charger les filières
       const savedFilieres = localStorage.getItem('schoolflow_filieres')
       if (savedFilieres) {
         const filieresData = JSON.parse(savedFilieres) as Filiere[]
-        setFilieres(filieresData) // Correction: filieresData au lieu de fileresData
+        setFilieres(filieresData)
       }
 
       // Charger les formateurs
@@ -190,7 +190,7 @@ export default function EmploiDuTempsGlobalPage() {
   }
 
   const formatTime = (time: string) => {
-    return time.slice(0, 5) // Format HH:MM
+    return time.slice(0, 5) 
   }
 
   if (isLoading) {
@@ -225,7 +225,6 @@ export default function EmploiDuTempsGlobalPage() {
         {/* En-tête */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <Calendar className="h-8 w-8 text-blue-600" />
             <h1 className="text-3xl font-bold text-foreground">Emploi du Temps Global</h1>
           </div>
           <p className="text-muted-foreground">
@@ -288,49 +287,6 @@ export default function EmploiDuTempsGlobalPage() {
                   />
                 </div>
               </div>
-
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Filter className="h-4 w-4" />
-                    Filtres avancés
-                  </Button>
-                </SheetTrigger>
-                <SheetContent>
-                  <SheetHeader>
-                    <SheetTitle>Filtres avancés</SheetTitle>
-                  </SheetHeader>
-                  <div className="mt-6">
-                    <h4 className="text-sm font-semibold text-foreground mb-3">Statistiques globales :</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <Card>
-                        <CardContent className="p-4 text-center">
-                          <div className="text-2xl font-bold text-blue-600">{filteredSchedules.length}</div>
-                          <div className="text-muted-foreground">Cours programmés</div>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="p-4 text-center">
-                          <div className="text-2xl font-bold text-green-600">{vagues.length}</div>
-                          <div className="text-muted-foreground">Vagues actives</div>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="p-4 text-center">
-                          <div className="text-2xl font-bold text-purple-600">{filieres.length}</div>
-                          <div className="text-muted-foreground">Filières</div>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardContent className="p-4 text-center">
-                          <div className="text-2xl font-bold text-orange-600">{formateurs.length}</div>
-                          <div className="text-muted-foreground">Formateurs</div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-                </SheetContent>
-              </Sheet>
             </div>
           </CardContent>
         </Card>

@@ -418,6 +418,7 @@ const AdminParentsPage = () => {
                           <FaEye className="h-3 w-3" />
                         </Button>
                         <Button 
+                          className="bg-red-500 text-white"
                           variant="destructive" 
                           size="sm" 
                           onClick={() => openDeleteModal(parent)}
@@ -443,19 +444,15 @@ const AdminParentsPage = () => {
         {/* Modal de détail du parent */}
         {isModalOpen && selectedParent && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 {/* En-tête du modal */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                      <FaUsers className="w-8 h-8 text-blue-600" />
-                    </div>
                     <div>
-                      <h2 className="text-2xl font-bold">
+                      <h2 className="mt-2 text-2xl font-bold">
                         {selectedParent.firstName} {selectedParent.lastName}
                       </h2>
-                      <p className="text-gray-600">Parent d&apos;élève(s)</p>
                     </div>
                   </div>
                   <Button variant="outline" onClick={closeModal}>
@@ -470,20 +467,17 @@ const AdminParentsPage = () => {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-lg">
-                        <FaUsers className="h-4 w-4" />
                         Informations du Parent
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-center gap-3">
-                        <FaEnvelope className="h-4 w-4 text-gray-400" />
                         <div>
                           <p className="text-sm font-medium">Email</p>
                           <p className="text-sm text-gray-600">{selectedParent.email}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <FaPhone className="h-4 w-4 text-gray-400" />
                         <div>
                           <p className="text-sm font-medium">Téléphone</p>
                           <p className="text-sm text-gray-600">{selectedParent.phone}</p>
@@ -573,11 +567,11 @@ const AdminParentsPage = () => {
                 Êtes-vous sûr de vouloir supprimer {parentToDelete.firstName} {parentToDelete.lastName} ? 
                 Cette action est irréversible.
               </p>
-              <div className="flex justify-end gap-4">
+              <div className="flex justify-center gap-2">
                 <Button variant="outline" onClick={closeDeleteModal}>
                   Annuler
                 </Button>
-                <Button variant="destructive" onClick={handleDeleteParent}>
+                <Button className="bg-red-500 text-white" variant="destructive" onClick={handleDeleteParent}>
                   Supprimer
                 </Button>
               </div>

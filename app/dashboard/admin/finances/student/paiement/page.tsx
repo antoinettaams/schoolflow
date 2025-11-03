@@ -49,7 +49,6 @@ export default function NewPaymentPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Déplacer loadStudentData dans un useCallback pour éviter les recréations
   const loadStudentData = useCallback(() => {
     // Données simulées
     const mockStudent: Student = {
@@ -62,11 +61,11 @@ export default function NewPaymentPage() {
       montantPaye: 200000
     };
     setStudent(mockStudent);
-  }, [params.id]); // Ajouter params.id comme dépendance
+  }, [params.id]); 
 
   useEffect(() => {
     loadStudentData();
-  }, [loadStudentData]); // Maintenant loadStudentData est stable grâce à useCallback
+  }, [loadStudentData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,10 +74,8 @@ export default function NewPaymentPage() {
     // Simulation d'envoi
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // Ici, vous enverriez les données à votre API
     console.log('Nouveau paiement:', formData);
     
-    // Redirection vers la page de détails
     router.push(`/dashboard/finances/student/${params.id}`);
   };
 

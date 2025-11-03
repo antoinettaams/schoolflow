@@ -1,6 +1,7 @@
+// app/dashboard/parent/profile/page.tsx
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import Image from "next/image";
 import {
@@ -13,12 +14,15 @@ import {
   Calendar,
   BookOpen,
   GraduationCap,
-  Hash,
   Users,
   CheckCircle,
   Shield,
   LucideIcon,
+  X,
 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface UserActivity {
   id: number;
@@ -33,6 +37,7 @@ interface ChildData {
   class: string;
   studentId: string;
   filiere: string;
+  vague: string;
 }
 
 const ParentProfilePage = () => {
@@ -43,10 +48,11 @@ const ParentProfilePage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [userActivity, setUserActivity] = useState<UserActivity[]>([]);
+  const [childrenData, setChildrenData] = useState<ChildData[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 🔥 Activité simulée pour parent
-  const getUserActivity = (): UserActivity[] => [
+  // 🔥 Activité simulée pour parent - Déplacé dans useCallback
+  const getUserActivity = useCallback((): UserActivity[] => [
     {
       id: 1,
       type: "login",
@@ -57,41 +63,64 @@ const ParentProfilePage = () => {
     {
       id: 2,
       type: "grade_view",
-      description: "Consultation des notes de Kossi Aimé",
+      description: `Consultation des notes de ${childrenData[0]?.name || "votre enfant"}`,
       timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
       icon: <BookOpen className="w-4 h-4 text-blue-500" />,
     },
     {
       id: 3,
       type: "attendance",
-      description: "Justification d'absence envoyée",
+      description: "Consultation de l'assiduité",
       timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
       icon: <CheckCircle className="w-4 h-4 text-green-500" />,
     },
     {
       id: 4,
-      type: "event",
-      description: "Inscription à la réunion parents-professeurs",
+      type: "schedule",
+      description: "Consultation de l'emploi du temps",
       timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      icon: <Users className="w-4 h-4 text-purple-500" />,
+      icon: <Calendar className="w-4 h-4 text-purple-500" />,
     },
-  ];
+  ], [childrenData]);
 
+  // Charger les données des enfants depuis localStorage
   useEffect(() => {
-    setUserActivity(getUserActivity());
+    const loadChildrenData = () => {
+      try {
+        const savedData = localStorage.getItem('parent_student_data');
+        if (savedData) {
+          const data = JSON.parse(savedData);
+          setChildrenData([{
+            name: data.studentName,
+            class: data.studentClass,
+            studentId: data.studentId || "Non assigné",
+            filiere: data.filiere,
+            vague: data.vague
+          }]);
+        } else {
+          // Données par défaut
+          setChildrenData([{
+            name: "Jean Dupont",
+            class: "Terminale S",
+            studentId: "STU2024001",
+            filiere: "Développement Web & Mobile",
+            vague: "Vague Janvier 2024"
+          }]);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des données enfants:", error);
+      }
+    };
+
+    loadChildrenData();
   }, []);
 
-  // Données fictives des enfants
-  const childrenData: ChildData[] = [
-    {
-      name: "Kossi Aimé",
-      class: "Terminale S2",
-      studentId: "STU2024001",
-      filiere: "Scientifique"
-    }
-  ];
+  // Mettre à jour l'activité lorsque les données enfants changent
+  useEffect(() => {
+    setUserActivity(getUserActivity());
+  }, [getUserActivity]);
 
-  // ✅ Upload photo avec Clerk
+  // ✅ Upload photo
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -182,10 +211,10 @@ const ParentProfilePage = () => {
 
       <div className="h-screen overflow-y-auto">
         <div className="max-w-6xl mx-auto p-6 space-y-6">
-          {/* ✅ Carte de profil principale - FORMAT SIMILAIRE À ADMIN */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 relative">
-            {/* Bannière */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-40 w-full relative">
+          {/* ✅ Carte de profil principale - EXACTEMENT COMME VOTRE DESIGN */}
+          <Card className="relative overflow-hidden border-0 shadow-xl">
+            {/* Bannière avec dégradé bleu-violet */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg h-40 w-full relative">
               <div className="absolute left-8 bottom-0 translate-y-1/2">
                 <div className="relative">
                   <Image
@@ -196,22 +225,23 @@ const ParentProfilePage = () => {
                     className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-2xl cursor-pointer"
                     onClick={() => setShowImageOptions(true)}
                   />
-                  <button
+                  <Button
                     onClick={() => setShowImageOptions(true)}
                     disabled={isUploading}
-                    className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full border-2 border-white shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-110 disabled:opacity-50"
+                    size="icon"
+                    className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full border-2 border-white shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-110 disabled:opacity-50 w-10 h-10"
                   >
                     {isUploading ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <Camera className="w-4 h-4" />
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
 
-            {/* Menu des options d'image */}
+            {/* Menu des options d'image - EXACTEMENT COMME VOTRE DESIGN */}
             {showImageOptions && (
               <>
                 <div className="absolute left-8 top-48 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
@@ -264,67 +294,76 @@ const ParentProfilePage = () => {
               </>
             )}
 
-            {/* Image Modal */}
+            {/* Image Modal - EXACTEMENT COMME VOTRE DESIGN */}
             {showImageModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                 <div className="bg-white rounded-xl p-4 max-w-lg w-full relative">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setShowImageModal(false)}
-                    className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl font-bold"
+                    className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
                   >
-                    ✕
-                  </button>
+                    <X className="w-5 h-5" />
+                  </Button>
                   <Image
-                    src={user.imageUrl}
+                    src={user.imageUrl || profileImage}
                     alt="Photo de profil"
                     width={500}
                     height={500}
                     className="w-full h-auto rounded-xl object-cover"
                   />
                   <div className="flex justify-end gap-3 p-4 border-t border-gray-200 mt-4">
-                    <button
+                    <Button
+                      variant="outline"
                       onClick={() => setShowImageModal(false)}
-                      className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                      className="px-4 py-2 bg-gray-500 text-white hover:bg-gray-600"
                     >
                       Fermer
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={handleDownloadImage}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700"
                     >
                       Télécharger
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Nom et rôle */}
-            <div className="pt-16 pb-6 px-8 border-b border-gray-100">
-              <h2 className="text-2xl font-extrabold text-gray-900 mb-1">
-                {user.firstName} {user.lastName}
-              </h2>
-              <p className="text-blue-600 font-medium">Parent</p>
-              <p className="text-gray-500 text-sm mt-1">
-                {user.primaryEmailAddress?.emailAddress}
-              </p>
-            </div>
+            <CardHeader className="pt-16 pb-6">
+              <div className="flex flex-col">
+                <CardTitle className="text-2xl font-extrabold text-gray-900">
+                  {user.firstName} {user.lastName}
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  <Badge variant="secondary" className="text-blue-600 bg-blue-50 font-medium">
+                    Parent
+                  </Badge>
+                  <span className="text-gray-500 text-sm ml-2">
+                    {user.primaryEmailAddress?.emailAddress}
+                  </span>
+                </CardDescription>
+              </div>
+            </CardHeader>
 
             {/* Informations personnelles */}
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-gray-700 mb-6 flex items-center gap-3">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-6">
                 <User className="w-6 h-6 text-blue-600" />
-                Informations Personnelles
-              </h3>
+                <h3 className="text-xl font-bold text-gray-700">Informations Personnelles</h3>
+              </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Info label="Prénom" value={user.firstName || ""} icon={User} />
-                <Info label="Nom" value={user.lastName || ""} icon={User} />
-                <Info
+                <InfoItem label="Prénom" value={user.firstName || ""} icon={User} />
+                <InfoItem label="Nom" value={user.lastName || ""} icon={User} />
+                <InfoItem
                   label="E-mail"
                   value={user.emailAddresses[0]?.emailAddress || ""}
                   icon={Mail}
                 />
-                <Info
+                <InfoItem
                   label="Compte créé le"
                   value={createdAt.toLocaleDateString("fr-FR", {
                     year: "numeric",
@@ -334,94 +373,112 @@ const ParentProfilePage = () => {
                   icon={Calendar}
                 />
               </div>
-            </div>
+            </CardContent>
 
             {/* Informations des enfants */}
-            <div className="p-6 border-t border-gray-100">
-              <h3 className="text-xl font-bold text-gray-700 mb-6 flex items-center gap-3">
+            <CardContent className="p-6 border-t">
+              <div className="flex items-center gap-3 mb-6">
                 <Users className="w-6 h-6 text-green-600" />
-                Informations des Enfants
-              </h3>
+                <h3 className="text-xl font-bold text-gray-700">Informations des Enfants</h3>
+              </div>
               <div className="space-y-4">
                 {childrenData.map((child, index) => (
-                  <div key={index} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <ChildInfo label="Nom de l'Enfant" value={child.name} icon={User} />
-                      <ChildInfo label="Classe" value={child.class} icon={BookOpen} />
-                      <ChildInfo label="Matricule" value={child.studentId} icon={Hash} />
-                      <ChildInfo label="Filière" value={child.filiere} icon={GraduationCap} />
+                  <Card key={index} className="bg-gray-50 border border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <ChildInfoItem label="Nom de l'Enfant" value={child.name} icon={User} />
+                        <ChildInfoItem label="Filière" value={child.filiere} icon={GraduationCap} />
+                        <ChildInfoItem label="Vague" value={child.vague} icon={Calendar} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+
+            {/* Date création + bouton */}
+            <CardContent className="px-6 py-4 border-t bg-gray-50/50">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <p className="text-sm text-gray-500">
+                  Compte créé le{" "}
+                  {createdAt.toLocaleDateString("fr-FR", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+                <Button
+                  onClick={handleLogout}
+                  variant="destructive"
+                  className="w-full sm:w-64 flex items-center justify-center gap-3 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Se déconnecter
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section sécurité */}
+          <Card className="border-0 shadow-xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Shield className="w-6 h-6 text-blue-600" />
+                <CardTitle className="text-xl font-bold text-gray-700">Sécurité et Compte</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                onClick={() => window.open("https://accounts.clerk.com/user", "_blank")}
+                className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50 border border-gray-200 rounded-lg"
+              >
+                <Shield className="w-5 h-5 text-blue-600" />
+                <div className="flex-1 text-left">
+                  <p className="font-semibold text-gray-900">Gérer la sécurité</p>
+                  <p className="text-sm text-gray-600">Mot de passe, 2FA, sessions</p>
+                </div>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Activité récente */}
+          <Card className="border-0 shadow-xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Calendar className="w-6 h-6 text-blue-600" />
+                <CardTitle className="text-xl font-bold text-gray-700">Activité Récente</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {userActivity.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    {activity.icon}
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {activity.description}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {activity.timestamp.toLocaleDateString("fr-FR")} à{" "}
+                        {activity.timestamp.toLocaleTimeString("fr-FR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Date création + bouton */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex flex-col gap-4">
-              <p className="text-sm text-gray-500">
-                Compte créé le{" "}
-                {createdAt.toLocaleDateString("fr-FR", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-              <button
-                onClick={handleLogout}
-                className="w-64 flex items-center justify-center gap-3 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl"
-              >
-                <LogOut className="w-6 h-6" />
-                Se déconnecter
-              </button>
-            </div>
-          </div>
-
-          {/* Section sécurité */}
-          <Section
-            title="Sécurité et Compte"
-            icon={<Shield className="w-6 h-6 text-blue-600" />}
-          >
-            <button
-              onClick={() => window.open("https://accounts.clerk.com/user", "_blank")}
-              className="text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-            >
-              <p className="font-semibold text-gray-900">Gérer la sécurité</p>
-              <p className="text-sm text-gray-600">Mot de passe, 2FA, sessions</p>
-            </button>
-          </Section>
-
-          {/* Activité récente */}
-          <Section
-            title="Activité Récente"
-            icon={<Calendar className="w-6 h-6 text-blue-600" />}
-          >
-            <div className="space-y-3">
-              {userActivity.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  {activity.icon}
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      {activity.description}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {activity.timestamp.toLocaleDateString("fr-FR")} à{" "}
-                      {activity.timestamp.toLocaleTimeString("fr-FR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Section>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Modale de déconnexion */}
+      {/* Modale de déconnexion - EXACTEMENT COMME VOTRE DESIGN */}
       {isLogoutModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
@@ -437,18 +494,20 @@ const ParentProfilePage = () => {
               Êtes-vous sûr de vouloir vous déconnecter ?
             </p>
             <div className="flex gap-3">
-              <button
+              <Button
+                variant="outline"
                 onClick={handleCancelLogout}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 Annuler
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="destructive"
                 onClick={handleConfirmLogout}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="flex-1 px-4 py-2 bg-red-600 text-white hover:bg-red-700"
               >
                 Se déconnecter
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -457,14 +516,14 @@ const ParentProfilePage = () => {
   );
 };
 
-// ✅ Composants utilitaires (MÊME FORMAT QUE ADMIN)
+// ✅ Composants utilitaires - EXACTEMENT COMME VOTRE DESIGN
 interface InfoProps {
   icon: LucideIcon;
   label: string;
   value: string;
 }
 
-const Info = ({ icon: Icon, label, value }: InfoProps) => (
+const InfoItem = ({ icon: Icon, label, value }: InfoProps) => (
   <div className="flex items-center p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
     <Icon className="w-5 h-5 text-blue-600 mr-4" />
     <div>
@@ -474,29 +533,13 @@ const Info = ({ icon: Icon, label, value }: InfoProps) => (
   </div>
 );
 
-const ChildInfo = ({ icon: Icon, label, value }: InfoProps) => (
+const ChildInfoItem = ({ icon: Icon, label, value }: InfoProps) => (
   <div className="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:bg-gray-50">
     <Icon className="w-5 h-5 text-green-600 mr-3" />
     <div>
       <p className="text-xs font-medium text-gray-500 uppercase">{label}</p>
       <p className="text-gray-800 font-semibold mt-1">{value}</p>
     </div>
-  </div>
-);
-
-interface SectionProps {
-  title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}
-
-const Section = ({ title, icon, children }: SectionProps) => (
-  <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-    <h3 className="text-xl font-bold text-gray-700 mb-4 flex items-center gap-3">
-      {icon}
-      {title}
-    </h3>
-    {children}
   </div>
 );
 

@@ -11,11 +11,9 @@ import {
   FaUserGraduate,
   FaFileAlt,
   FaClipboardList,
-  FaComments,
   FaSignOutAlt,
   FaTasks,
   FaBell,
-  FaRegChartBar,
   FaBars,
   FaTimes,
   FaUser,
@@ -97,16 +95,13 @@ const SidebarTeacher = () => {
     { label: "Mes Classes", href: "/dashboard/teacher/classes", icon: <FaUserGraduate />, category: "PÉDAGOGIE" },
     { label: "Emploi du Temps", href: "/dashboard/teacher/schedule", icon: <FaCalendarAlt />, category: "PÉDAGOGIE" },
     { label: "Gestion des Notes", href: "/dashboard/teacher/grades", icon: <FaFileAlt />, category: "PÉDAGOGIE" },
-    { label: "Dates d'Examens", href: "/dashboard/teacher/exams", icon: <FaRegChartBar />, category: "PÉDAGOGIE" },
     { label: "Devoirs & Exercices", href: "/dashboard/teacher/homeworks", icon: <FaTasks />, category: "PÉDAGOGIE" },
     { label: "Évènements Scolaires", href: "/dashboard/teacher/events", icon: <FaGraduationCap />, category: "PÉDAGOGIE" },
     { label: "Assiduité", href: "/dashboard/teacher/attendance", icon: <FaClipboardList />, category: "PÉDAGOGIE" },
-    { label: "Forum", href: "/dashboard/teacher/forum", icon: <FaComments />, category: "ADMINISTRATION" },
   ];
 
   const groupedItems = {
     "PÉDAGOGIE": navItems.filter((i) => i.category === "PÉDAGOGIE"),
-    "ADMINISTRATION": navItems.filter((i) => i.category === "ADMINISTRATION"),
   };
 
   const dashboardItem = navItems.find((i) => !i.category);

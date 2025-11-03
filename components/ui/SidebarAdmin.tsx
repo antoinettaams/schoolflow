@@ -137,8 +137,8 @@ const SidebarAdmin = () => {
       {isMobileOpen && <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setIsMobileOpen(false)} />}
 
       <aside className={`fixed top-0 left-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
-        <div className="p-3 border-b border-gray-200 flex justify-between items-center">
-          <h1 className="text-lg font-bold text-principal">SchoolFlow</h1>
+        <div className="p-3 border-b border-gray-200 text-tertiary flex justify-between items-center">
+          <h1 className="text-lg font-bold">SchoolFlow</h1>
           <Button variant="ghost" size="icon" onClick={() => setIsMobileOpen(false)} className="lg:hidden">
             <FaTimes className="text-gray-600" />
           </Button>

@@ -172,7 +172,7 @@ export default function JournalOperationsPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Journal des Opérations</h1>
             <p className="text-gray-600 mt-1">Opérations comptables liées aux inscriptions et scolarités</p>
           </div>
-          <div className="flex gap-3 mt-4 sm:mt-0">
+          <div className="flex gap-3 mt-4 sm:mt-0 flex flex-col">
             <Button variant="outline" onClick={() => alert('Export PDF en cours')}>
               <Download className="h-4 w-4 mr-2" />
               Exporter PDF
@@ -303,7 +303,7 @@ export default function JournalOperationsPage() {
 
       {/* Modal Details */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-2xl p-6 bg-white">
+        <DialogContent className="max-w-2xl max-h-screen overflow-y-auto p-6 bg-white">
           <DialogHeader>
             <DialogTitle>Détails de l&apos;Opération</DialogTitle>
             <DialogDescription>{selectedOperation?.numero} - Générée automatiquement</DialogDescription>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState} from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import {
@@ -40,7 +40,6 @@ interface ClerkErrorResponse {
   errors?: ClerkError[];
   message?: string;
 }
-
 const StudentSettingsPage = () => {
   const { user, isLoaded } = useUser();
   const { signOut, openSignIn, session } = useClerk();
@@ -65,29 +64,7 @@ const StudentSettingsPage = () => {
     newPassword: "",
   });
 
-  // 🔒 Vérification accès étudiant
-  useEffect(() => {
-    if (isLoaded && !user) {
-      router.push("/sign-in");
-    } else if (isLoaded && user) {
-      const role = user.publicMetadata?.role || "inconnu";
-      if (role !== "student") {
-        toast.error("Accès réservé aux étudiants uniquement !");
-        router.push("/dashboard");
-      } else {
-        // Pré-remplir les infos du profil Clerk
-        setFormData({
-          firstName: user.firstName || "",
-          lastName: user.lastName || "",
-          username: user.username || "",
-          email: user.primaryEmailAddress?.emailAddress || "",
-          currentPassword: "",
-          newPassword: "",
-        });
-      }
-    }
-  }, [user, isLoaded, router]);
-
+  
   // Vérifie si la session est récente (moins de 5 min)
   const isSessionRecent = () => {
     if (!session?.lastActiveAt) return false;
@@ -98,7 +75,14 @@ const StudentSettingsPage = () => {
   };
 
   const triggerReauthentication = () => {
-    openSignIn({ redirectUrl: window.location.href });
+    openSignIn({ 
+      redirectUrl: window.location.href,
+      appearance: {
+        elements: {
+          formButtonPrimary: "bg-blue-600 hover:bg-blue-700",
+        }
+      }
+    });
   };
 
   // Fonction utilitaire pour gérer les erreurs Clerk
@@ -116,7 +100,7 @@ const StudentSettingsPage = () => {
     return clerkError?.errors?.[0]?.message || clerkError?.message || "Une erreur inconnue est survenue";
   };
 
-  // ✅ Mise à jour du profil étudiant
+  // Mise à jour du profil étudiant
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -133,15 +117,34 @@ const StudentSettingsPage = () => {
     setIsLoading(true);
 
     try {
+      // Mise à jour des informations de base
       await user.update({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        username: formData.username,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
       });
 
-      if (formData.email !== user?.primaryEmailAddress?.emailAddress) {
-        await user.createEmailAddress({ email: formData.email });
-        toast.info("Un email de vérification a été envoyé à la nouvelle adresse.");
+      // Mise à jour du username
+      if (formData.username && formData.username !== user.username) {
+        await user.update({
+          username: formData.username.trim(),
+        });
+      }
+
+      // Gestion de l'email
+      const currentEmail = user.primaryEmailAddress?.emailAddress;
+      if (formData.email !== currentEmail) {
+        // Vérifier si l'email existe déjà dans les adresses secondaires
+        const emailExists = user.emailAddresses.some(
+          (emailAddr) => emailAddr.emailAddress === formData.email
+        );
+
+        if (!emailExists) {
+          // Créer une nouvelle adresse email
+          await user.createEmailAddress({ email: formData.email });
+          toast.info("Un email de vérification a été envoyé à la nouvelle adresse.");
+        } else {
+          toast.info("Cette adresse email est déjà associée à votre compte.");
+        }
       }
 
       toast.success("Profil étudiant mis à jour avec succès !");
@@ -156,7 +159,7 @@ const StudentSettingsPage = () => {
     }
   };
 
-  // ✅ Changement de mot de passe
+  // Changement de mot de passe
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -201,9 +204,15 @@ const StudentSettingsPage = () => {
         toast.error("Ce mot de passe a été compromis. Veuillez en choisir un autre.");
       } else if (errorCode === "form_password_size") {
         toast.error("Le mot de passe doit contenir au moins 8 caractères.");
+      } else if (errorCode === "form_password_no_uppercase" || errorCode === "form_password_no_lowercase") {
+        toast.error("Le mot de passe doit contenir des majuscules et minuscules.");
+      } else if (errorCode === "form_password_no_number") {
+        toast.error("Le mot de passe doit contenir au moins un chiffre.");
       } else {
         const errorMessage = handleClerkError(error);
-        toast.error("Erreur lors du changement de mot de passe : " + errorMessage);
+        if (!needsReauth) {
+          toast.error("Erreur lors du changement de mot de passe : " + errorMessage);
+        }
       }
     } finally {
       setIsLoading(false);
@@ -213,104 +222,116 @@ const StudentSettingsPage = () => {
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 border-opacity-75"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Chargement des paramètres...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col lg:pl-5 pt-20 lg:pt-6">
-      {/* En-tête */}
-      <div className="bg-white border-b border-gray-200 p-6 flex-shrink-0">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-gray-900">Paramètres Étudiant</h1>
-          <p className="text-gray-500 mt-1">Gérez votre compte et vos préférences</p>
-        </div>
-      </div>
-
-      {/* Modal ré-authentification */}
-      <Dialog open={needsReauth} onOpenChange={setNeedsReauth}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              Vérification requise
-            </DialogTitle>
-            <DialogDescription>
-              Une vérification de sécurité est nécessaire pour continuer.
-            </DialogDescription>
-          </DialogHeader>
+    <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+      <div className="h-screen overflow-y-auto">
+        <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
           
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Pour des raisons de sécurité, veuillez vous ré-authentifier.
-            </AlertDescription>
-          </Alert>
-
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setNeedsReauth(false)}
-              className="flex-1"
-            >
-              Annuler
-            </Button>
-            <Button
-              onClick={triggerReauthentication}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
-            >
-              Se ré-authentifier
-            </Button>
+          {/* En-tête */}
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">Paramètres Étudiant</h1>
+            <p className="text-sm sm:text-base text-gray-500 mt-1 sm:mt-2 break-words">
+              Gérez votre compte et vos préférences
+            </p>
           </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* Contenu principal */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto p-6 flex flex-col gap-6">
-          
-          {/* Section Profil Étudiant */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <User className="w-5 h-5 text-blue-600" />
+          {/* Modal ré-authentification */}
+          <Dialog open={needsReauth} onOpenChange={setNeedsReauth}>
+            <DialogContent className="max-w-[95vw] sm:max-w-md mx-2 sm:mx-auto">
+              <DialogHeader>
+                <div className="flex justify-center mb-4">
+                  <div className="h-12 w-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                  </div>
                 </div>
-                <div>
-                  <CardTitle>Profil Étudiant</CardTitle>
-                  <CardDescription>Modifiez vos informations personnelles</CardDescription>
+                <DialogTitle className="text-center text-lg sm:text-xl break-words">
+                  Vérification requise
+                </DialogTitle>
+                <DialogDescription className="text-center text-sm sm:text-base break-words">
+                  Une vérification de sécurité est nécessaire pour continuer.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <Alert className="bg-yellow-50 border-yellow-200">
+                <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <AlertDescription className="text-yellow-800 text-sm break-words">
+                  Pour des raisons de sécurité, veuillez vous ré-authentifier.
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setNeedsReauth(false)}
+                  className="w-full sm:flex-1 text-sm sm:text-base"
+                >
+                  Annuler
+                </Button>
+                <Button
+                  onClick={triggerReauthentication}
+                  className="w-full sm:flex-1 bg-blue-600 hover:bg-blue-700 text-sm sm:text-base"
+                >
+                  Se ré-authentifier
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Section Profil Étudiant */}
+          <Card className="border-0 shadow-lg overflow-hidden">
+            <CardHeader className="pb-4 sm:pb-6">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 bg-blue-50 rounded-lg flex-shrink-0">
+                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 break-words">
+                    Profil Étudiant
+                  </CardTitle>
+                  <CardDescription className="text-sm sm:text-base text-gray-500 break-words">
+                    Modifiez vos informations personnelles
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <div className="space-y-4">
                 {/* Section profil dépliante */}
-                <div className="border border-gray-200 rounded-lg">
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
                   <Button
                     variant="ghost"
                     onClick={() => setProfileOpen(!profileOpen)}
-                    className="w-full h-auto px-4 py-4 flex items-center justify-between hover:bg-gray-50"
+                    className="w-full h-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between hover:bg-gray-50 min-w-0"
                   >
-                    <div className="text-left">
-                      <span className="font-medium text-gray-900">Informations personnelles</span>
-                      <p className="text-sm text-gray-500 mt-1">
+                    <div className="text-left min-w-0 flex-1 mr-3">
+                      <span className="font-medium text-gray-900 text-sm sm:text-base block break-words">
+                        Informations personnelles
+                      </span>
+                      <p className="text-xs sm:text-sm text-gray-500 mt-1 break-words">
                         Modifiez votre nom, prénom, nom d&apos;utilisateur et email
                       </p>
                     </div>
                     {profileOpen ? (
-                      <ChevronUp className="w-5 h-5 text-gray-400" />
+                      <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                      <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
                     )}
                   </Button>
 
                   {profileOpen && (
-                    <div className="px-4 pb-4">
+                    <div className="px-3 sm:px-4 pb-4">
                       <form onSubmit={handleProfileUpdate} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="firstName">Prénom</Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                          <div className="space-y-2 min-w-0">
+                            <Label htmlFor="firstName" className="text-sm font-medium">Prénom</Label>
                             <Input
                               id="firstName"
                               type="text"
@@ -322,12 +343,13 @@ const StudentSettingsPage = () => {
                                 }))
                               }
                               placeholder="Votre prénom"
+                              className="text-sm sm:text-base"
                               required
                             />
                           </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="lastName">Nom</Label>
+                          <div className="space-y-2 min-w-0">
+                            <Label htmlFor="lastName" className="text-sm font-medium">Nom</Label>
                             <Input
                               id="lastName"
                               type="text"
@@ -339,13 +361,14 @@ const StudentSettingsPage = () => {
                                 }))
                               }
                               placeholder="Votre nom"
+                              className="text-sm sm:text-base"
                               required
                             />
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="username">Nom d&apos;utilisateur</Label>
+                        <div className="space-y-2 min-w-0">
+                          <Label htmlFor="username" className="text-sm font-medium">Nom d&apos;utilisateur</Label>
                           <Input
                             id="username"
                             type="text"
@@ -357,13 +380,14 @@ const StudentSettingsPage = () => {
                               }))
                             }
                             placeholder="Nom d&apos;utilisateur"
+                            className="text-sm sm:text-base"
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="email" className="flex items-center gap-2">
-                            <Mail className="w-4 h-4" />
-                            Adresse email
+                        <div className="space-y-2 min-w-0">
+                          <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
+                            <Mail className="w-4 h-4 flex-shrink-0" />
+                            <span className="break-words">Adresse email</span>
                           </Label>
                           <Input
                             id="email"
@@ -376,9 +400,10 @@ const StudentSettingsPage = () => {
                               }))
                             }
                             placeholder="votre@email.com"
+                            className="text-sm sm:text-base"
                             required
                           />
-                          <p className="text-sm text-gray-500">
+                          <p className="text-xs sm:text-sm text-gray-500 break-words">
                             Un email de vérification sera envoyé si vous changez d&apos;adresse
                           </p>
                         </div>
@@ -389,10 +414,12 @@ const StudentSettingsPage = () => {
                           <Button
                             type="submit"
                             disabled={isLoading}
-                            className="bg-blue-600 hover:bg-blue-700"
+                            className="bg-blue-600 hover:bg-blue-700 text-sm sm:text-base min-w-0"
                           >
-                            <Save className="w-4 h-4 mr-2" />
-                            {isLoading ? "Mise à jour..." : "Enregistrer les modifications"}
+                            <Save className="w-4 h-4 mr-2 flex-shrink-0" />
+                            <span className="truncate">
+                              {isLoading ? "Mise à jour..." : "Enregistrer"}
+                            </span>
                           </Button>
                         </div>
                       </form>
@@ -404,24 +431,30 @@ const StudentSettingsPage = () => {
           </Card>
 
           {/* Section Apparence */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <Sun className="w-5 h-5 text-blue-600" />
+          <Card className="border-0 shadow-lg overflow-hidden">
+            <CardHeader className="pb-4 sm:pb-6">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 bg-blue-50 rounded-lg flex-shrink-0">
+                  <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 </div>
-                <div>
-                  <CardTitle>Apparence</CardTitle>
-                  <CardDescription>Personnalisez l&apos;apparence de votre interface</CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 break-words">
+                    Apparence
+                  </CardTitle>
+                  <CardDescription className="text-sm sm:text-base text-gray-500 break-words">
+                    Personnalisez l&apos;apparence de votre interface
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="dark-mode">Mode sombre</Label>
-                    <p className="text-sm text-gray-500">
+            <CardContent className="pt-0">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg min-w-0">
+                  <div className="space-y-0.5 min-w-0 flex-1 mr-4">
+                    <Label htmlFor="dark-mode" className="text-sm sm:text-base font-medium block break-words">
+                      Mode sombre
+                    </Label>
+                    <p className="text-xs sm:text-sm text-gray-500 break-words">
                       {darkMode ? "Interface en mode sombre" : "Interface en mode clair"}
                     </p>
                   </div>
@@ -436,44 +469,54 @@ const StudentSettingsPage = () => {
           </Card>
 
           {/* Section Général */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gray-100 rounded-lg">
-                  <Globe className="w-5 h-5 text-blue-600" />
+          <Card className="border-0 shadow-lg overflow-hidden">
+            <CardHeader className="pb-4 sm:pb-6">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0">
+                  <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 </div>
-                <div>
-                  <CardTitle>Général</CardTitle>
-                  <CardDescription>Langue et notifications</CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 break-words">
+                    Général
+                  </CardTitle>
+                  <CardDescription className="text-sm sm:text-base text-gray-500 break-words">
+                    Langue et notifications
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="language">Langue</Label>
-                    <p className="text-sm text-gray-500">Définir la langue d&apos;affichage</p>
+            <CardContent className="pt-0">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg gap-3 sm:gap-0 min-w-0">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <Label htmlFor="language" className="text-sm sm:text-base font-medium block break-words">
+                      Langue
+                    </Label>
+                    <p className="text-xs sm:text-sm text-gray-500 break-words">
+                      Définir la langue d&apos;affichage
+                    </p>
                   </div>
                   <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue />
+                    <SelectTrigger className="w-full sm:w-[180px] text-sm sm:text-base min-w-0">
+                      <SelectValue className="truncate" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fr">Français</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Español</SelectItem>
-                      <SelectItem value="de">Deutsch</SelectItem>
+                      <SelectItem value="fr" className="text-sm sm:text-base truncate">Français</SelectItem>
+                      <SelectItem value="en" className="text-sm sm:text-base truncate">English</SelectItem>
+                      <SelectItem value="es" className="text-sm sm:text-base truncate">Español</SelectItem>
+                      <SelectItem value="de" className="text-sm sm:text-base truncate">Deutsch</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <Separator />
 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="notifications">Notifications</Label>
-                    <p className="text-sm text-gray-500">
+                <div className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg min-w-0">
+                  <div className="space-y-0.5 min-w-0 flex-1 mr-4">
+                    <Label htmlFor="notifications" className="text-sm sm:text-base font-medium block break-words">
+                      Notifications
+                    </Label>
+                    <p className="text-xs sm:text-sm text-gray-500 break-words">
                       Recevoir des notifications sur les cours et annonces
                     </p>
                   </div>
@@ -488,45 +531,51 @@ const StudentSettingsPage = () => {
           </Card>
 
           {/* Section Sécurité */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-50 rounded-lg">
-                  <Lock className="w-5 h-5 text-red-600" />
+          <Card className="border-0 shadow-lg overflow-hidden">
+            <CardHeader className="pb-4 sm:pb-6">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 bg-red-50 rounded-lg flex-shrink-0">
+                  <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                 </div>
-                <div>
-                  <CardTitle>Sécurité</CardTitle>
-                  <CardDescription>Protégez votre compte étudiant</CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 break-words">
+                    Sécurité
+                  </CardTitle>
+                  <CardDescription className="text-sm sm:text-base text-gray-500 break-words">
+                    Protégez votre compte étudiant
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <div className="space-y-4">
-                <div className="border border-gray-200 rounded-lg">
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
                   <Button
                     variant="ghost"
                     onClick={() => setPasswordOpen(!passwordOpen)}
-                    className="w-full h-auto px-4 py-4 flex items-center justify-between hover:bg-gray-50"
+                    className="w-full h-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between hover:bg-gray-50 min-w-0"
                   >
-                    <div className="text-left">
-                      <span className="font-medium text-gray-900">Modifier le mot de passe</span>
-                      <p className="text-sm text-gray-500 mt-1">
+                    <div className="text-left min-w-0 flex-1 mr-3">
+                      <span className="font-medium text-gray-900 text-sm sm:text-base block break-words">
+                        Modifier le mot de passe
+                      </span>
+                      <p className="text-xs sm:text-sm text-gray-500 mt-1 break-words">
                         Mettez à jour votre mot de passe régulièrement
                       </p>
                     </div>
                     {passwordOpen ? (
-                      <ChevronUp className="w-5 h-5 text-gray-400" />
+                      <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                      <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
                     )}
                   </Button>
 
                   {passwordOpen && (
-                    <div className="px-4 pb-4">
+                    <div className="px-3 sm:px-4 pb-4">
                       <form onSubmit={handlePasswordChange} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="currentPassword">Mot de passe actuel</Label>
+                        <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                          <div className="space-y-2 min-w-0">
+                            <Label htmlFor="currentPassword" className="text-sm font-medium">Mot de passe actuel</Label>
                             <div className="relative">
                               <Input
                                 id="currentPassword"
@@ -539,6 +588,7 @@ const StudentSettingsPage = () => {
                                   }))
                                 }
                                 placeholder="Entrez votre mot de passe actuel"
+                                className="text-sm sm:text-base pr-10"
                                 required
                               />
                               <Button
@@ -548,13 +598,16 @@ const StudentSettingsPage = () => {
                                 onClick={() => setShowOldPassword(!showOldPassword)}
                                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                               >
-                                {showOldPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {showOldPassword ? 
+                                  <EyeOff className="w-4 h-4 text-gray-400" /> : 
+                                  <Eye className="w-4 h-4 text-gray-400" />
+                                }
                               </Button>
                             </div>
                           </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="newPassword">Nouveau mot de passe</Label>
+                          <div className="space-y-2 min-w-0">
+                            <Label htmlFor="newPassword" className="text-sm font-medium">Nouveau mot de passe</Label>
                             <div className="relative">
                               <Input
                                 id="newPassword"
@@ -567,6 +620,7 @@ const StudentSettingsPage = () => {
                                   }))
                                 }
                                 placeholder="Choisissez un nouveau mot de passe"
+                                className="text-sm sm:text-base pr-10"
                                 required
                               />
                               <Button
@@ -576,9 +630,15 @@ const StudentSettingsPage = () => {
                                 onClick={() => setShowNewPassword(!showNewPassword)}
                                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                               >
-                                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {showNewPassword ? 
+                                  <EyeOff className="w-4 h-4 text-gray-400" /> : 
+                                  <Eye className="w-4 h-4 text-gray-400" />
+                                }
                               </Button>
                             </div>
+                            <p className="text-xs text-gray-500 break-words">
+                              Le mot de passe doit contenir au moins 8 caractères avec majuscules, minuscules et chiffres.
+                            </p>
                           </div>
                         </div>
 
@@ -587,9 +647,12 @@ const StudentSettingsPage = () => {
                             type="submit"
                             disabled={isLoading}
                             variant="destructive"
+                            className="text-sm sm:text-base min-w-0"
                           >
-                            <Key className="w-4 h-4 mr-2" />
-                            {isLoading ? "Changement..." : "Mettre à jour le mot de passe"}
+                            <Key className="w-4 h-4 mr-2 flex-shrink-0" />
+                            <span className="truncate">
+                              {isLoading ? "Changement..." : "Mettre à jour"}
+                            </span>
                           </Button>
                         </div>
                       </form>

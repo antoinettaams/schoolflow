@@ -82,14 +82,12 @@ const SidebarCenseur = () => {
     { label: "Planning & Assignation", href: "/dashboard/censor/planning", icon: <FaChalkboardTeacher />, category: "ORGANISATION PÉDAGOGIQUE" },
     { label: "Emplois du Temps", href: "/dashboard/censor/schedules", icon: <FaCalendarAlt />, category: "ORGANISATION PÉDAGOGIQUE" },
     
-    // NOUVEAUX MENUS AJOUTÉS
     { label: "Gestion des notes", href: "/dashboard/censor/notes-examens", icon: <FaFileSignature />, category: "ÉVALUATION" },
     { label: "Événements Scolaires", href: "/dashboard/censor/events", icon: <FaCalendarCheck />, category: "ÉVÉNEMENTS" },
     
     { label: "Absences", href: "/dashboard/censor/absences", icon: <FaUserGraduate />, category: "SURVEILLANCE" },
     { label: "Statistiques", href: "/dashboard/censor/statistiques", icon: <FaChartLine />, category: "ANALYSE" },
     { label: "Rapports Hebdomadaires", href: "/dashboard/censor/rapports", icon: <FaClipboardList />, category: "ANALYSE" },
-    { label: "Statistiques", href: "/dashboard/censor/statistiques", icon: <FaChartLine />, category: "ANALYSE" },
   ];
 
   const groupedItems = {
@@ -142,7 +140,7 @@ const SidebarCenseur = () => {
 
       <aside className={`fixed top-0 left-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
         <div className="p-3 border-b border-gray-200 flex justify-between items-center text-tertiary">
-          <h1 className="text-lg font-bold text-principal">SchoolFlow</h1>
+          <h1 className="text-lg font-bold">SchoolFlow</h1>
           <Button variant="ghost" size="icon" onClick={() => setIsMobileOpen(false)} className="lg:hidden">
             <FaTimes className="text-gray-600" />
           </Button>

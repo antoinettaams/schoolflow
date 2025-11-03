@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Download, DollarSign, CreditCard, Wallet, TrendingUpIcon, FileText, BarChart3, Users, BookOpen,TrendingUp, TrendingDown, Minus, Eye, Calendar, School, UserCheck } from 'lucide-react';
+import { Download, DollarSign, CreditCard, Wallet, TrendingUpIcon, FileText, BarChart3, Users, BookOpen,TrendingUp, TrendingDown, Minus, Calendar, School, UserCheck } from 'lucide-react';
 
 type TimeRange = 'week' | 'month' | 'quarter' | 'year';
 
@@ -531,7 +531,6 @@ export default function RapportsPage() {
                       <TableHead className="text-gray-700 font-semibold">Modules</TableHead>
                       <TableHead className="text-gray-700 font-semibold">Satisfaction</TableHead>
                       <TableHead className="text-gray-700 font-semibold">Statut</TableHead>
-                      <TableHead className="text-gray-700 font-semibold">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -569,88 +568,6 @@ export default function RapportsPage() {
                           <Badge variant={getStatusVariant(classe.statut)}>
                             {classe.statut}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Performance des Formateurs */}
-          <Card className="bg-white border-gray-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-gray-900">
-                <UserCheck className="h-5 w-5 text-green-600" />
-                Performance des Formateurs
-              </CardTitle>
-              <CardDescription className="text-gray-600">
-                Évaluation et progression sous la responsabilité de chaque formateur
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-gray-200">
-                      <TableHead className="text-gray-700 font-semibold">Formateur</TableHead>
-                      <TableHead className="text-gray-700 font-semibold">Filière</TableHead>
-                      <TableHead className="text-gray-700 font-semibold">Satisfaction</TableHead>
-                      <TableHead className="text-gray-700 font-semibold">Progression</TableHead>
-                      <TableHead className="text-gray-700 font-semibold">Assiduité</TableHead>
-                      <TableHead className="text-gray-700 font-semibold">Notes Moy.</TableHead>
-                      <TableHead className="text-gray-700 font-semibold">Évaluation</TableHead>
-                      <TableHead className="text-gray-700 font-semibold">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {teacherPerformanceData.map((teacher, index) => (
-                      <TableRow key={index} className="border-gray-100 hover:bg-gray-50/50">
-                        <TableCell className="font-medium text-gray-900">{teacher.formateur}</TableCell>
-                        <TableCell className="text-gray-700">{teacher.filiere}</TableCell>
-                        <TableCell>
-                          <div className={`font-semibold ${getSatisfactionColor(teacher.satisfaction)}`}>
-                            {teacher.satisfaction}/5
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            {teacher.progression.startsWith('+') ? 
-                              <TrendingUp className="h-4 w-4 text-green-500" /> : 
-                              <TrendingDown className="h-4 w-4 text-red-500" />
-                            }
-                            <span className={teacher.progression.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
-                              {teacher.progression}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={teacher.assiduite >= 90 ? 'default' : 'secondary'}>
-                            {teacher.assiduite}%
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-gray-700">{teacher.notes}/20</TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            teacher.satisfaction >= 4.5 ? 'default' :
-                            teacher.satisfaction >= 4.0 ? 'default' :
-                            teacher.satisfaction >= 3.5 ? 'secondary' : 'destructive'
-                          }>
-                            {teacher.satisfaction >= 4.5 ? 'Excellent' :
-                             teacher.satisfaction >= 4.0 ? 'Très bien' :
-                             teacher.satisfaction >= 3.5 ? 'Satisfaisant' : 'À améliorer'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <Eye className="h-4 w-4" />
-                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}

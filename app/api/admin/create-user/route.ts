@@ -2,42 +2,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth, clerkClient } from '@clerk/nextjs/server';
 
+interface CreateUserRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  phone?: string;
+  studentNumber?: string;
+  filiereId?: string;
+  matiere?: string;
+  enfantName?: string;
+  relation?: string;
+  customPassword?: string;
+  vagueNumber?: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // 🔐 VÉRIFICATION AUTH ADMIN AVEC API CLERK
-    const { userId } = await auth();
+    // VÉRIFICATION AUTH ADMIN
+    const { userId: currentUserId } = await auth();
     
-    console.log("🔍 DEBUG - User ID:", userId);
+    console.log("🔍 DEBUG - User ID:", currentUserId);
     
-    if (!userId) {
+    if (!currentUserId) {
       return NextResponse.json(
         { error: "Non authentifié" },
         { status: 401 }
       );
     }
 
-    // Vérifier que l'utilisateur est admin ou secrétaire via l'API Clerk
+    // Vérifier que l'utilisateur est admin via l'API Clerk
     const client = await clerkClient();
-    const currentUser = await client.users.getUser(userId);
-    const userRole = currentUser.publicMetadata.role as string;
+    const currentUser = await client.users.getUser(currentUserId);
+    const userRole = currentUser.publicMetadata?.role as string || "";
     
     console.log("🔍 DEBUG - User role:", userRole);
-    console.log("🔍 DEBUG - PublicMetadata:", currentUser.publicMetadata);
     
     const isAdmin = userRole && (
       userRole.toLowerCase().includes("admin") || 
-      userRole === "Administrateur"
+      userRole === "Administrateur" ||
+      userRole === "ADMIN"
     );
 
     const isSecretaire = userRole && (
       userRole.toLowerCase().includes("secretaire") || 
-      userRole === "Secrétaire"
+      userRole === "Secrétaire" ||
+      userRole === "SECRETAIRE"
     );
     
-    console.log("🔍 DEBUG - Is admin?", isAdmin);
-    console.log("🔍 DEBUG - Is secretaire?", isSecretaire);
-    
-    // Autoriser seulement les admins et secrétaires
     if (!isAdmin && !isSecretaire) {
       return NextResponse.json(
         { 
@@ -51,7 +63,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ CORRIGÉ : 'phone' est gardé car utilisé dans le formulaire
+    console.log("Accès autorisé pour le rôle:", userRole);
+
+    //  RÉCUPÉRER LES DONNÉES
+    const requestData: CreateUserRequest = await req.json();
+    
     const { 
       email, 
       firstName, 
@@ -59,19 +75,16 @@ export async function POST(req: NextRequest) {
       role, 
       phone, 
       studentNumber, 
-      filiere, 
+      filiereId, 
       matiere, 
       enfantName, 
       relation,
-      departement,
-      specialite,
-      domaine,
       customPassword,
       vagueNumber
-    } = await req.json();
+    } = requestData;
 
     console.log("📥 Données reçues:", { 
-      email, firstName, lastName, role, phone, vagueNumber 
+      email, firstName, lastName, role, phone, vagueNumber, filiereId
     });
 
     // Validation de base
@@ -82,7 +95,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 🔥 SOLUTION : Utiliser l'API fetch directement vers l'API Clerk
+    //  CRÉATION DANS CLERK
     const clerkApiUrl = 'https://api.clerk.com/v1/users';
     const clerkSecretKey = process.env.CLERK_SECRET_KEY;
 
@@ -91,61 +104,41 @@ export async function POST(req: NextRequest) {
     }
 
     const password = customPassword || generateTemporaryPassword();
+    console.log("Mot de passe:", customPassword ? "Personnalisé" : "Temporaire");
 
-    console.log("🔑 Mot de passe:", customPassword ? "Personnalisé" : "Temporaire");
+    // Créer un username valide
+    const username = email.split('@')[0];
+    const cleanUsername = username.replace(/[^a-zA-Z0-9_]/g, '_');
 
-    // 🔥 CORRECTION : Créer un username à partir de l'email
-    const username = email.split('@')[0]; // Prend la partie avant le @
-    const cleanUsername = username.replace(/[^a-zA-Z0-9_]/g, '_'); // Nettoie le username
-
-    // ✅ CORRIGÉ : Données pour l'API Clerk avec numéro de téléphone
+    // Données pour Clerk
     const userData = {
       email_address: [email],
       username: cleanUsername,
       first_name: firstName,
       last_name: lastName,
       password: password,
-      // ✅ AJOUT du numéro de téléphone dans les données utilisateur
-      ...(phone && {
-        phone_numbers: [phone] // Ajoute le numéro si fourni
-      }),
       public_metadata: {
         role: role,
         status: "active",
-        createdBy: userId,
+        createdBy: currentUserId,
         createdAt: new Date().toISOString(),
-        // ✅ AJOUT du phone dans les métadonnées aussi
         phone: phone || null,
-        // Champs spécifiques selon le rôle
-        ...(role === "Etudiant" && {
-          studentNumber: studentNumber,
-          filiere: filiere,
-          vagueNumber: vagueNumber
-        }),
-        ...(role === "Enseignant" && {
-          matiere: matiere,
-          filiere: filiere || null
-        }),
-        ...(role === "Parent" && {
-          enfantName: enfantName,
-          filiere: filiere,
-          relation: relation
-        }),
-        ...(role === "Secretaire" && {
-          departement: departement
-        }),
-        ...(role === "Comptable" && {
-          specialite: specialite
-        }),
-        ...(role === "Censeur" && {
-          domaine: domaine
-        })
+        studentNumber: studentNumber,
+        filiereId: filiereId,
+        matiere: matiere,
+        enfantName: enfantName,
+        relation: relation,
+        vagueNumber: vagueNumber
       }
     };
 
-    console.log("📤 Données envoyées à Clerk:", userData);
+    if (phone) {
+      userData.phone_numbers = [phone];
+    }
 
-    // 🔥 APPEL DIRECT À L'API CLERK
+    console.log("Données envoyées à Clerk:", userData);
+
+    // APPEL À CLERK
     const response = await fetch(clerkApiUrl, {
       method: 'POST',
       headers: {
@@ -169,50 +162,59 @@ export async function POST(req: NextRequest) {
       throw new Error(errorData.errors?.[0]?.message || "Erreur API Clerk");
     }
 
-    const createdUser = await response.json();
-    console.log("✅ Utilisateur créé avec succès:", createdUser.id);
+    const clerkUser = await response.json();
+    console.log("Utilisateur Clerk créé:", clerkUser.id);
 
+    // RÉPONSE DE SUCCÈS (sans Prisma pour l'instant)
     return NextResponse.json({
       success: true,
-      message: `${role} ${firstName} ${lastName} créé avec succès !`,
+      message: `${role} ${firstName} ${lastName} créé avec succès dans Clerk !`,
+      warning: "La base de données locale n'est pas encore configurée",
       user: {
-        id: createdUser.id,
-        email: createdUser.email_addresses?.[0]?.email_address,
-        firstName: createdUser.first_name,
-        lastName: createdUser.last_name,
+        clerkId: clerkUser.id,
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
         role: role,
-        phone: phone || "Non renseigné", // ✅ RETOURNER le numéro de téléphone
+        phone: phone || "Non renseigné",
         temporaryPassword: customPassword ? "Personnalisé" : password,
-        vagueNumber: vagueNumber
+        vagueNumber: vagueNumber,
+        studentNumber: studentNumber
       },
       credentials: {
         email: email,
-        phone: phone || "Non renseigné", // ✅ AJOUT dans les credentials
+        phone: phone || "Non renseigné",
         password: customPassword ? "Personnalisé" : password,
         loginUrl: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/sign-in`,
         vagueNumber: vagueNumber
-      }
+      },
+      nextSteps: [
+        "Exécutez 'npx prisma db push' pour créer les tables dans la base de données",
+        "Les utilisateurs pourront quand même se connecter via Clerk",
+        "La synchronisation avec la base locale se fera ultérieurement"
+      ]
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("❌ Erreur détaillée création utilisateur:", error);
+    
+    const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
     
     return NextResponse.json(
       { 
-        error: "Erreur lors de la création: " + (error as Error).message
+        error: "Erreur lors de la création: " + errorMessage
       },
       { status: 500 }
     );
   }
 }
 
-// 🔥 GÉNÉRER UN MOT DE PASSE TEMPORAIRE SÉCURISÉ
-function generateTemporaryPassword() {
+// GÉNÉRER UN MOT DE PASSE TEMPORAIRE SÉCURISÉ
+function generateTemporaryPassword(): string {
   const length = 12;
   const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
   let password = "";
   
-  // Assurer au moins un caractère de chaque type
   const requirements = [
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
     "abcdefghijklmnopqrstuvwxyz", 
@@ -220,16 +222,14 @@ function generateTemporaryPassword() {
     "!@#$%^&*"
   ];
   
-  // Ajouter un caractère de chaque type
   requirements.forEach(req => {
     password += req[Math.floor(Math.random() * req.length)];
   });
   
-  // Compléter avec des caractères aléatoires
   for (let i = password.length; i < length; i++) {
     password += charset[Math.floor(Math.random() * charset.length)];
   }
   
-  // Mélanger le mot de passe
   return password.split('').sort(() => Math.random() - 0.5).join('');
 }
+

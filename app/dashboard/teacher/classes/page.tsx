@@ -24,7 +24,7 @@ interface Filiere {
   professeur: string;
 }
 
-// --- Données fictives des filières d'un formateur ---
+// --- Données fictives des filières ---
 const filieresData: Filiere[] = [
   { 
     id: 1, 
@@ -63,7 +63,7 @@ const filieresData: Filiere[] = [
 const FormateurFilieresDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   
-  // Filtrer par le nom du formateur actuel (exemple: "M. Diallo")
+  // Filtrer
   const formateurActuel = "M. Diallo";
   
   const mesFilieres = filieresData.filter(filiere => 
@@ -75,7 +75,6 @@ const FormateurFilieresDashboard = () => {
     filiere.vague.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Séparer les filières en deux groupes : 2 en haut, 2 en bas
   const filieresHaut = filteredFilieres.slice(0, 2);
   const filieresBas = filteredFilieres.slice(2, 4);
 
@@ -197,9 +196,8 @@ const FormateurFilieresDashboard = () => {
             </Card>
           </div>
 
-          {/* --- Liste des filières en disposition 2x2 --- */}
+          {/* --- Liste des filières --- */}
           <div className="space-y-6">
-            {/* Première ligne : 2 filières en haut */}
             {filieresHaut.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filieresHaut.map((filiere) => (
@@ -208,7 +206,6 @@ const FormateurFilieresDashboard = () => {
               </div>
             )}
 
-            {/* Deuxième ligne : 2 filières en bas */}
             {filieresBas.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filieresBas.map((filiere) => (

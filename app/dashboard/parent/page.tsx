@@ -10,10 +10,10 @@ import {
   FaGraduationCap,
   FaRegChartBar,
   FaFileAlt,
-  FaArrowRight,
+  FaArrowRight, 
   FaClock
 } from "react-icons/fa";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent,CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -29,12 +29,19 @@ const HeaderSection = ({
   className: string; 
 }) => (
   <header className="pb-4 border-b border-gray-200">
-    <h1 className="font-title text-3xl font-extrabold tracking-tight text-gray-900">
-      Bonjour, {parentName}! 👋
-    </h1>
-    <p className="text-gray-500 mt-1">
-      Supervision de votre enfant : <span className="font-semibold">{childName} ({className})</span>.
-    </p>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h1 className="font-title text-3xl font-extrabold tracking-tight text-gray-900">
+          Bonjour, {parentName}! 
+        </h1>
+        <p className="text-gray-500 mt-1">
+          Supervision de votre enfant : <span className="font-semibold">{childName} ({className})</span>.
+        </p>
+      </div>
+      <div className="text-sm sm:text-base text-gray-500 bg-gray-100 px-3 py-2 rounded-lg shrink-0">
+        {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+      </div>
+    </div>
   </header>
 );
 
@@ -124,18 +131,7 @@ const ParentDashboard = () => {
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
 
-  // Vérification du rôle parent
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      const userRole = user?.publicMetadata?.role;
-      console.log("Rôle utilisateur:", userRole);
-      
-      if (userRole !== "Parent") {
-        console.log("❌ Accès refusé - Rôle incorrect");
-        router.push("/unauthorized");
-      }
-    }
-  }, [isLoaded, isSignedIn, user, router]);
+  
 
   // Données simulées avec mise à jour en temps réel
   const childInfo = {
@@ -192,26 +188,7 @@ const ParentDashboard = () => {
   }
 
   // Vérification finale du rôle
-  const userRole = user?.publicMetadata?.role;
-  if (userRole !== "Parent") {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
-          <p className="text-gray-600 mb-4">
-            Vous n&apos;avez pas les permissions de parent.
-          </p>
-          <button
-            onClick={() => router.push("/")}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Retour à l&apos;accueil
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+ 
   const parentName = user ? `${user.firstName} ${user.lastName}` : "Parent";
 
   return (

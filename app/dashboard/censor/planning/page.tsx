@@ -44,7 +44,6 @@ interface Teacher {
 interface Vague {
   id: string;
   name: string;
-  // Ajoutez d'autres propriétés si nécessaire
 }
 
 interface Filiere {
@@ -57,7 +56,6 @@ interface Filiere {
 interface Module {
   id: string;
   name: string;
-  // Ajoutez d'autres propriétés si nécessaire
 }
 
 interface User {
@@ -68,7 +66,6 @@ interface User {
   statut?: string;
   prenom?: string;
   nom?: string;
-  // Ajoutez d'autres propriétés si nécessaire
 }
 
 export default function PlanningAssignationsPage() {
@@ -103,11 +100,11 @@ export default function PlanningAssignationsPage() {
         const savedUsers = localStorage.getItem('schoolflow_users');
         const savedAssignations = localStorage.getItem('schoolflow_assignations');
         
-        console.log('🔍 CHARGEMENT DES DONNÉES:');
+        console.log('CHARGEMENT DES DONNÉES:');
         
         if (savedVagues) {
           const vaguesData = JSON.parse(savedVagues) as Vague[];
-          console.log('📅 Vagues chargées:', vaguesData);
+          console.log('Vagues chargées:', vaguesData);
           setVagues(vaguesData);
         }
         
@@ -125,19 +122,19 @@ export default function PlanningAssignationsPage() {
           const teachers = users.filter((user) => {
             const isTeacher = user.role === 'Enseignant';
             const isActive = user.statut !== 'inactif';
-            console.log(`👨‍🏫 ${user.name} - Rôle: ${user.role}, Statut: ${user.statut}, Actif: ${isActive}`);
+            console.log(`${user.name} - Rôle: ${user.role}, Statut: ${user.statut}, Actif: ${isActive}`);
             return isTeacher && isActive;
           });
           
-          console.log('✅ Formateurs filtrés:', teachers);
+          console.log('Formateurs filtrés:', teachers);
           setFormateurs(teachers);
         } else {
-          console.log('❌ Aucun utilisateur trouvé dans schoolflow_users');
+          console.log('Aucun utilisateur trouvé dans schoolflow_users');
         }
         
         if (savedAssignations) {
           const assignationsData = JSON.parse(savedAssignations) as Assignment[];
-          console.log('📋 Assignations existantes:', assignationsData);
+          console.log('Assignations existantes:', assignationsData);
           setAssignations(assignationsData);
         }
       } catch (error) {
@@ -155,7 +152,7 @@ export default function PlanningAssignationsPage() {
     if (!isLoading) {
       try {
         localStorage.setItem('schoolflow_assignations', JSON.stringify(assignations));
-        console.log('💾 Assignations sauvegardées:', assignations);
+        console.log('Assignations sauvegardées:', assignations);
       } catch (error) {
         console.error('Erreur lors de la sauvegarde des assignations:', error);
       }
@@ -172,16 +169,13 @@ export default function PlanningAssignationsPage() {
     ? filieres.find(f => f.id === selectedFiliere)?.modules || []
     : [];
 
-  // CORRECTION : Utiliser la bonne structure des formateurs
   const formateursDisponibles = formateurs.filter(f => 
     f.role === 'Enseignant' && (f.statut !== 'inactif')
   );
 
-  console.log('🎯 Formateurs disponibles pour sélection:', formateursDisponibles);
+  console.log('Formateurs disponibles pour sélection:', formateursDisponibles);
 
-  // CORRECTION : Fonction pour afficher le nom du formateur
   const getTeacherDisplayName = (teacher: Teacher) => {
-    // Utiliser prenom + nom si disponibles, sinon utiliser name
     if (teacher.prenom && teacher.nom) {
       return `${teacher.prenom} ${teacher.nom}`;
     }
@@ -241,7 +235,7 @@ export default function PlanningAssignationsPage() {
   };
 
   const ajouterAssignation = () => {
-    console.log('🔄 Tentative d&apos;ajout d&apos;assignation:');
+    console.log('Tentative d&apos;ajout d&apos;assignation:');
     console.log('Vague:', selectedVague);
     console.log('Filière:', selectedFiliere);
     console.log('Module:', selectedModule);
@@ -265,7 +259,7 @@ export default function PlanningAssignationsPage() {
     }
 
     if (verifierConflitHoraires(selectedTeacher, newAssignment.slots)) {
-      alert("⚠️ Ce formateur a déjà un cours à ces horaires !");
+      alert("Ce formateur a déjà un cours à ces horaires !");
       return;
     }
 
@@ -278,11 +272,11 @@ export default function PlanningAssignationsPage() {
       schedule: newAssignment
     };
 
-    console.log('✅ Nouvelle assignation créée:', assignment);
+    console.log('Nouvelle assignation créée:', assignment);
 
     setAssignations(prev => {
       const newAssignations = [...prev, assignment];
-      console.log('📋 Liste des assignations mise à jour:', newAssignations);
+      console.log('Liste des assignations mise à jour:', newAssignations);
       return newAssignations;
     });
 
@@ -326,7 +320,7 @@ export default function PlanningAssignationsPage() {
     });
 
     setShowAssignmentForm(false);
-    alert("✅ Assignation ajoutée !");
+    alert("Assignation ajoutée !");
   };
 
   const supprimerAssignation = (id: string) => {
@@ -428,7 +422,7 @@ export default function PlanningAssignationsPage() {
           )}
         </div>
 
-        {/* LISTE DES ASSIGNATIONS EXISTANTES */}
+        {/* LISTE DES ASSIGNATIONS */}
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h2 className="text-lg font-semibold mb-4">Assignations existantes</h2>
           {assignations.length === 0 ? (
@@ -441,7 +435,7 @@ export default function PlanningAssignationsPage() {
                 const moduleItem = filiere?.modules?.find(m => m.id === assignment.moduleId);
                 const teacher = formateurs.find(f => f.id === assignment.teacherId);
                 
-                console.log('📊 Affichage assignation:', {
+                console.log('Affichage assignation:', {
                   assignment,
                   vague,
                   filiere,
@@ -497,11 +491,11 @@ export default function PlanningAssignationsPage() {
         </div>
       </div>
 
-      {/* MODAL - VERSION AMÉLIORÉE */}
+      {/* MODAL */}
       {showAssignmentForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl border w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
-            {/* En-tête fixe */}
+            {/* En-tête */}
             <div className="bg-white p-6 border-b border-gray-200 sticky top-0 z-10">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold">Nouvelle assignation</h2>
@@ -554,7 +548,7 @@ export default function PlanningAssignationsPage() {
                   </select>
                   {formateursDisponibles.length === 0 && (
                     <p className="text-xs text-red-600 mt-1">
-                      ⚠️ Aucun formateur disponible. Créez d&apos;abord des comptes formateurs.
+                      Aucun formateur disponible. Créez d&apos;abord des comptes formateurs.
                     </p>
                   )}
                 </div>

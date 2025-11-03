@@ -204,7 +204,7 @@ export default function FinancesPage() {
     
     const { variant, text, icon: Icon } = config[statut];
     return (
-      <Badge variant={variant} className="flex items-center gap-1">
+      <Badge variant={variant} className="flex items-center gap-1 text-xs">
         <Icon className="h-3 w-3" />
         {text}
       </Badge>
@@ -220,7 +220,7 @@ export default function FinancesPage() {
     
     const { variant, text } = config[statut];
     return (
-      <Badge variant={variant}>
+      <Badge variant={variant} className="text-xs">
         {text}
       </Badge>
     );
@@ -253,40 +253,40 @@ export default function FinancesPage() {
       {/* Header fixe */}
       <header className="border-b p-4 sm:p-6 sticky top-0 z-[100] shadow-sm bg-background">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-foreground truncate">
               Gestion Financière
             </h1>
-            <p className="text-muted-foreground text-sm sm:text-base">
+            <p className="text-muted-foreground text-sm sm:text-base truncate">
               Suivi des paiements et finances par vague - Vue Directeur
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-64">
+          <div className="flex flex-col xs:flex-row gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-48 lg:w-64 min-w-0">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 type="text"
-                placeholder="Rechercher un étudiant..."
+                placeholder="Rechercher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 w-full"
               />
             </div>
 
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 flex-1 sm:flex-none"
             >
               <Filter className="h-4 w-4" />
-              Filtres
+              <span className="hidden xs:inline">Filtres</span>
               <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
             </Button>
 
-            <Button className="flex items-center gap-2">
+            <Button className="flex items-center gap-2 flex-1 sm:flex-none">
               <Download className="h-4 w-4" />
-              Exporter
+              <span className="hidden xs:inline">Exporter</span>
             </Button>
           </div>
         </div>
@@ -294,23 +294,23 @@ export default function FinancesPage() {
         {/* Filtres dépliants */}
         {showFilters && (
           <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
               {/* Filtre par vague */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-foreground">Filtrer par vague :</h4>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2">
                   <Badge
                     variant={selectedVague === 'all' ? "default" : "outline"}
-                    className="cursor-pointer transition-colors"
+                    className="cursor-pointer transition-colors text-xs"
                     onClick={() => setSelectedVague('all')}
                   >
-                    Toutes les vagues
+                    Toutes
                   </Badge>
                   {vagues.map(vague => (
                     <Badge
                       key={vague.id}
                       variant={selectedVague === vague.id ? "default" : "outline"}
-                      className="cursor-pointer transition-colors"
+                      className="cursor-pointer transition-colors text-xs truncate max-w-[120px] sm:max-w-none"
                       onClick={() => setSelectedVague(vague.id)}
                     >
                       {vague.name}
@@ -320,14 +320,14 @@ export default function FinancesPage() {
               </div>
 
               {/* Filtre par statut de paiement */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-foreground">Statut de paiement :</h4>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2">
                   {statutTypes.map(statut => (
                     <Badge
                       key={statut}
                       variant={selectedStatut === statut ? "default" : "outline"}
-                      className="cursor-pointer transition-colors capitalize"
+                      className="cursor-pointer transition-colors capitalize text-xs"
                       onClick={() => setSelectedStatut(statut)}
                     >
                       {statut === 'en_retard' ? 'En retard' : 
@@ -341,18 +341,18 @@ export default function FinancesPage() {
             </div>
 
             {/* Statistiques rapides des filtres */}
-            <div className="mt-4 pt-4 border-t">
-              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+            <div className="mt-3 pt-3 border-t">
+              <div className="flex flex-wrap gap-3 text-xs sm:text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
+                  <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>{filteredStudents.length} étudiant(s)</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <DollarSign className="h-4 w-4" />
+                  <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>{formatMoney(globalStats.totalPaye)} perçu(s)</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <CreditCard className="h-4 w-4" />
+                  <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span className="text-red-600">{formatMoney(globalStats.totalRestant)} dû(s)</span>
                 </div>
               </div>
@@ -363,74 +363,74 @@ export default function FinancesPage() {
 
       {/* Contenu scrollable */}
       <div className="flex-1 overflow-auto">
-        <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+        <div className="p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-6 max-w-7xl mx-auto">
           
           {/* Cartes de statistiques */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+            <Card className="min-w-0">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Perçu</p>
-                    <p className="text-xl font-bold text-foreground">{formatMoney(globalStats.totalPaye)}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Total Perçu</p>
+                    <p className="text-lg sm:text-xl font-bold text-foreground truncate">{formatMoney(globalStats.totalPaye)}</p>
                   </div>
-                  <div className="p-2 bg-green-100 rounded-full dark:bg-green-900">
-                    <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className="p-1 sm:p-2 bg-green-100 rounded-full dark:bg-green-900 flex-shrink-0 ml-2">
+                    <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400" />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {globalStats.tauxPaiement.toFixed(1)}% du total attendu
+                <p className="text-xs text-muted-foreground mt-1 sm:mt-2 truncate">
+                  {globalStats.tauxPaiement.toFixed(1)}% du total
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
+            <Card className="min-w-0">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Étudiants</p>
-                    <p className="text-xl font-bold text-foreground">{globalStats.studentsCount}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Étudiants</p>
+                    <p className="text-lg sm:text-xl font-bold text-foreground truncate">{globalStats.studentsCount}</p>
                   </div>
-                  <div className="p-2 bg-blue-100 rounded-full dark:bg-blue-900">
-                    <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div className="p-1 sm:p-2 bg-blue-100 rounded-full dark:bg-blue-900 flex-shrink-0 ml-2">
+                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {globalStats.completeInscriptions} inscriptions complètes
+                <p className="text-xs text-muted-foreground mt-1 sm:mt-2 truncate">
+                  {globalStats.completeInscriptions} complètes
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
+            <Card className="min-w-0">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">En retard</p>
-                    <p className="text-xl font-bold text-foreground">{globalStats.paiementsEnRetard}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">En retard</p>
+                    <p className="text-lg sm:text-xl font-bold text-foreground truncate">{globalStats.paiementsEnRetard}</p>
                   </div>
-                  <div className="p-2 bg-red-100 rounded-full dark:bg-red-900">
-                    <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  <div className="p-1 sm:p-2 bg-red-100 rounded-full dark:bg-red-900 flex-shrink-0 ml-2">
+                    <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 dark:text-red-400" />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground mt-1 sm:mt-2 truncate">
                   Paiements en attente
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
+            <Card className="min-w-0">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Solde dû</p>
-                    <p className="text-xl font-bold text-foreground">{formatMoney(globalStats.totalRestant)}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Solde dû</p>
+                    <p className="text-lg sm:text-xl font-bold text-foreground truncate">{formatMoney(globalStats.totalRestant)}</p>
                   </div>
-                  <div className="p-2 bg-orange-100 rounded-full dark:bg-orange-900">
-                    <CreditCard className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  <div className="p-1 sm:p-2 bg-orange-100 rounded-full dark:bg-orange-900 flex-shrink-0 ml-2">
+                    <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 dark:text-orange-400" />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Montant restant à payer
+                <p className="text-xs text-muted-foreground mt-1 sm:mt-2 truncate">
+                  Restant à payer
                 </p>
               </CardContent>
             </Card>
@@ -438,109 +438,110 @@ export default function FinancesPage() {
 
           {/* Tableau des étudiants */}
           <Card>
-            <CardHeader className="bg-muted/50">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <CardTitle className="text-lg">
+            <CardHeader className="bg-muted/50 p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <CardTitle className="text-base sm:text-lg truncate">
                   Détail des étudiants ({filteredStudents.length})
                 </CardTitle>
-                <CardDescription>
-                  Solde total dû: <span className="font-semibold text-red-600">{formatMoney(globalStats.totalRestant)}</span>
+                <CardDescription className="text-xs sm:text-sm">
+                  Solde dû: <span className="font-semibold text-red-600">{formatMoney(globalStats.totalRestant)}</span>
                 </CardDescription>
               </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Étudiant</TableHead>
-                      <TableHead>Filière</TableHead>
-                      <TableHead>Vague</TableHead>
-                      <TableHead>Inscription</TableHead>
-                      <TableHead>Paiement</TableHead>
-                      <TableHead>Montants</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredStudents.length === 0 ? (
+                <div className="min-w-[800px]">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8">
-                          <Users className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                          <p className="text-muted-foreground">Aucun étudiant trouvé</p>
-                          <p className="text-sm text-muted-foreground mt-1">Ajustez vos critères de recherche</p>
-                        </TableCell>
+                        <TableHead className="w-[180px] sm:w-[200px]">Étudiant</TableHead>
+                        <TableHead className="w-[100px] sm:w-[120px]">Filière</TableHead>
+                        <TableHead className="w-[120px] sm:w-[140px]">Vague</TableHead>
+                        <TableHead className="w-[100px]">Inscription</TableHead>
+                        <TableHead className="w-[100px]">Paiement</TableHead>
+                        <TableHead className="w-[140px] sm:w-[160px]">Montants</TableHead>
+                        <TableHead className="w-[80px]">Actions</TableHead>
                       </TableRow>
-                    ) : (
-                      filteredStudents.map((student) => (
-                        <TableRow key={student.id} className="hover:bg-muted/50">
-                          <TableCell>
-                            <div>
-                              <div className="font-medium text-foreground">
-                                {student.prenom} {student.nom}
-                              </div>
-                              <div className="text-sm text-muted-foreground truncate max-w-[150px]">
-                                {student.email}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm text-foreground">{student.filiere}</div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm text-foreground truncate max-w-[120px]">
-                              {student.vagueName}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {getInscriptionBadge(student.statutInscription)}
-                          </TableCell>
-                          <TableCell>
-                            {getStatusBadge(student.statutPaiement)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm space-y-1 min-w-[140px]">
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Insc:</span>
-                                <span className="font-medium">{formatMoney(student.montantInscription)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Scol:</span>
-                                <span className="font-medium">{formatMoney(student.montantScolarite)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Payé:</span>
-                                <span className={`font-medium ${
-                                  student.montantPaye === student.montantInscription + student.montantScolarite 
-                                    ? 'text-green-600' 
-                                    : 'text-orange-600'
-                                }`}>
-                                  {formatMoney(student.montantPaye)}
-                                </span>
-                              </div>
-                              {student.montantPaye < student.montantInscription + student.montantScolarite && (
-                                <div className="flex justify-between pt-1 border-t">
-                                  <span className="text-muted-foreground text-xs">Reste:</span>
-                                  <span className="font-medium text-red-600 text-xs">
-                                    {formatMoney((student.montantInscription + student.montantScolarite) - student.montantPaye)}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Button asChild variant="ghost" size="sm">
-                              <Link href="/dashboard/admin/finances/student/id">
-                                <Eye className="h-3 w-3" />
-                                Détails
-                              </Link>
-                            </Button>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredStudents.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8">
+                            <Users className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground/50 mx-auto mb-3" />
+                            <p className="text-muted-foreground text-sm">Aucun étudiant trouvé</p>
+                            <p className="text-xs text-muted-foreground mt-1">Ajustez vos critères de recherche</p>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      ) : (
+                        filteredStudents.map((student) => (
+                          <TableRow key={student.id} className="hover:bg-muted/50">
+                            <TableCell className="py-2">
+                              <div className="min-w-0">
+                                <div className="font-medium text-foreground text-sm truncate">
+                                  {student.prenom} {student.nom}
+                                </div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {student.email}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-xs sm:text-sm text-foreground truncate">{student.filiere}</div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-xs sm:text-sm text-foreground truncate">
+                                {student.vagueName}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {getInscriptionBadge(student.statutInscription)}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(student.statutPaiement)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-xs space-y-1 min-w-[120px]">
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Insc:</span>
+                                  <span className="font-medium">{formatMoney(student.montantInscription)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Scol:</span>
+                                  <span className="font-medium">{formatMoney(student.montantScolarite)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Payé:</span>
+                                  <span className={`font-medium ${
+                                    student.montantPaye === student.montantInscription + student.montantScolarite 
+                                      ? 'text-green-600' 
+                                      : 'text-orange-600'
+                                  }`}>
+                                    {formatMoney(student.montantPaye)}
+                                  </span>
+                                </div>
+                                {student.montantPaye < student.montantInscription + student.montantScolarite && (
+                                  <div className="flex justify-between pt-1 border-t">
+                                    <span className="text-muted-foreground text-[10px]">Reste:</span>
+                                    <span className="font-medium text-red-600 text-[10px]">
+                                      {formatMoney((student.montantInscription + student.montantScolarite) - student.montantPaye)}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <Link href="/dashboard/admin/finances/student/id">
+                                  <Eye className="h-3 w-3" />
+                                </Link>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -548,21 +549,21 @@ export default function FinancesPage() {
           {/* Résumé détaillé */}
           {filteredStudents.length > 0 && (
             <Card>
-              <CardHeader>
-                <CardTitle>Résumé détaillé</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl">Résumé détaillé</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+              <CardContent className="p-4 sm:p-6 pt-0">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 text-sm">
                   <div>
-                    <h4 className="font-medium text-foreground mb-3">Répartition par vague</h4>
-                    <div className="space-y-2">
+                    <h4 className="font-medium text-foreground mb-2 sm:mb-3 text-sm sm:text-base">Répartition par vague</h4>
+                    <div className="space-y-1 sm:space-y-2">
                       {vagues.map(vague => {
                         const count = filteredStudents.filter(s => s.vagueId === vague.id).length
                         if (count === 0) return null
                         return (
                           <div key={vague.id} className="flex justify-between items-center py-1">
-                            <span className="text-muted-foreground truncate flex-1 mr-2">{vague.name}</span>
-                            <Badge variant="secondary">
+                            <span className="text-muted-foreground truncate flex-1 mr-2 text-xs sm:text-sm">{vague.name}</span>
+                            <Badge variant="secondary" className="text-xs">
                               {count} étudiant{count > 1 ? 's' : ''}
                             </Badge>
                           </div>
@@ -571,38 +572,38 @@ export default function FinancesPage() {
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-medium text-foreground mb-3">Statut des paiements</h4>
-                    <div className="space-y-2">
+                    <h4 className="font-medium text-foreground mb-2 sm:mb-3 text-sm sm:text-base">Statut des paiements</h4>
+                    <div className="space-y-1 sm:space-y-2">
                       {['paye', 'partiel', 'en_retard', 'non_paye'].map(statut => {
                         const count = filteredStudents.filter(s => s.statutPaiement === statut).length
                         if (count === 0) return null
                         return (
                           <div key={statut} className="flex justify-between items-center py-1">
-                            <span className="text-muted-foreground capitalize">{statut.replace('_', ' ')}</span>
-                            <span className="font-medium">{count}</span>
+                            <span className="text-muted-foreground capitalize text-xs sm:text-sm">{statut.replace('_', ' ')}</span>
+                            <span className="font-medium text-xs sm:text-sm">{count}</span>
                           </div>
                         )
                       })}
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-medium text-foreground mb-3">Synthèse financière</h4>
-                    <div className="space-y-2">
+                    <h4 className="font-medium text-foreground mb-2 sm:mb-3 text-sm sm:text-base">Synthèse financière</h4>
+                    <div className="space-y-1 sm:space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total inscriptions:</span>
-                        <span className="font-medium">{formatMoney(globalStats.totalInscription)}</span>
+                        <span className="text-muted-foreground text-xs sm:text-sm">Total inscriptions:</span>
+                        <span className="font-medium text-xs sm:text-sm">{formatMoney(globalStats.totalInscription)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total scolarité:</span>
-                        <span className="font-medium">{formatMoney(globalStats.totalScolarite)}</span>
+                        <span className="text-muted-foreground text-xs sm:text-sm">Total scolarité:</span>
+                        <span className="font-medium text-xs sm:text-sm">{formatMoney(globalStats.totalScolarite)}</span>
                       </div>
                       <div className="flex justify-between pt-2 border-t">
-                        <span className="text-muted-foreground font-medium">Total attendu:</span>
-                        <span className="font-bold">{formatMoney(globalStats.totalInscription + globalStats.totalScolarite)}</span>
+                        <span className="text-muted-foreground font-medium text-xs sm:text-sm">Total attendu:</span>
+                        <span className="font-bold text-xs sm:text-sm">{formatMoney(globalStats.totalInscription + globalStats.totalScolarite)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total perçu:</span>
-                        <span className="font-bold text-green-600">{formatMoney(globalStats.totalPaye)}</span>
+                        <span className="text-muted-foreground text-xs sm:text-sm">Total perçu:</span>
+                        <span className="font-bold text-green-600 text-xs sm:text-sm">{formatMoney(globalStats.totalPaye)}</span>
                       </div>
                     </div>
                   </div>

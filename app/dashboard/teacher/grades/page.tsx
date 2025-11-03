@@ -1,809 +1,684 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo } from "react";
+
 import {
-  Filter,
-  PlusCircle,
-  BookOpen,
-  Calculator,
-  List,
-  Settings,
-  UserPlus,
-  Trash2,
-  Edit,
-  Save,
-} from 'lucide-react';
+  FaFilter,
+  FaSave,
+  FaEdit,
+  FaLock,
+} from "react-icons/fa";
 
-// Définitions de types
-type Session = string; // Ex: Semestre 1 (2025/2026)
-type GradeType = 'Interrogation' | 'Devoir Surveillé' | 'Composition' | 'Oral';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+
+/* ---------- Types ---------- */
 
 interface Student {
   id: string;
   name: string;
-  classId: string;
-  session: Session;
+  email: string;
+  filiere: string;
 }
 
 interface Grade {
-  id: number;
-  studentId: string;
-  subject: string;
-  type: GradeType;
-  score: number;
-  maxScore: number;
+  interrogation1?: number;
+  interrogation2?: number;
+  interrogation3?: number;
+  devoir?: number;
+  composition?: number;
+  rang?: number;
+}
+
+interface StudentGrade extends Student {
+  grades: Grade;
+  moyenneInterro?: number;
+  moyenneDevoir?: number;
+  moyenneComposition?: number;
+  moyenneModule?: number;
+}
+
+interface Module {
+  id: string;
+  name: string;
   coefficient: number;
-  session: Session;
-  date: string;
+  filiere: string;
 }
 
-interface CalculatedAverages {
-  studentId: string;
-  session: Session;
-  classId: string;
-  Interrogation: number | null;
-  'Devoir Surveillé': number | null;
-  Composition: number | null;
-  Oral: number | null;
-  GeneralAverage: number | null;
-}
+/* ---------- SVG Icons ---------- */
 
-// Données Mocks de l'enseignant
-const teacherData = {
-  id: 1,
-  name: 'M. Lefevre',
-  classes: ['6ème A', 'Terminale C', 'Première S'],
-};
+const FileText = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+    <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+    <path d="M10 9H8" />
+    <path d="M16 13H8" />
+    <path d="M16 17H8" />
+  </svg>
+);
 
-// Données Initiales
-const initialStudents: Student[] = [
-  { id: 's1', name: 'Alice K.', classId: '6ème A', session: 'Semestre 1 (2025/2026)' },
-  { id: 's2', name: 'Bernard D.', classId: '6ème A', session: 'Semestre 1 (2025/2026)' },
-  { id: 's3', name: 'Cécile T.', classId: 'Terminale C', session: 'Semestre 2 (2025/2026)' },
+/* ---------- Données de simulation ---------- */
+
+const filieres = [
+  "Informatique",
+  "Génie Civil", 
+  "Gestion",
+  "Marketing",
+  "Mécanique"
 ];
 
-const initialGrades: Grade[] = [
-  { id: 1, studentId: 's1', subject: 'Mathématiques', type: 'Interrogation', score: 15, maxScore: 20, coefficient: 1, session: 'Semestre 1 (2025/2026)', date: '2025-09-15' },
-  { id: 5, studentId: 's1', subject: 'Mathématiques', type: 'Devoir Surveillé', score: 12, maxScore: 20, coefficient: 3, session: 'Semestre 1 (2025/2026)', date: '2025-10-01' },
-  { id: 10, studentId: 's1', subject: 'Mathématiques', type: 'Interrogation', score: 18, maxScore: 20, coefficient: 1, session: 'Semestre 1 (2025/2026)', date: '2025-10-10' },
-  { id: 2, studentId: 's2', subject: 'Mathématiques', type: 'Interrogation', score: 13, maxScore: 20, coefficient: 1, session: 'Semestre 1 (2025/2026)', date: '2025-09-15' },
-  { id: 7, studentId: 's2', subject: 'Mathématiques', type: 'Devoir Surveillé', score: 10, maxScore: 20, coefficient: 3, session: 'Semestre 1 (2025/2026)', date: '2025-10-01' },
-  { id: 8, studentId: 's2', subject: 'Mathématiques', type: 'Composition', score: 8, maxScore: 20, coefficient: 5, session: 'Semestre 1 (2025/2026)', date: '2025-10-25' },
-  { id: 3, studentId: 's3', subject: 'Physique', type: 'Composition', score: 17, maxScore: 20, coefficient: 4, session: 'Semestre 2 (2025/2026)', date: '2026-03-20' },
+const semestres = [
+  "Semestre 1",
+  "Semestre 2", 
+  "Semestre 3",
+  "Semestre 4"
 ];
 
-const initialSessions: Session[] = ['Semestre 1 (2025/2026)', 'Semestre 2 (2025/2026)'];
-const allGradeTypes: GradeType[] = ['Interrogation', 'Devoir Surveillé', 'Composition', 'Oral'];
+const modulesAssignes: Module[] = [
+  { id: "nextjs", name: "Next JS", coefficient: 4, filiere: "Informatique" },
+  { id: "database", name: "Base de Données", coefficient: 3, filiere: "Informatique" },
+  { id: "react", name: "React Avancé", coefficient: 3, filiere: "Informatique" },
+  { id: "comptabilité", name: "Comptabilité", coefficient: 3, filiere: "Gestion" },
+  { id: "management", name: "Management", coefficient: 2, filiere: "Gestion" },
+  { id: "construction", name: "Techniques de Construction", coefficient: 4, filiere: "Génie Civil" },
+];
 
-const StudentGradesDetail: React.FC<{ studentId: string; studentName: string }> = ({ studentId, studentName }) => {
-  const [grades, setGrades] = useState<Grade[]>(initialGrades);
-  const [gradeFilters] = useState({
-    session: initialSessions[0] || '',
-    className: teacherData.classes[0] || '',
-    type: '' as GradeType | '',
-  });
+const students: Student[] = [
+  { id: "1", name: "Jean Dupont", email: "jean.dupont@student.com", filiere: "Informatique"},
+  { id: "2", name: "Marie Martin", email: "marie.martin@student.com", filiere: "Informatique"},
+  { id: "3", name: "Pierre Bernard", email: "pierre.bernard@student.com", filiere: "Génie Civil"},
+  { id: "4", name: "Sophie Leroy", email: "sophie.leroy@student.com", filiere: "Gestion"},
+  { id: "5", name: "Thomas Moreau", email: "thomas.moreau@student.com", filiere: "Marketing"},
+  { id: "6", name: "Laura Petit", email: "laura.petit@student.com", filiere: "Mécanique"},
+  { id: "7", name: "Nicolas Blanc", email: "nicolas.blanc@student.com", filiere: "Informatique"},
+  { id: "8", name: "Camille Roux", email: "camille.roux@student.com", filiere: "Génie Civil"},
+  { id: "9", name: "David Lambert", email: "david.lambert@student.com", filiere: "Gestion"},
+  { id: "10", name: "Sarah Cohen", email: "sarah.cohen@student.com", filiere: "Gestion"},
+];
 
-  const studentGrades = grades.filter(
-    (g) => g.studentId === studentId && g.session === gradeFilters.session
-  );
+const initialGrades: StudentGrade[] = students.map(student => ({
+  ...student,
+  grades: {
+    rang: 0
+  },
+  moyenneInterro: 0,
+  moyenneDevoir: 0,
+  moyenneComposition: 0,
+  moyenneModule: 0,
+}));
 
-  const handleDeleteGrade = (gradeId: number) => {
-    if (confirm(`Supprimer cette note pour ${studentName} ?`)) {
-      setGrades((prev) => prev.filter((g) => g.id !== gradeId));
+/* ---------- Composant principal ---------- */
+
+const TeacherGrades: React.FC = () => {
+  const [selectedSemestre, setSelectedSemestre] = useState<string>("Semestre 1");
+  const [selectedFiliere, setSelectedFiliere] = useState<string>("");
+  const [selectedModule, setSelectedModule] = useState<string>("");
+  const [studentGrades, setStudentGrades] = useState<StudentGrade[]>(initialGrades);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [hasChanges, setHasChanges] = useState<boolean>(false);
+
+  // Modules assignés filtrés selon la filière sélectionnée
+  const filteredModules = useMemo(() => {
+    if (!selectedFiliere) {
+      return [];
     }
-  };
+    return modulesAssignes.filter(module => module.filiere === selectedFiliere);
+  }, [selectedFiliere]);
 
-  return (
-    <div className="bg-gray-50 p-4 border-t border-gray-200 lg:pl-5 pt-20 lg:pt-6">
-      <h3 className="text-md font-semibold text-gray-700 mb-2">Détails des notes - {studentName}</h3>
-      {studentGrades.length > 0 ? (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="p-2 text-left">Matière</th>
-              <th className="p-2 text-center">Type</th>
-              <th className="p-2 text-center">Note</th>
-              <th className="p-2 text-center">Coefficient</th>
-              <th className="p-2 text-center">Date</th>
-              <th className="p-2 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {studentGrades.map((grade) => (
-              <tr key={grade.id} className="border-b">
-                <td className="p-2">{grade.subject}</td>
-                <td className="p-2 text-center">{grade.type}</td>
-                <td className="p-2 text-center">
-                  {grade.score}/{grade.maxScore}
-                </td>
-                <td className="p-2 text-center">{grade.coefficient}</td>
-                <td className="p-2 text-center">{new Date(grade.date).toLocaleDateString('fr-FR')}</td>
-                <td className="p-2 text-center">
-                  <button
-                    onClick={() => handleDeleteGrade(grade.id)}
-                    className="text-red-500 hover:text-red-700"
-                    title="Supprimer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p className="text-gray-500 text-center py-4">Aucune note pour cette session.</p>
-      )}
-    </div>
-  );
-};
+  // Réinitialiser le module quand la filière change
+  React.useEffect(() => {
+    setSelectedModule("");
+  }, [selectedFiliere]);
 
-const GradeModal: React.FC<{
-  show: boolean;
-  onClose: () => void;
-  onAddGrade: (grade: Omit<Grade, 'id'>) => void;
-  students: Student[];
-  sessions: Session[];
-}> = ({ show, onClose, onAddGrade, students, sessions }) => {
-  const [newGrade, setNewGrade] = useState<Omit<Grade, 'id'>>({
-    studentId: students.length > 0 ? students[0].id : '',
-    subject: '',
-    type: allGradeTypes[0],
-    score: 0,
-    maxScore: 20,
-    coefficient: 1,
-    session: sessions[0] || '',
-    date: new Date().toISOString().substring(0, 10),
-  });
-
-  const handleSubmit = () => {
-    if (!newGrade.subject || !newGrade.studentId || !newGrade.session) {
-      alert('Veuillez remplir tous les champs obligatoires.');
-      return;
-    }
-    if (newGrade.score < 0 || newGrade.score > newGrade.maxScore) {
-      alert(`La note doit être entre 0 et ${newGrade.maxScore}.`);
-      return;
-    }
-    onAddGrade(newGrade);
-    setNewGrade({
-      studentId: students.length > 0 ? students[0].id : '',
-      subject: '',
-      type: allGradeTypes[0],
-      score: 0,
-      maxScore: 20,
-      coefficient: 1,
-      session: sessions[0] || '',
-      date: new Date().toISOString().substring(0, 10),
+  // Filtrage des étudiants basé sur les sélections
+  const filteredStudents = useMemo(() => {
+    return studentGrades.filter(student => {
+      const filiereMatch = !selectedFiliere || student.filiere === selectedFiliere;
+      return filiereMatch;
     });
-    onClose();
-  };
+  }, [studentGrades, selectedFiliere]);
 
-  if (!show) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar">
-        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <PlusCircle className="w-5 h-5 text-green-600" /> Saisie de Note
-        </h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Élève</label>
-            <select
-              value={newGrade.studentId}
-              onChange={(e) => setNewGrade((prev) => ({ ...prev, studentId: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            >
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.classId}, {s.session})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Matière</label>
-            <input
-              type="text"
-              value={newGrade.subject}
-              onChange={(e) => setNewGrade((prev) => ({ ...prev, subject: e.target.value }))}
-              placeholder="Ex: Mathématiques"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-            <select
-              value={newGrade.type}
-              onChange={(e) => setNewGrade((prev) => ({ ...prev, type: e.target.value as GradeType }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            >
-              {allGradeTypes.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
-              <input
-                type="number"
-                value={newGrade.score}
-                onChange={(e) => setNewGrade((prev) => ({ ...prev, score: parseFloat(e.target.value) }))}
-                placeholder="Note sur 20"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Note maximale</label>
-              <input
-                type="number"
-                value={newGrade.maxScore}
-                onChange={(e) => setNewGrade((prev) => ({ ...prev, maxScore: parseInt(e.target.value) }))}
-                placeholder="Ex: 20"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Coefficient</label>
-            <input
-              type="number"
-              value={newGrade.coefficient}
-              onChange={(e) => setNewGrade((prev) => ({ ...prev, coefficient: parseInt(e.target.value) }))}
-              placeholder="Ex: 1"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Session</label>
-            <select
-              value={newGrade.session}
-              onChange={(e) => setNewGrade((prev) => ({ ...prev, session: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            >
-              {sessions.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-            <input
-              type="date"
-              value={newGrade.date}
-              onChange={(e) => setNewGrade((prev) => ({ ...prev, date: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            />
-          </div>
-          <div className="flex gap-3 pt-4">
-            <button
-              onClick={handleSubmit}
-              className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700"
-            >
-              Enregistrer la note
-            </button>
-            <button
-              onClick={onClose}
-              className="flex-1 bg-gray-500 text-white py-3 rounded-lg font-semibold hover:bg-gray-600"
-            >
-              Annuler
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const TeacherDashboardPage = () => {
-  const [activeTab, setActiveTab] = useState<'grades' | 'calculation' | 'config'>('grades');
-  const [grades, setGrades] = useState<Grade[]>(initialGrades);
-  const [students, setStudents] = useState<Student[]>(initialStudents);
-  const [sessions, setSessions] = useState<Session[]>(initialSessions);
-  const [calculatedAverages, setCalculatedAverages] = useState<CalculatedAverages[]>([]);
-  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  const [gradeFilters, setGradeFilters] = useState({
-    session: initialSessions[0] || '',
-    className: teacherData.classes[0] || '',
-    type: '' as GradeType | '',
-  });
-
-  const [showAddGrade, setShowAddGrade] = useState(false);
-
-  const [newStudentConfig, setNewStudentConfig] = useState({
-    name: '',
-    classId: teacherData.classes[0] || '',
-    session: initialSessions[0] || '',
-  });
-
-  const handleAddStudentAndSession = () => {
-    const { name, classId, session } = newStudentConfig;
-    if (!name.trim() || !classId || !session) {
-      alert('Veuillez remplir tous les champs (nom, classe, session).');
-      return;
-    }
-
-    // Ajouter la session si elle n'existe pas
-    if (!sessions.includes(session)) {
-      setSessions((prev) => [...prev, session].sort());
-    }
-
-    // Ajouter l'élève
-    const newStudent: Student = {
-      id: `s${Date.now()}`,
-      name: name.trim(),
-      classId,
-      session,
-    };
-    setStudents((prev) => [...prev, newStudent]);
-    setNewStudentConfig({
-      name: '',
-      classId: teacherData.classes[0] || '',
-      session: initialSessions[0] || '',
-    });
-    alert(`L'élève ${newStudent.name} a été ajouté à ${classId} pour ${session}.`);
-  };
-
-  const handleDeleteSession = (name: string) => {
-    if (grades.some((g) => g.session === name)) {
-      alert('Impossible de supprimer cette session, car elle contient déjà des notes.');
-      return;
-    }
-    setSessions((prev) => prev.filter((t) => t !== name));
-    if (gradeFilters.session === name) {
-      setGradeFilters((prev) => ({ ...prev, session: sessions.filter((t) => t !== name)[0] || '' }));
-    }
-  };
-
-  const calculateInternalAverage = useCallback(
-    (studentId: string, subject?: string, session: Session | '' = gradeFilters.session, type: GradeType | '' = gradeFilters.type) => {
-      const relevantGrades = grades.filter(
-        (g) =>
-          g.studentId === studentId &&
-          (session === '' || g.session === session) &&
-          (type === '' || g.type === type) &&
-          (!subject || g.subject === subject)
-      );
-
-      if (relevantGrades.length === 0) return 'N/A';
-
-      const totalWeightedScore = relevantGrades.reduce((sum, g) => sum + (g.score / g.maxScore) * 20 * g.coefficient, 0);
-      const totalCoefficient = relevantGrades.reduce((sum, g) => sum + g.coefficient, 0);
-
-      return totalCoefficient > 0 ? (totalWeightedScore / totalCoefficient).toFixed(2) : 'N/A';
-    },
-    [grades, gradeFilters.session, gradeFilters.type]
-  );
-
-  const countGradesByType = useCallback(
-    (studentId: string, type: GradeType) => {
-      return grades.filter((g) => g.studentId === studentId && g.session === gradeFilters.session && g.type === type).length;
-    },
-    [grades, gradeFilters.session]
-  );
-
-  const filteredStudentsForGrades = useMemo(() => {
-    return students.filter((s) => s.classId === gradeFilters.className && s.session === gradeFilters.session);
-  }, [students, gradeFilters.className, gradeFilters.session]);
-
-  const uniqueSubjects = useMemo(() => {
-    const classGrades = grades.filter((g) => filteredStudentsForGrades.some((s) => s.id === g.studentId) && g.session === gradeFilters.session);
-    return Array.from(new Set(classGrades.map((g) => g.subject))).sort();
-  }, [grades, filteredStudentsForGrades, gradeFilters.session]);
-
-  const getOrCreateAverages = useCallback(
-    (studentId: string) => {
-      const existing = calculatedAverages.find((a) => a.studentId === studentId && a.session === gradeFilters.session);
-      if (existing) return existing;
-
-      const student = students.find((s) => s.id === studentId);
+  // Calcul des moyennes
+  const processedGrades = useMemo(() => {
+    return filteredStudents.map(student => {
+      const { interrogation1 = 0, interrogation2 = 0, interrogation3 = 0, devoir = 0, composition = 0 } = student.grades;
+      
+      // Moyenne des interrogations
+      const interroNotes = [interrogation1, interrogation2, interrogation3].filter(grade => grade !== undefined && grade !== 0);
+      const moyenneInterro = interroNotes.length > 0 ? interroNotes.reduce((sum, grade) => sum + grade, 0) / interroNotes.length : 0;
+      
+      const moyenneDevoir = devoir || 0;
+      const moyenneComposition = composition || 0;
+      
+      // Moyenne du module 
+      const moyenneModule = (moyenneInterro * 0.3 + moyenneDevoir * 0.3 + moyenneComposition * 0.4);
+      
       return {
-        studentId,
-        session: gradeFilters.session,
-        classId: student?.classId || gradeFilters.className,
-        Interrogation: null,
-        'Devoir Surveillé': null,
-        Composition: null,
-        Oral: null,
-        GeneralAverage: null,
+        ...student,
+        moyenneInterro,
+        moyenneDevoir,
+        moyenneComposition,
+        moyenneModule,
       };
-    },
-    [calculatedAverages, gradeFilters.session, gradeFilters.className, students]
-  );
-
-  const handleAverageChange = (studentId: string, type: GradeType | 'GeneralAverage', value: string) => {
-    const numValue = value === '' ? null : Math.min(20, Math.max(0, parseFloat(value)));
-
-    setCalculatedAverages((prev) => {
-      const newAverages = prev.filter((a) => !(a.studentId === studentId && a.session === gradeFilters.session));
-      const existing = getOrCreateAverages(studentId);
-
-      return [...newAverages, { ...existing, [type]: numValue }];
     });
-  };
+  }, [filteredStudents]);
 
-  const handleSaveAverages = async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      alert('Moyennes sauvegardées avec succès !');
-    } catch {
-      alert('Erreur lors de la sauvegarde des moyennes.');
+  const handleGradeChange = (studentId: string, field: keyof Grade, value: string) => {
+    let numericValue: number | undefined;
+    
+    if (field === 'rang') {
+      numericValue = value === "" ? undefined : Math.max(1, parseInt(value) || 1);
+    } else {
+      numericValue = value === "" ? undefined : Math.min(20, Math.max(0, parseFloat(value) || 0));
     }
+    
+    setStudentGrades(prev => prev.map(student => 
+      student.id === studentId 
+        ? { 
+            ...student, 
+            grades: { 
+              ...student.grades, 
+              [field]: numericValue 
+            } 
+          } 
+        : student
+    ));
+    setHasChanges(true);
   };
 
-  const handleAddGrade = (grade: Omit<Grade, 'id'>) => {
-    setGrades((prev) => [...prev, { ...grade, id: Date.now() }]);
-    alert('Note ajoutée avec succès !');
+  const handleSave = () => {
+    console.log("Notes et rangs sauvegardés:", processedGrades);
+    setIsEditing(false);
+    setHasChanges(false);
   };
+
+  const handleCancel = () => {
+    setStudentGrades(initialGrades);
+    setIsEditing(false);
+    setHasChanges(false);
+  };
+
+  const getGradeColor = (grade: number) => {
+    if (grade >= 16) return "bg-green-100 text-green-800 border-green-200";
+    if (grade >= 14) return "bg-blue-100 text-blue-800 border-blue-200";
+    if (grade >= 12) return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    return "bg-red-100 text-red-800 border-red-200";
+  };
+
+  const getRankColor = (rank: number) => {
+    if (rank === 1) return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    if (rank <= 3) return "bg-green-100 text-green-800 border-green-200";
+    if (rank <= 5) return "bg-blue-100 text-blue-800 border-blue-200";
+    return "bg-gray-100 text-gray-800 border-gray-200";
+  };
+
+  const selectedModuleData = modulesAssignes.find(m => m.id === selectedModule);
 
   return (
-    <div ref={contentRef} className="h-screen overflow-y-auto bg-gray-50 p-4 sm:p-6 lg:p-8 custom-scrollbar">
-      <div className="max-w-7xl mx-auto flex flex-col gap-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Tableau de Bord Enseignant 🧑‍🏫
-            </h1>
-            <p className="text-gray-600">Bienvenue, {teacherData.name}. Gérez vos notes, calculs et configuration.</p>
-          </div>
-        </div>
-
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('grades')}
-            className={`px-4 py-2 text-lg font-medium transition-colors ${
-              activeTab === 'grades' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <BookOpen className="w-5 h-5 inline mr-2" /> Saisie des Notes
-          </button>
-          <button
-            onClick={() => setActiveTab('calculation')}
-            className={`px-4 py-2 text-lg font-medium transition-colors ${
-              activeTab === 'calculation' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Calculator className="w-5 h-5 inline mr-2" /> Calcul & Synthèse
-          </button>
-          <button
-            onClick={() => setActiveTab('config')}
-            className={`px-4 py-2 text-lg font-medium transition-colors ${
-              activeTab === 'config' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Settings className="w-5 h-5 inline mr-2" /> Configuration
-          </button>
-        </div>
-
-        {activeTab === 'config' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Settings className="w-6 h-6 text-blue-600" /> Gestion des Données
-            </h2>
-
-            <div className="bg-white shadow-md rounded-xl p-6 border border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-green-600" /> Ajouter un Élève et Session
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nom de l&apos;élève</label>
-                  <input
-                    type="text"
-                    value={newStudentConfig.name}
-                    onChange={(e) => setNewStudentConfig((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="Ex: Jean Dupont"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Classe</label>
-                  <select
-                    value={newStudentConfig.classId}
-                    onChange={(e) => setNewStudentConfig((prev) => ({ ...prev, classId: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                  >
-                    {teacherData.classes.map((cls) => (
-                      <option key={cls} value={cls}>
-                        {cls}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Session</label>
-                  <input
-                    type="text"
-                    value={newStudentConfig.session}
-                    onChange={(e) => setNewStudentConfig((prev) => ({ ...prev, session: e.target.value }))}
-                    placeholder="Ex: Semestre 1 (2025/2026)"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                  />
-                </div>
-                <button
-                  onClick={handleAddStudentAndSession}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
-                >
-                  <UserPlus className="w-5 h-5" /> Ajouter Élève et Session
-                </button>
+    <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-10">
+      <div className="p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-6">
+        {/* En-tête */}
+        <Card>
+          <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 sm:gap-4">
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 break-words">
+                  Gestion des Notes - {selectedModuleData?.name || "Sélectionnez un module"}
+                </CardTitle>
+                <p className="text-gray-600 mt-1 text-sm sm:text-base">
+                  {selectedModuleData ? `Coefficient: ${selectedModuleData.coefficient} | ` : ""}
+                  {selectedFiliere ? `Filière: ${selectedFiliere} | ` : ""}
+                  Semestre: {selectedSemestre}
+                </p>
               </div>
-            </div>
-
-            <div className="bg-white shadow-md rounded-xl p-6 border border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">Sessions Actuelles</h3>
-              <div className="flex flex-wrap gap-3">
-                {sessions.map((t) => (
-                  <span
-                    key={t}
-                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 border border-purple-300"
-                  >
-                    {t}
-                    <button
-                      onClick={() => handleDeleteSession(t)}
-                      className="text-purple-600 hover:text-purple-800 ml-1"
-                      title="Supprimer la session"
+              <div className="flex flex-col xs:flex-row gap-2 w-full lg:w-48 flex-shrink-0">
+                {isEditing ? (
+                  <>
+                    <Button variant="outline" size="sm" onClick={handleCancel} className="flex-1 lg:flex-none">
+                      Annuler
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={handleSave}
+                      disabled={!hasChanges}
+                      className="flex-1 lg:flex-none"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {(activeTab === 'grades' || activeTab === 'calculation') && (
-          <div className="space-y-6">
-            <div className="bg-white shadow-md rounded-xl p-5 border border-gray-200 sticky top-0 z-20">
-              <h2 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-500" /> Filtres
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <select
-                  value={gradeFilters.className}
-                  onChange={(e) => {
-                    setGradeFilters((prev) => ({ ...prev, className: e.target.value }));
-                    setExpandedStudentId(null);
-                  }}
-                  className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"
-                >
-                  {teacherData.classes.map((cls) => (
-                    <option key={cls} value={cls}>
-                      {cls}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={gradeFilters.session}
-                  onChange={(e) => {
-                    setGradeFilters((prev) => ({ ...prev, session: e.target.value }));
-                    setExpandedStudentId(null);
-                  }}
-                  className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"
-                >
-                  {sessions.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={gradeFilters.type}
-                  onChange={(e) => setGradeFilters((prev) => ({ ...prev, type: e.target.value as GradeType }))}
-                  className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"
-                  disabled={activeTab === 'calculation'}
-                >
-                  <option value="">Tous les types</option>
-                  {allGradeTypes.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {activeTab === 'grades' && (
-              <div className="space-y-4">
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setShowAddGrade(true)}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
+                      <FaSave className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                      <span className="text-xs sm:text-sm">Enregistrer</span>
+                    </Button>
+                  </>
+                ) : (
+                  <Button 
+                    size="sm" 
+                    onClick={() => setIsEditing(true)}
+                    disabled={!selectedModule}
+                    className="w-full"
                   >
-                    <PlusCircle className="w-4 h-4" /> Enregistrer une Note
-                  </button>
-                </div>
+                    <FaEdit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="text-xs sm:text-sm">Modifier les notes</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
 
-                <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                    Synthèse des notes pour la saisie ({gradeFilters.session})
-                  </h2>
-                  <div className="max-h-[60vh] overflow-y-auto border rounded-md custom-scrollbar">
-                    <table className="w-full text-left border-collapse">
-                      <thead className="sticky top-0 bg-gray-100 z-10 shadow-sm">
-                        <tr className="border-b">
-                          <th className="p-3 text-sm font-medium">Étudiant</th>
-                          {uniqueSubjects.map((s) => (
-                            <th key={s} className="p-3 text-sm font-medium text-center">
-                              {s} (Moy. Interne)
-                            </th>
-                          ))}
-                          <th className="p-3 text-sm font-medium text-center">Moyenne Générale Interne</th>
-                          <th className="p-3 text-sm font-medium text-right">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredStudentsForGrades.map((student) => (
-                          <React.Fragment key={student.id}>
-                            <tr className="border-b hover:bg-gray-50">
-                              <td className="p-3 font-medium text-gray-900">{student.name}</td>
-                              {uniqueSubjects.map((s) => (
-                                <td key={s} className="p-3 text-center text-sm font-semibold text-blue-600">
-                                  {calculateInternalAverage(student.id, s, gradeFilters.session, gradeFilters.type)}
-                                </td>
-                              ))}
-                              <td className="p-3 text-center font-bold text-lg text-indigo-700">
-                                {calculateInternalAverage(student.id, undefined, gradeFilters.session, '')}
-                              </td>
-                              <td className="p-3 text-right">
-                                <button
-                                  onClick={() => setExpandedStudentId(student.id === expandedStudentId ? null : student.id)}
-                                  className="text-sm text-blue-500 hover:text-blue-700 flex items-center justify-end w-full"
-                                >
-                                  {student.id === expandedStudentId ? 'Masquer' : 'Détails Notes'}
-                                  <List className="w-4 h-4 ml-1" />
-                                </button>
-                              </td>
-                            </tr>
-                            {student.id === expandedStudentId && (
-                              <tr>
-                                <td colSpan={uniqueSubjects.length + 3} className="p-0">
-                                  <StudentGradesDetail studentId={student.id} studentName={student.name} />
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
-                        ))}
-                      </tbody>
-                    </table>
-                    {filteredStudentsForGrades.length === 0 && (
-                      <div className="p-6 text-center text-gray-500">Aucun élève trouvé dans cette classe.</div>
-                    )}
-                  </div>
-                </div>
+        {/* Filtres */}
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+              {/* Filtre Semestre */}
+              <div className="min-w-0">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Semestre
+                </label>
+                <Select onValueChange={setSelectedSemestre} defaultValue={selectedSemestre}>
+                  <SelectTrigger className="bg-white w-full">
+                    <div className="flex items-center">
+                      <FaFilter className="w-3 h-3 text-gray-400 mr-2 flex-shrink-0" />
+                      <SelectValue placeholder="Semestre" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {semestres.map(semestre => (
+                      <SelectItem key={semestre} value={semestre}>
+                        {semestre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtre Filière */}
+              <div className="min-w-0">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Filière *
+                </label>
+                <Select 
+                  value={selectedFiliere} 
+                  onValueChange={setSelectedFiliere}
+                >
+                  <SelectTrigger className="bg-white w-full">
+                    <SelectValue placeholder="Choisir une filière" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {filieres.map(filiere => (
+                      <SelectItem key={filiere} value={filiere}>
+                        {filiere}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtre Module (BLOQUÉ jusqu'à sélection de filière) */}
+              <div className="min-w-0">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Module
+                  {!selectedFiliere && (
+                    <span className="text-red-500 ml-1">*</span>
+                  )}
+                </label>
+                <Select 
+                  value={selectedModule} 
+                  onValueChange={setSelectedModule}
+                  disabled={!selectedFiliere}
+                >
+                  <SelectTrigger className={`bg-white w-full ${!selectedFiliere ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <div className="flex items-center">
+                      {!selectedFiliere && <FaLock className="w-3 h-3 text-gray-400 mr-2 flex-shrink-0" />}
+                      <SelectValue 
+                        placeholder={
+                          !selectedFiliere 
+                            ? "Choisissez d'abord une filière" 
+                            : filteredModules.length === 0
+                            ? "Aucun module assigné"
+                            : "Sélectionnez un module"
+                        } 
+                      />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {filteredModules.map(module => (
+                      <SelectItem key={module.id} value={module.id}>
+                        <span className="truncate">{module.name} (Coef: {module.coefficient})</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!selectedFiliere && (
+                  <p className="text-xs text-red-500 mt-1">
+                    Veuillez d&apos;abord sélectionner une filière
+                  </p>
+                )}
+                {selectedFiliere && filteredModules.length === 0 && (
+                  <p className="text-xs text-yellow-600 mt-1">
+                    Aucun module assigné pour {selectedFiliere}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Résumé des filtres */}
+            <div className="mt-3 sm:mt-4 flex flex-wrap gap-1 sm:gap-2">
+              <Badge variant="secondary" className="text-xs">
+                {selectedSemestre}
+              </Badge>
+              {selectedFiliere && (
+                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                  <span className="truncate">{selectedFiliere}</span>
+                </Badge>
+              )}
+              {selectedModuleData && (
+                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                  <span className="truncate">{selectedModuleData.name}</span>
+                </Badge>
+              )}
+              <Badge variant="secondary" className="text-xs">
+                {processedGrades.length} étudiant(s)
+              </Badge>
+              {selectedFiliere && (
+                <Badge variant="outline" className="text-xs">
+                  {filteredModules.length} module(s)
+                </Badge>
+              )}
+            </div>
+
+            {/* Information sur les modules assignés */}
+            {selectedFiliere && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  <strong>Modules assignés pour {selectedFiliere}:</strong>{" "}
+                  {filteredModules.length > 0 
+                    ? filteredModules.map(m => m.name).join(", ")
+                    : "Aucun module assigné"
+                  }
+                </p>
               </div>
             )}
+          </CardContent>
+        </Card>
 
-            {activeTab === 'calculation' && (
-              <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Edit className="w-5 h-5 text-red-600" /> Saisie des Moyennes Finales (sur 20)
-                </h2>
-                <p className="text-sm text-gray-500 mb-4">
-                  Saisissez les moyennes pour chaque type de note et la Moyenne Générale de la Session **{gradeFilters.session}** pour la classe **{gradeFilters.className}**.
-                </p>
-                <div className="max-h-[70vh] overflow-y-auto border rounded-md custom-scrollbar">
-                  <table className="w-full text-left border-collapse">
-                    <thead className="sticky top-0 bg-gray-100 z-10 shadow-sm">
-                      <tr className="border-b">
-                        <th className="p-3 text-sm font-medium sticky left-0 bg-gray-100 z-20">Étudiant</th>
-                        {allGradeTypes.map((type) => (
-                          <React.Fragment key={type}>
-                            <th colSpan={2} className="p-3 text-sm font-medium text-center">
-                              {type}
-                            </th>
-                          </React.Fragment>
-                        ))}
-                        <th className="p-3 text-sm font-medium text-center font-bold text-indigo-700">Moyenne Générale</th>
-                      </tr>
-                      <tr className="border-b">
-                        <th className="p-3 text-sm font-medium sticky left-0 bg-gray-100 z-20"></th>
-                        {allGradeTypes.map((type) => (
-                          <React.Fragment key={type}>
-                            <th className="p-3 text-sm font-medium text-center">Notes</th>
-                            <th className="p-3 text-sm font-medium text-center">Moy.</th>
-                          </React.Fragment>
-                        ))}
-                        <th className="p-3 text-sm font-medium text-center"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredStudentsForGrades.map((student) => {
-                        const averages = getOrCreateAverages(student.id);
-                        const studentGrades = grades.filter((g) => g.studentId === student.id && g.session === gradeFilters.session);
+        {/* Tableau des notes */}
+        {selectedModule ? (
+          <Card>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 text-base sm:text-lg lg:text-xl">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
+                  <span className="break-words">Saisie des Notes - {selectedModuleData?.name}</span>
+                </div>
+                <Badge variant="outline" className="text-xs sm:text-sm w-fit">
+                  Filière: {selectedFiliere}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
 
-                        return (
-                          <tr key={student.id} className="border-b hover:bg-gray-50">
-                            <td className="p-3 font-medium text-gray-900 sticky left-0 bg-white hover:bg-gray-50 z-20">{student.name}</td>
-                            {allGradeTypes.map((type) => {
-                              const relevantGrades = studentGrades.filter((g) => g.type === type);
-                              const gradeCount = countGradesByType(student.id, type);
-                              const internalAvg = calculateInternalAverage(student.id, undefined, gradeFilters.session, type).toString().replace('N/A', '-');
+            <CardContent className="p-0">
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <div className="min-w-[800px] lg:min-w-[1000px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="font-semibold text-gray-900 w-40 lg:w-48 sticky left-0 bg-gray-50 z-10 text-xs sm:text-sm">
+                          Étudiant
+                        </TableHead>
+                        
+                        {/* Interrogations */}
+                        <TableHead colSpan={4} className="text-center font-semibold text-gray-900 bg-blue-50 text-xs sm:text-sm">
+                          Interrogations
+                        </TableHead>
+                        
+                        {/* Devoir */}
+                        <TableHead colSpan={2} className="text-center font-semibold text-gray-900 bg-green-50 text-xs sm:text-sm">
+                          Devoir
+                        </TableHead>
+                        
+                        {/* Composition */}
+                        <TableHead colSpan={2} className="text-center font-semibold text-gray-900 bg-purple-50 text-xs sm:text-sm">
+                          Composition
+                        </TableHead>
+                        
+                        <TableHead className="text-center font-semibold text-gray-900 bg-yellow-50 text-xs sm:text-sm">
+                          Moy. Module
+                        </TableHead>
+                        
+                        <TableHead className="text-center font-semibold text-gray-900 bg-gray-100 text-xs sm:text-sm">
+                          Rang
+                        </TableHead>
+                      </TableRow>
+                      
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="sticky left-0 bg-gray-50 z-10 text-xs sm:text-sm">Nom</TableHead>
+                        
+                        {/* Colonnes Interrogations */}
+                        <TableHead className="text-center min-w-[60px] sm:min-w-[80px] text-xs sm:text-sm">Interro 1</TableHead>
+                        <TableHead className="text-center min-w-[60px] sm:min-w-[80px] text-xs sm:text-sm">Interro 2</TableHead>
+                        <TableHead className="text-center min-w-[60px] sm:min-w-[80px] text-xs sm:text-sm">Interro 3</TableHead>
+                        <TableHead className="text-center min-w-[70px] sm:min-w-[80px] bg-blue-50 text-xs sm:text-sm">Moy. Interro</TableHead>
+                        
+                        {/* Colonnes Devoir */}
+                        <TableHead className="text-center min-w-[60px] sm:min-w-[80px] text-xs sm:text-sm">Devoir</TableHead>
+                        <TableHead className="text-center min-w-[70px] sm:min-w-[80px] bg-green-50 text-xs sm:text-sm">Moy. Devoir</TableHead>
+                        
+                        {/* Colonnes Composition */}
+                        <TableHead className="text-center min-w-[60px] sm:min-w-[80px] text-xs sm:text-sm">Composition</TableHead>
+                        <TableHead className="text-center min-w-[70px] sm:min-w-[80px] bg-purple-50 text-xs sm:text-sm">Moy. Comp.</TableHead>
+                        
+                        <TableHead className="text-center min-w-[80px] sm:min-w-[100px] bg-yellow-50 text-xs sm:text-sm">Moyenne</TableHead>
+                        <TableHead className="text-center min-w-[60px] sm:min-w-[80px] bg-gray-100 text-xs sm:text-sm">Rang</TableHead>
+                      </TableRow>
+                    </TableHeader>
 
-                              return (
-                                <React.Fragment key={type}>
-                                  <td className="p-1 text-center">
-                                    <div className="flex flex-col items-center">
-                                      {relevantGrades.map((grade, index) => (
-                                        <span key={index} className="text-xs text-gray-600">
-                                          {grade.score}/{grade.maxScore} (coef. {grade.coefficient})
-                                        </span>
-                                      ))}
-                                      {gradeCount === 0 && <span className="text-xs text-gray-500">-</span>}
-                                    </div>
-                                  </td>
-                                  <td className="p-1 text-center">
-                                    <div className="flex flex-col items-center">
-                                      <span className="text-xs text-gray-500 mb-1">
-                                        ({gradeCount} notes, Moy. interne: {internalAvg})
-                                      </span>
-                                      <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        max="20"
-                                        value={averages[type] !== null ? averages[type]!.toFixed(2) : ''}
-                                        onChange={(e) => handleAverageChange(student.id, type, e.target.value)}
-                                        placeholder="Saisir /20"
-                                        className="w-24 text-center border border-gray-300 rounded-md py-1 px-2 text-sm font-semibold focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                      />
-                                    </div>
-                                  </td>
-                                </React.Fragment>
-                              );
-                            })}
-                            <td className="p-1 text-center font-bold">
-                              <input
+                    <TableBody>
+                      {processedGrades.map((student) => (
+                        <TableRow key={student.id} className="hover:bg-gray-50">
+                          {/* Nom de l'étudiant */}
+                          <TableCell className="font-medium sticky left-0 bg-white p-2 sm:p-3">
+                            <div className="min-w-0">
+                              <div className="font-semibold text-xs sm:text-sm break-words">{student.name}</div>
+                              <div className="text-xs text-gray-500 truncate">{student.email}</div>
+                            </div>
+                          </TableCell>
+
+                          {/* Interrogations */}
+                          <TableCell className="text-center p-1">
+                            {isEditing ? (
+                              <Input
                                 type="number"
-                                step="0.01"
                                 min="0"
                                 max="20"
-                                value={averages.GeneralAverage !== null ? averages.GeneralAverage!.toFixed(2) : ''}
-                                onChange={(e) => handleAverageChange(student.id, 'GeneralAverage', e.target.value)}
-                                placeholder={calculateInternalAverage(student.id, undefined, gradeFilters.session, '').toString().replace('N/A', 'Saisir')}
-                                className="w-24 text-center border-2 border-indigo-500 rounded-md py-1 px-2 text-lg font-bold shadow-sm"
+                                step="0.5"
+                                value={student.grades.interrogation1 || ""}
+                                onChange={(e) => handleGradeChange(student.id, 'interrogation1', e.target.value)}
+                                className="w-12 sm:w-16 text-center mx-auto text-xs"
+                                placeholder="0"
                               />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  {filteredStudentsForGrades.length === 0 && (
-                    <div className="p-6 text-center text-gray-500">Aucun élève trouvé dans cette classe pour la saisie des moyennes.</div>
-                  )}
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={handleSaveAverages}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
-                  >
-                    <Save className="w-4 h-4" /> Sauvegarder les moyennes
-                  </button>
+                            ) : (
+                              <Badge className={`px-1 sm:px-2 py-1 text-xs ${getGradeColor(student.grades.interrogation1 || 0)}`}>
+                                {student.grades.interrogation1?.toFixed(1) || "-"}
+                              </Badge>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="text-center p-1">
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                min="0"
+                                max="20"
+                                step="0.5"
+                                value={student.grades.interrogation2 || ""}
+                                onChange={(e) => handleGradeChange(student.id, 'interrogation2', e.target.value)}
+                                className="w-12 sm:w-16 text-center mx-auto text-xs"
+                                placeholder="0"
+                              />
+                            ) : (
+                              <Badge className={`px-1 sm:px-2 py-1 text-xs ${getGradeColor(student.grades.interrogation2 || 0)}`}>
+                                {student.grades.interrogation2?.toFixed(1) || "-"}
+                              </Badge>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="text-center p-1">
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                min="0"
+                                max="20"
+                                step="0.5"
+                                value={student.grades.interrogation3 || ""}
+                                onChange={(e) => handleGradeChange(student.id, 'interrogation3', e.target.value)}
+                                className="w-12 sm:w-16 text-center mx-auto text-xs"
+                                placeholder="0"
+                              />
+                            ) : (
+                              <Badge className={`px-1 sm:px-2 py-1 text-xs ${getGradeColor(student.grades.interrogation3 || 0)}`}>
+                                {student.grades.interrogation3?.toFixed(1) || "-"}
+                              </Badge>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="text-center bg-blue-50/20 p-1">
+                            <Badge className={`px-1 sm:px-2 py-1 font-medium text-xs ${getGradeColor(student.moyenneInterro || 0)}`}>
+                              {student.moyenneInterro?.toFixed(2) || "0.00"}
+                            </Badge>
+                          </TableCell>
+
+                          {/* Devoir */}
+                          <TableCell className="text-center p-1">
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                min="0"
+                                max="20"
+                                step="0.5"
+                                value={student.grades.devoir || ""}
+                                onChange={(e) => handleGradeChange(student.id, 'devoir', e.target.value)}
+                                className="w-12 sm:w-16 text-center mx-auto text-xs"
+                                placeholder="0"
+                              />
+                            ) : (
+                              <Badge className={`px-1 sm:px-2 py-1 text-xs ${getGradeColor(student.grades.devoir || 0)}`}>
+                                {student.grades.devoir?.toFixed(1) || "-"}
+                              </Badge>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="text-center bg-green-50/20 p-1">
+                            <Badge className={`px-1 sm:px-2 py-1 font-medium text-xs ${getGradeColor(student.moyenneDevoir || 0)}`}>
+                              {student.moyenneDevoir?.toFixed(2) || "0.00"}
+                            </Badge>
+                          </TableCell>
+
+                          {/* Composition */}
+                          <TableCell className="text-center p-1">
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                min="0"
+                                max="20"
+                                step="0.5"
+                                value={student.grades.composition || ""}
+                                onChange={(e) => handleGradeChange(student.id, 'composition', e.target.value)}
+                                className="w-12 sm:w-16 text-center mx-auto text-xs"
+                                placeholder="0"
+                              />
+                            ) : (
+                              <Badge className={`px-1 sm:px-2 py-1 text-xs ${getGradeColor(student.grades.composition || 0)}`}>
+                                {student.grades.composition?.toFixed(1) || "-"}
+                              </Badge>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="text-center bg-purple-50/20 p-1">
+                            <Badge className={`px-1 sm:px-2 py-1 font-medium text-xs ${getGradeColor(student.moyenneComposition || 0)}`}>
+                              {student.moyenneComposition?.toFixed(2) || "0.00"}
+                            </Badge>
+                          </TableCell>
+
+                          {/* Moyenne Module */}
+                          <TableCell className="text-center bg-yellow-50/20 p-1">
+                            <Badge className={`px-1 sm:px-2 py-1 font-bold text-xs ${getGradeColor(student.moyenneModule || 0)}`}>
+                              {student.moyenneModule?.toFixed(2) || "0.00"}
+                            </Badge>
+                          </TableCell>
+
+                          {/* Rang (saisi par le prof) */}
+                          <TableCell className="text-center bg-gray-50 p-1">
+                            {isEditing ? (
+                              <Input
+                                type="number"
+                                min="1"
+                                value={student.grades.rang || ""}
+                                onChange={(e) => handleGradeChange(student.id, 'rang', e.target.value)}
+                                className="w-12 sm:w-16 text-center mx-auto text-xs"
+                                placeholder="1"
+                              />
+                            ) : (
+                              <Badge className={`px-1 sm:px-2 py-1 font-bold text-xs ${getRankColor(student.grades.rang || 0)}`}>
+                                {student.grades.rang || "-"}
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
-            )}
-          </div>
-        )}
 
-        <GradeModal
-          show={showAddGrade}
-          onClose={() => setShowAddGrade(false)}
-          onAddGrade={handleAddGrade}
-          students={students}
-          sessions={sessions}
-        />
+              {/* Légende et informations */}
+              <div className="mt-3 sm:mt-4 p-3 bg-gray-50 rounded-lg">
+                <div className="text-xs sm:text-sm text-gray-600 mb-2">
+                  <strong>Légende :</strong> 
+                  <span className="ml-2 sm:ml-4">Interrogations (30%)</span>
+                  <span className="ml-2 sm:ml-4">Devoir (30%)</span>
+                  <span className="ml-2 sm:ml-4">Composition (40%)</span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  <strong>Note :</strong> Les moyennes sont calculées automatiquement, mais les rangs doivent être saisis manuellement par le professeur.
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          // Message 
+          <Card>
+            <CardContent className="p-6 sm:p-8 text-center">
+              <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
+              <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-2">
+                {!selectedFiliere ? "Sélectionnez une filière" : "Sélectionnez un module"}
+              </h3>
+              <p className="text-gray-500 text-sm sm:text-base">
+                {!selectedFiliere 
+                  ? "Veuillez d'abord choisir une filière pour voir vos modules assignés."
+                  : "Veuillez sélectionner un module pour afficher le tableau des notes."
+                }
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
 };
 
-export default TeacherDashboardPage;
+export default TeacherGrades;

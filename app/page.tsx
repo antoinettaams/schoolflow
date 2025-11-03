@@ -27,8 +27,8 @@ export default function Home() {
             exit={{ opacity: 0, transition: { duration: 0.5 } }}
           >
             <motion.div
-              initial={{ y: 100, scale: 1 }}        // effet départ bas
-              animate={{ y: 0, scale: 0.8 }}       // zoom arrière et montée
+              initial={{ y: 100, scale: 1 }}      
+              animate={{ y: 0, scale: 0.8 }}       
               transition={{ duration: 2, ease: "easeOut" }}
               className="flex flex-col items-center"
             >

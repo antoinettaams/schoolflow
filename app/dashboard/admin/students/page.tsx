@@ -289,7 +289,7 @@ const AdminStudentsPage = () => {
           <CardHeader>
             <CardTitle className="text-2xl text-red-600">Accès Refusé</CardTitle>
             <CardDescription className="text-gray-600">
-              Vous n'avez pas les permissions d'administrateur.
+              Vous n&apos;avez pas les permissions d&apos;administrateur.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -297,7 +297,7 @@ const AdminStudentsPage = () => {
               onClick={() => router.push("/")}
               className="bg-blue-600 text-white hover:bg-blue-700"
             >
-              Retour à l'accueil
+              Retour à l&apos;accueil
             </Button>
           </CardContent>
         </Card>
@@ -313,7 +313,7 @@ const AdminStudentsPage = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Gestion des Élèves</h1>
             <p className="text-gray-600 mt-2">
-              Vue d'ensemble complète de tous les élèves de l'établissement.
+              Vue d&apos;ensemble complète de tous les élèves de l&apos;établissement.
             </p>
           </div>
           <Link href="/auth/signup">
@@ -538,7 +538,7 @@ const AdminStudentsPage = () => {
                         <Button variant="outline" size="sm" onClick={() => openModal(student)}>
                           <FaEye className="h-3 w-3" />
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => openDeleteModal(student)}>
+                        <Button className="text-white bg-red-500" variant="destructive" size="sm" onClick={() => openDeleteModal(student)}>
                           <FaTrash className="h-3 w-3" />
                         </Button>
                       </div>
@@ -558,9 +558,6 @@ const AdminStudentsPage = () => {
                 {/* En-tête du modal */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                      <FaUserGraduate className="w-8 h-8 text-blue-600" />
-                    </div>
                     <div>
                       <h2 className="text-2xl font-bold">
                         {selectedStudent.firstName} {selectedStudent.lastName}
@@ -578,13 +575,11 @@ const AdminStudentsPage = () => {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-lg">
-                        <FaIdCard className="h-4 w-4" />
                         Informations Personnelles
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-center gap-3">
-                        <FaEnvelope className="h-4 w-4 text-gray-400" />
                         <div>
                           <p className="text-sm font-medium">Email</p>
                           <p className="text-sm text-gray-600">{selectedStudent.email}</p>
@@ -766,9 +761,9 @@ const AdminStudentsPage = () => {
             <div className="bg-white rounded-lg max-w-md w-full p-6">
               <h2 className="text-xl font-bold text-red-600 mb-4">Confirmer la suppression</h2>
               <p className="mb-6">Êtes-vous sûr de vouloir supprimer {studentToDelete.firstName} {studentToDelete.lastName} ? Cette action est irréversible.</p>
-              <div className="flex justify-end gap-4">
+              <div className="flex justify-center gap-2">
                 <Button variant="outline" onClick={closeDeleteModal}>Annuler</Button>
-                <Button variant="destructive" onClick={handleDeleteStudent}>Supprimer</Button>
+                <Button className="text-white bg-red-500" variant="destructive" onClick={handleDeleteStudent}>Supprimer</Button>
               </div>
             </div>
           </div>

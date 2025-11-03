@@ -49,7 +49,6 @@ export default function StudentDetailsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Déplacer loadStudentData dans un useCallback pour éviter les recréations
   const loadStudentData = useCallback(() => {
     // Données simulées
     const mockStudent: Student = {
@@ -95,11 +94,11 @@ export default function StudentDetailsPage() {
     setStudent(mockStudent);
     setPayments(mockPayments);
     setIsLoading(false);
-  }, [params.id]); // Ajouter params.id comme dépendance
+  }, [params.id]);
 
   useEffect(() => {
     loadStudentData();
-  }, [loadStudentData]); // Maintenant loadStudentData est stable grâce à useCallback
+  }, [loadStudentData]);
 
   const getStatusBadge = (statut: Student['statutPaiement']) => {
     const config = {

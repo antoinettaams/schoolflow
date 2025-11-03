@@ -181,12 +181,12 @@ const TeachersManagement = () => {
           <CardHeader>
             <CardTitle className="text-2xl text-red-600">Accès Refusé</CardTitle>
             <CardDescription className="text-gray-600">
-              Vous n'avez pas les permissions d'administrateur.
+              Vous n&apos;avez pas les permissions d&apos;administrateur.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => router.push("/")} className="bg-blue-600 text-white hover:bg-blue-700">
-              Retour à l'accueil
+              Retour à l&apos;accueil
             </Button>
           </CardContent>
         </Card>
@@ -236,7 +236,7 @@ const TeachersManagement = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
-              <p className="text-xs text-muted-foreground">En attente d'assignation</p>
+              <p className="text-xs text-muted-foreground">En attente d&apos;assignation</p>
             </CardContent>
           </Card>
           <Card>
@@ -373,6 +373,7 @@ const TeachersManagement = () => {
                           <FaEye className="h-3 w-3" />
                         </Button>
                         <Button
+                          className="bg-red-500 text-white"
                           variant="destructive"
                           size="sm"
                           onClick={() => setTeacherToDelete(teacher)}
@@ -432,11 +433,12 @@ const TeachersManagement = () => {
                   Voulez-vous vraiment supprimer {teacherToDelete.firstName} {teacherToDelete.lastName} ?
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex justify-end gap-2">
+              <CardContent className="flex justify-center gap-2">
                 <Button variant="outline" onClick={() => setTeacherToDelete(null)}>
                   Annuler
                 </Button>
                 <Button
+                  className="text-white bg-red-500"
                   variant="destructive"
                   onClick={() => handleDeleteTeacher(teacherToDelete.id)}
                 >

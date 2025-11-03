@@ -69,7 +69,6 @@ const SidebarStudent = () => {
     return isActive ? "text-white text-base" : "text-principal text-base";
   };
 
-  // ✅ CORRIGÉ : Wrapper pour les icônes
   const IconWrapper = ({ 
     icon, 
     href, 
@@ -111,7 +110,6 @@ const SidebarStudent = () => {
     setIsProfileModalOpen(false);
   };
 
-  // ✅ CORRIGÉ : Fonctions pour la modale de déconnexion
   const handleLogoutClick = () => {
     setIsProfileModalOpen(false);
     setIsLogoutModalOpen(true);
@@ -178,9 +176,9 @@ const SidebarStudent = () => {
         className={`fixed top-0 left-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-50 transform transition-transform duration-300 ease-in-out 
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
       >
-        {/* ✅ MÊME HEADER QUE L'ADMIN */}
-        <div className="p-3 border-b border-gray-200 flex justify-between items-center">
-          <h1 className="text-lg font-bold text-principal">SchoolFlow</h1>
+        {/*  HEADER */}
+        <div className="p-3 border-b border-gray-200 text-tertiary flex justify-between items-center">
+          <h1 className="text-lg font-bold">SchoolFlow</h1>
           <Button 
             variant="ghost" 
             size="icon" 
@@ -204,7 +202,6 @@ const SidebarStudent = () => {
           </div>
         )}
 
-        {/* ✅ MÊME STRUCTURE DE MENU QUE L'ADMIN */}
         <div className="flex-1 overflow-y-auto border-b border-gray-200 text-sm">
           {Object.entries(groupedItems).map(([category, items]) => (
             <div key={category} className="p-3 space-y-1 border-t border-gray-100">
@@ -225,7 +222,6 @@ const SidebarStudent = () => {
           ))}
         </div>
 
-        {/* ✅ EXACTEMENT LE MÊME PROFIL QUE L'ADMIN */}
         <div className="mt-auto border-t border-gray-100 p-3 relative">
           <Button
             variant="ghost"
@@ -234,7 +230,6 @@ const SidebarStudent = () => {
           >
             <div className="flex items-center gap-2">
               {user?.imageUrl ? (
-                // ✅ CORRIGÉ : Utilisation de Image
                 <div className="h-7 w-7 rounded-full overflow-hidden">
                   <Image 
                     src={user.imageUrl} 
@@ -266,7 +261,6 @@ const SidebarStudent = () => {
             />
           </Button>
 
-          {/* ✅ MÊME MODALE DE PROFIL QUE L'ADMIN */}
           {isProfileModalOpen && (
             <>
               <div 
@@ -319,7 +313,7 @@ const SidebarStudent = () => {
 
       <div className="hidden lg:block lg:w-64 flex-shrink-0" />
 
-      {/* ✅ EXACTEMENT LA MÊME MODALE DE DÉCONNEXION QUE L'ADMIN */}
+      {/* MODALE DE DÉCONNEXION QUE L'ADMIN */}
       {isLogoutModalOpen && (
         <>
           {/* Overlay */}
@@ -328,25 +322,21 @@ const SidebarStudent = () => {
             onClick={handleCancelLogout}
           />
           
-          {/* Modale - Même design que l'Admin */}
           <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl z-[70] w-80 max-w-[90vw]">
             <div className="p-6">
-              {/* Icône d'avertissement */}
               <div className="flex justify-center mb-4">
                 <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center">
                   <FaExclamationTriangle className="h-6 w-6 text-red-600" />
                 </div>
               </div>
-              
-              {/* Titre et message - Mêmes textes que l'Admin */}
+
               <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
                 Confirmer la déconnexion
               </h3>
               <p className="text-gray-600 text-sm text-center mb-6">
                 Êtes-vous sûr de vouloir vous déconnecter de votre compte ?
               </p>
-              
-              {/* Boutons d'action - Mêmes que l'Admin */}
+
               <div className="flex gap-3">
                 <Button
                   variant="outline"

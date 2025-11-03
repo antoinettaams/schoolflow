@@ -310,9 +310,9 @@ export default function StatistiquesFinancieresPage() {
             <CardDescription>Analyse détaillée basée sur les paiements et charges</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4 mb-6">
+            <div className="sm:flex flex-col gap-4  mb-6 lg:flex flex-row">
               <Select value={selectedVague} onValueChange={setSelectedVague}>
-                <SelectTrigger className="bg-white w-[200px]">
+                <SelectTrigger className="mb-4 bg-white w-[200px]">
                   <SelectValue placeholder="Toutes les vagues" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">

@@ -17,7 +17,7 @@ import {
   FaCheckCircle,
   FaPlus
 } from "react-icons/fa";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent,CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
@@ -25,20 +25,16 @@ const SecretaryDashboard = () => {
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
 
-  
-    // Vérification du rôle Secretaire
-    useEffect(() => {
-      if (isLoaded && isSignedIn) {
-        const userRole = user?.publicMetadata?.role;
-        console.log("Rôle utilisateur:", userRole);
-        
-        if (userRole !== "Secretaire") {
-          console.log("❌ Accès refusé - Rôle incorrect");
-          router.push("/unauthorized");
-        }
-      }
-    }, [isLoaded, isSignedIn, user, router]);
-  
+  // verification du rôle Sécrétaire
+  useEffect(() => {
+          if (isLoaded && isSignedIn) {
+            const userRole = user?.publicMetadata?.role;
+            if (userRole !== "Secretaire") {
+              router.push("/unauthorized");
+            }
+          }
+        }, [isLoaded, isSignedIn, user, router]);
+   
 
   // Loading state
   if (!isLoaded) {
@@ -58,26 +54,31 @@ const SecretaryDashboard = () => {
     );
   }
 
-  // Vérification finale du rôle
-  const userRole = user?.publicMetadata?.role;
+  //Vérifiction finale
+   const userRole = user?.publicMetadata?.role;
   if (userRole !== "Secretaire") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Accès Refusé</h1>
-          <p className="text-gray-600 mb-4">
-            Vous n&apos;avez pas les permissions de secrétaire.
-          </p>
-          <button
-            onClick={() => router.push("/")}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Retour à l&apos;accueil
-          </button>
-        </div>
+        <Card className="p-8 max-w-md text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl text-red-600">Accès Refusé</CardTitle>
+            <CardDescription className="text-gray-600">
+              Vous n&apos;avez pas les permissions d&apos;administrateur.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => router.push("/")}
+              className="bg-blue-600 text-white hover:bg-blue-700 w-full"
+            >
+              Retour à l&apos;accueil
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
+
 
   // Données de la secrétaire
   const secretaryData = {
@@ -102,7 +103,7 @@ const SecretaryDashboard = () => {
     {
       title: "Nouvelle Inscription",
       description: "Inscrire un nouvel étudiant",
-      icon: <FaUserGraduate className="text-2xl text-blue-600" />,
+      icon: <FaUserGraduate className="text-xl sm:text-2xl text-blue-600" />,
       href: "/auth/signup",
       color: "bg-blue-50 border-blue-200",
       buttonColor: "bg-blue-600 hover:bg-blue-700"
@@ -110,7 +111,7 @@ const SecretaryDashboard = () => {
     {
       title: "Créer un Événement", 
       description: "Planifier un événement scolaire",
-      icon: <FaCalendarAlt className="text-2xl text-green-600" />,
+      icon: <FaCalendarAlt className="text-xl sm:text-2xl text-green-600" />,
       href: "/dashboard/secretaire/evenements",
       color: "bg-green-50 border-green-200",
       buttonColor: "bg-green-600 hover:bg-green-700"
@@ -120,29 +121,29 @@ const SecretaryDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       <div className="h-screen overflow-y-auto">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="max-w-7xl mx-auto">
             
-            {/* En-tête avec info utilisateur */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-6 sticky top-0 z-10">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">
+            {/* En-tête */}
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6 sticky top-0 z-10">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 truncate">
                     Tableau de Bord Secrétaire
                   </h1>
-                  <p className="text-gray-600 mt-2">
+                  <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
                     Bienvenue, {user.firstName} {user.lastName} 👩‍💼
                   </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                      ✅ Secrétaire
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
+                    <span className="bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium w-fit">
+                      Secrétaire
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-xs sm:text-sm text-gray-500 truncate">
                       {user.primaryEmailAddress?.emailAddress}
                     </span>
                   </div>
                 </div>
-                <div className="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg">
+                <div className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg mt-2 sm:mt-0 w-fit sm:w-auto">
                   {new Date().toLocaleDateString('fr-FR', { 
                     weekday: 'long', 
                     year: 'numeric', 
@@ -154,30 +155,30 @@ const SecretaryDashboard = () => {
             </div>
 
             {/* Cartes d'ajout rapide */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Actions Rapides</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="mb-6 sm:mb-8">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Actions Rapides</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {quickAddCards.map((card, index) => (
                   <div 
                     key={index}
-                    className={`${card.color} border-2 rounded-xl p-6 flex flex-col h-full transition-all hover:shadow-lg hover:border-gray-300`}
+                    className={`${card.color} border-2 rounded-xl p-4 sm:p-6 flex flex-col h-full transition-all hover:shadow-lg hover:border-gray-300`}
                   >
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="p-3 bg-white rounded-lg shadow-sm">
+                    <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                      <div className="p-2 sm:p-3 bg-white rounded-lg shadow-sm flex-shrink-0">
                         {card.icon}
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 text-lg">{card.title}</h3>
-                        <p className="text-gray-600 text-sm">{card.description}</p>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 text-base sm:text-lg truncate">{card.title}</h3>
+                        <p className="text-gray-600 text-xs sm:text-sm line-clamp-2">{card.description}</p>
                       </div>
                     </div>
                     
                     <div className="mt-auto">
                       <Link
                         href={card.href}
-                        className={`${card.buttonColor} text-white font-semibold py-3 px-4 rounded-lg w-full flex items-center justify-center gap-2 transition-colors hover:shadow-md`}
+                        className={`${card.buttonColor} text-white font-semibold py-2 sm:py-3 px-3 sm:px-4 rounded-lg w-full flex items-center justify-center gap-2 transition-colors hover:shadow-md text-sm sm:text-base`}
                       >
-                        <FaPlus />
+                        <FaPlus className="w-3 h-3 sm:w-4 sm:h-4" />
                         <span>Commencer</span>
                       </Link>
                     </div>
@@ -187,64 +188,64 @@ const SecretaryDashboard = () => {
             </div>
 
             {/* Contenu principal */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
               
               {/* Colonne de gauche */}
-              <div className="lg:col-span-2 space-y-6">
+              <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                 
                 {/* Statistiques */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Aperçu Administratif</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Aperçu Administratif</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
                     <Card className="bg-white border-l-4 border-l-blue-500">
-                      <CardContent className="p-4">
+                      <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Inscriptions ce mois</p>
-                            <p className="text-2xl font-bold text-gray-900">{secretaryData.monthlyStats.inscriptions}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Inscriptions ce mois</p>
+                            <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{secretaryData.monthlyStats.inscriptions}</p>
                           </div>
-                          <FaUserGraduate className="h-8 w-8 text-blue-500" />
+                          <FaUserGraduate className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0 ml-2" />
                         </div>
-                        <Progress value={75} className="mt-2" />
+                        <Progress value={75} className="mt-2 h-1 sm:h-2" />
                       </CardContent>
                     </Card>
 
                     <Card className="bg-white border-l-4 border-l-green-500">
-                      <CardContent className="p-4">
+                      <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Documents traités</p>
-                            <p className="text-2xl font-bold text-gray-900">{secretaryData.monthlyStats.documentsProcessed}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Documents traités</p>
+                            <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{secretaryData.monthlyStats.documentsProcessed}</p>
                           </div>
-                          <FaFileAlt className="h-8 w-8 text-green-500" />
+                          <FaFileAlt className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0 ml-2" />
                         </div>
-                        <Progress value={90} className="mt-2" />
+                        <Progress value={90} className="mt-2 h-1 sm:h-2" />
                       </CardContent>
                     </Card>
 
                     <Card className="bg-white border-l-4 border-l-purple-500">
-                      <CardContent className="p-4">
+                      <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Taux de complétion</p>
-                            <p className="text-2xl font-bold text-gray-900">{secretaryData.monthlyStats.completionRate}%</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Taux de complétion</p>
+                            <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{secretaryData.monthlyStats.completionRate}%</p>
                           </div>
-                          <FaChartLine className="h-8 w-8 text-purple-500" />
+                          <FaChartLine className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0 ml-2" />
                         </div>
-                        <Progress value={secretaryData.monthlyStats.completionRate} className="mt-2" />
+                        <Progress value={secretaryData.monthlyStats.completionRate} className="mt-2 h-1 sm:h-2" />
                       </CardContent>
                     </Card>
                   </div>
 
                   {/* Widgets principaux */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <Card>
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Inscriptions en Attente</CardTitle>
-                        <FaUserGraduate className="h-4 w-4 text-orange-500" />
+                        <CardTitle className="text-xs sm:text-sm font-medium truncate">Inscriptions en Attente</CardTitle>
+                        <FaUserGraduate className="h-4 w-4 text-orange-500 flex-shrink-0 ml-2" />
                       </CardHeader>
-                      <CardContent className="pt-4 space-y-2">
-                        <div className="text-3xl font-bold text-orange-600">
+                      <CardContent className="pt-3 sm:pt-4 space-y-1 sm:space-y-2">
+                        <div className="text-2xl sm:text-3xl font-bold text-orange-600">
                           {secretaryData.pendingInscriptions}
                         </div>
                         <p className="text-xs text-gray-700">À traiter aujourd&apos;hui</p>
@@ -258,11 +259,11 @@ const SecretaryDashboard = () => {
 
                     <Card>
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Cartes à Imprimer</CardTitle>
-                        <FaIdCard className="h-4 w-4 text-blue-500" />
+                        <CardTitle className="text-xs sm:text-sm font-medium truncate">Cartes à Imprimer</CardTitle>
+                        <FaIdCard className="h-4 w-4 text-blue-500 flex-shrink-0 ml-2" />
                       </CardHeader>
-                      <CardContent className="pt-4 space-y-2">
-                        <div className="text-3xl font-bold text-blue-600">
+                      <CardContent className="pt-3 sm:pt-4 space-y-1 sm:space-y-2">
+                        <div className="text-2xl sm:text-3xl font-bold text-blue-600">
                           {secretaryData.cardsToPrint}
                         </div>
                         <p className="text-xs text-gray-700">En attente</p>
@@ -277,23 +278,23 @@ const SecretaryDashboard = () => {
                 </div>
 
                 {/* Activités récentes */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Activités Récentes</h3>
-                  <div className="space-y-3">
+                <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">Activités Récentes</h3>
+                  <div className="space-y-2 sm:space-y-3">
                     {recentActivities.map((activity) => (
-                      <div key={activity.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
-                        <div className="flex items-center gap-3">
+                      <div key={activity.id} className="flex items-center justify-between p-2 sm:p-3 hover:bg-gray-50 rounded">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                           {activity.status === 'completed' ? (
-                            <FaCheckCircle className="h-4 w-4 text-green-500" />
+                            <FaCheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
                           ) : (
-                            <FaExclamationTriangle className="h-4 w-4 text-orange-500" />
+                            <FaExclamationTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-orange-500 flex-shrink-0" />
                           )}
-                          <div>
-                            <p className="text-sm font-medium">{activity.action}</p>
-                            <p className="text-xs text-gray-500">{activity.student}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium truncate">{activity.action}</p>
+                            <p className="text-xs text-gray-500 truncate">{activity.student}</p>
                           </div>
                         </div>
-                        <span className="text-xs text-gray-400">{activity.time}</span>
+                        <span className="text-xs text-gray-400 flex-shrink-0 ml-2">{activity.time}</span>
                       </div>
                     ))}
                   </div>
@@ -302,60 +303,60 @@ const SecretaryDashboard = () => {
               </div>
 
               {/* Colonne de droite */}
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 
                 {/* Alertes */}
-                <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-                  <h3 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
-                    <FaBell className="text-red-600" />
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 sm:p-6">
+                  <h3 className="font-semibold text-red-900 mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">
+                    <FaBell className="text-red-600 h-4 w-4" />
                     Alertes Urgentes
                   </h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <div className="text-sm text-red-800">
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+                      <div className="text-xs sm:text-sm text-red-800">
                         <span className="font-medium">{secretaryData.pendingInscriptions} inscriptions</span> en attente
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <div className="text-sm text-red-800">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+                      <div className="text-xs sm:text-sm text-red-800">
                         <span className="font-medium">{secretaryData.cardsToPrint} cartes</span> à imprimer
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <div className="text-sm text-red-800">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+                      <div className="text-xs sm:text-sm text-red-800">
                         <span className="font-medium">{secretaryData.unreadMessages} messages</span> non lus
                       </div>
                     </div>
                   </div>
-                  <button className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                  <button className="w-full mt-3 sm:mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 sm:px-4 rounded-lg transition-colors text-sm sm:text-base">
                     Voir les alertes
                   </button>
                 </div>
 
                 {/* Événements à venir */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Événements à Venir</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                      <FaCalendarAlt className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <p className="text-sm font-medium">Réunion parents</p>
+                <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+                  <h3 className="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Événements à Venir</h3>
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-blue-50 rounded-lg">
+                      <FaCalendarAlt className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-medium truncate">Réunion parents</p>
                         <p className="text-xs text-gray-600">Demain, 14h00</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                      <FaCalendarAlt className="h-5 w-5 text-green-600" />
-                      <div>
-                        <p className="text-sm font-medium">Commission pédagogique</p>
+                    <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-green-50 rounded-lg">
+                      <FaCalendarAlt className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-medium truncate">Commission pédagogique</p>
                         <p className="text-xs text-gray-600">Vendredi, 10h00</p>
                       </div>
                     </div>
                   </div>
-                  <Link href="/dashboard/secretaire/evenements" className="w-full mt-4 block">
-                    <Button variant="outline" className="w-full">
+                  <Link href="/dashboard/secretaire/evenements" className="w-full mt-3 sm:mt-4 block">
+                    <Button variant="outline" className="w-full text-xs sm:text-sm">
                       Voir tous les événements
                     </Button>
                   </Link>

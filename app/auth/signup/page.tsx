@@ -7,7 +7,7 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import toast, { Toaster } from "react-hot-toast";
 import Image from "next/image";
 
-// ✅ Interface pour typer les métadonnées
+// Interface pour typer les métadonnées
 interface UserPublicMetadata {
   role?: string;
 }
@@ -24,28 +24,28 @@ export default function SignUpPage() {
   const [accessDenied, setAccessDenied] = useState(false);
   const [isSecretaire, setIsSecretaire] = useState(false);
 
-  // ✅ Tableau des filières SIMPLIFIÉ (sans niveaux)
+  // Tableau des filières 
   const filieres = [
     { id: "informatique", name: "Informatique" },
     { id: "mathematiques", name: "Mathématiques" },
   ];
 
-  // ⚡ Vérification des permissions ADMIN ou SECRETAIRE
+  // Vérification des permissions ADMIN ou SECRETAIRE
   useEffect(() => {
     if (!authLoaded || !userLoaded) return;
 
-    console.log("🔍 DEBUG - User ID:", userId);
-    console.log("🔍 DEBUG - User:", user);
+    console.log("DEBUG - User ID:", userId);
+    console.log("DEBUG - User:", user);
 
     if (!userId) {
-      console.log("🚫 Non connecté - Redirection vers /auth/SignIn");
+      console.log("Non connecté - Redirection vers /auth/SignIn");
       router.push("/auth/SignIn");
       return;
     }
 
-    // ✅ CORRIGÉ : Typage approprié pour les métadonnées
+    // CORRIGÉ : Typage approprié pour les métadonnées
     const userRole = (user?.publicMetadata as UserPublicMetadata)?.role;
-    console.log("🔍 DEBUG - User role:", userRole);
+    console.log("EBUG - User role:", userRole);
     
     const isAdmin = userRole && (
       userRole.toLowerCase().includes("admin") || 
@@ -59,11 +59,11 @@ export default function SignUpPage() {
       userRole === "secretaire"
     );
     
-    console.log("🔍 DEBUG - Is admin?", isAdmin);
-    console.log("🔍 DEBUG - Is secretaire?", isSecretaireUser);
+    console.log("DEBUG - Is admin?", isAdmin);
+    console.log("DEBUG - Is secretaire?", isSecretaireUser);
     
     if (!isAdmin && !isSecretaireUser) {
-      console.log("🚫 Accès refusé - Pas admin ni secrétaire - Redirection vers dashboard");
+      console.log("Accès refusé - Pas admin ni secrétaire - Redirection vers dashboard");
       setAccessDenied(true);
       toast.error("Accès refusé : réservé aux administrateurs et secrétaires");
       setTimeout(() => {
@@ -85,7 +85,7 @@ export default function SignUpPage() {
       setRole("Etudiant");
     }
 
-    console.log("✅ Accès autorisé - Admin ou Secrétaire détecté");
+    console.log("Accès autorisé - Admin ou Secrétaire détecté");
     setIsLoading(false);
   }, [authLoaded, userLoaded, userId, user, router]);
 
@@ -249,7 +249,7 @@ export default function SignUpPage() {
     }
   };
 
-  // ✅ Interface pour les données utilisateur
+  // Interface pour les données utilisateur
   interface UserData {
     email: string;
     firstName: string;
@@ -267,7 +267,7 @@ export default function SignUpPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // ✅ Toast de chargement
+    // Toast de chargement
     const loadingToast = toast.loading('Création du compte en cours...');
 
     try {
@@ -280,7 +280,7 @@ export default function SignUpPage() {
       const firstName = nameParts[0];
       const lastName = nameParts.slice(1).join(" ") || firstName;
 
-      // ✅ Données utilisateur
+      // Données utilisateur
       const userData: UserData = {
         email,
         firstName,
@@ -294,7 +294,7 @@ export default function SignUpPage() {
         relation: formData.get("relation") as string,
       };
 
-      console.log("📤 Données envoyées à l&apos;API:", userData);
+      console.log("Données envoyées à l&apos;API:", userData);
 
       const response = await fetch('/api/admin/create-user', {
         method: 'POST',
@@ -310,12 +310,12 @@ export default function SignUpPage() {
         throw new Error(result.error || 'Erreur lors de la création');
       }
 
-      // ✅ SUCCÈS - Toast de succès avec informations détaillées
+      // SUCCÈS - Toast de succès avec informations détaillées
       toast.dismiss(loadingToast);
       toast.success(
         <div className="max-w-md">
           <div className="font-bold text-green-800 mb-2">
-            ✅ Compte {isSecretaire ? "Étudiant" : role} créé avec succès !
+            Compte {isSecretaire ? "Étudiant" : role} créé avec succès !
           </div>
           <div className="text-sm space-y-1">
             <div><strong>📧 Email:</strong> {email}</div>
@@ -342,7 +342,7 @@ export default function SignUpPage() {
       form.reset();
       
     } catch (err: unknown) {
-      // ✅ ERREUR - Toast d'erreur
+      // ERREUR - Toast d'erreur
       toast.dismiss(loadingToast);
       const errorMessage = err instanceof Error ? err.message : "Erreur lors de la création du compte";
       toast.error(
@@ -394,7 +394,7 @@ export default function SignUpPage() {
 
   return (
     <>
-      {/* ✅ Composant Toaster pour afficher les notifications */}
+      {/* Composant Toaster pour afficher les notifications */}
       <Toaster 
         position="top-right"
         toastOptions={{
@@ -421,7 +421,7 @@ export default function SignUpPage() {
             },
           },
           loading: {
-            duration: Infinity, // Reste jusqu'à ce qu'on le dismiss manuellement
+            duration: Infinity,
           },
         }}
       />
@@ -448,7 +448,7 @@ export default function SignUpPage() {
             {isSecretaire && (
               <div className="mt-4 bg-blue-800 bg-opacity-50 p-3 rounded-lg">
                 <p className="text-sm font-medium">
-                  📝 Mode Secrétaire : Inscription étudiants uniquement
+                  Mode Secrétaire : Inscription étudiants uniquement
                 </p>
               </div>
             )}
@@ -460,7 +460,7 @@ export default function SignUpPage() {
                 {isSecretaire ? "Inscrire un étudiant" : "Créer un compte"}
               </h2>
 
-              {/* SELECTION DU ROLE - CACHÉ POUR LA SECRETAIRE */}
+              {/* SELECTION DU ROLE */}
               {!isSecretaire ? (
                 <div className="mb-6">
                   <label htmlFor="role" className="block mb-2 font-title font-medium text-dark">

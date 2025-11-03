@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { FaTachometerAlt, FaLock, FaBug } from "react-icons/fa";
 
-// Définition des types pour TypeScript
 interface FloatingBugProps {
   delay: number;
   size: number;
@@ -17,7 +16,6 @@ export default function NotFound() {
     setMounted(true);
   }, []);
 
-  // Composant avec typage approprié
   const FloatingBug = ({ delay, size, position }: FloatingBugProps) => (
     <div 
       className={`absolute ${position} animate-float opacity-0`}
@@ -41,7 +39,6 @@ export default function NotFound() {
   if (!mounted) return null;
 
   return (
-    // 'h-screen' est conservé. 'overflow-hidden' est ajouté pour couper tout débordement accidentel
     <div className="h-screen bg-black text-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
       
       {/* Bugs flottants */}
@@ -55,7 +52,7 @@ export default function NotFound() {
         <div className="font-title flex items-center justify-center mb-6 flex-none">
           <div className="relative">
             
-            {/* Le nombre 4-Robot-4 */}
+            {/* 4-Robot-4 */}
             <div className="flex items-center justify-center 
               text-[5rem] sm:text-[8rem] md:text-[12rem] lg:text-[15rem] 
               leading-none font-black flex-none"
@@ -72,7 +69,6 @@ export default function NotFound() {
                   <div className="absolute inset-0 bg-tertiary rounded-full animate-pulse-slow" />
                   <div className="absolute inset-1 bg-black rounded-full" />
                   <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    {/* Taille de l'emoji réduite */}
                     <div className="text-2xl sm:text-4xl md:text-6xl animate-bounce-slow">🤖</div>
                   </div>
                   {/* Antennes */}
@@ -87,8 +83,6 @@ export default function NotFound() {
                 <span className="absolute top-0 left-0 text-bluvy animate-glitch-3 opacity-70">4</span>
               </span>
             </div>
-            
-            {/* Effet de scan */}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-second to-transparent opacity-20 animate-scan" />
           </div>
         </div>

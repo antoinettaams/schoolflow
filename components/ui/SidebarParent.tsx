@@ -7,7 +7,7 @@ import { useUser, useClerk } from "@clerk/nextjs";
 import Image from "next/image";
 import { 
   FaUsers, FaCalendarAlt, FaFileInvoiceDollar, FaRegChartBar, FaClipboardList, 
-  FaComments, FaCog, FaSignOutAlt, FaGraduationCap, FaBars, FaUser, FaFileAlt, FaChevronDown,
+  FaCog, FaSignOutAlt, FaGraduationCap, FaBars, FaUser, FaFileAlt, FaChevronDown,
   FaTimes, FaExclamationTriangle, FaBell
 } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,6 @@ const SidebarParent = () => {
     return isActive ? "text-white text-base" : "text-principal text-base";
   };
 
-  // ✅ CORRIGÉ : Wrapper pour les icônes
   const IconWrapper = ({ 
     icon, 
     href, 
@@ -85,7 +84,6 @@ const SidebarParent = () => {
     { label: "Évènements Scolaires", href: "/dashboard/parent/events", icon: <FaGraduationCap />, category: "SUPERVISION" },
     { label: "Bulletins", href: "/dashboard/parent/grades", icon: <FaFileAlt />, category: "SUPERVISION" },
     { label: "Frais Scolaires", href: "/dashboard/parent/finance", icon: <FaFileInvoiceDollar />, category: "ADMINISTRATION" },
-    { label: "Forum", href: "/dashboard/parent/forum", icon: <FaComments />, category: "ADMINISTRATION" },
   ];
 
   const groupedItems = {
@@ -103,7 +101,6 @@ const SidebarParent = () => {
     setIsProfileModalOpen(false);
   };
 
-  // ✅ FONCTIONS POUR LA MODALE DE DÉCONNEXION
   const handleLogoutClick = () => {
     setIsProfileModalOpen(false);
     setIsLogoutModalOpen(true);
@@ -170,9 +167,9 @@ const SidebarParent = () => {
         className={`fixed top-0 left-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-50 transform transition-transform duration-300 ease-in-out 
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
       >
-        {/* ✅ MÊME HEADER */}
-        <div className="p-3 border-b border-gray-200 flex justify-between items-center">
-          <h1 className="text-lg font-bold text-principal">SchoolFlow</h1>
+        {/* HEADER */}
+        <div className="p-3 border-b border-gray-200 text-tertiary flex justify-between items-center">
+          <h1 className="text-lg font-bold">SchoolFlow</h1>
           <Button 
             variant="ghost" 
             size="icon" 
@@ -183,7 +180,6 @@ const SidebarParent = () => {
           </Button>
         </div>
 
-        {/* ✅ MÊME DASHBOARD ITEM */}
         {dashboardItem && (
           <div className="p-3 border-b border-gray-200">
             <Link 
@@ -196,7 +192,6 @@ const SidebarParent = () => {
           </div>
         )}
 
-        {/* ✅ MÊME STRUCTURE DE MENU */}
         <div className="flex-1 overflow-y-auto border-b border-gray-200 text-sm">
           {Object.entries(groupedItems).map(([category, items]) => (
             <div key={category} className="p-3 space-y-1 border-t border-gray-100">
@@ -217,7 +212,6 @@ const SidebarParent = () => {
           ))}
         </div>
 
-        {/* ✅ EXACTEMENT LE MÊME PROFIL */}
         <div className="mt-auto border-t border-gray-100 p-3 relative">
           <Button
             variant="ghost"
@@ -226,7 +220,6 @@ const SidebarParent = () => {
           >
             <div className="flex items-center gap-2">
               {user?.imageUrl ? (
-                // ✅ CORRIGÉ : Utilisation de Image
                 <div className="h-7 w-7 rounded-full overflow-hidden">
                   <Image 
                     src={user.imageUrl} 
@@ -258,7 +251,6 @@ const SidebarParent = () => {
             />
           </Button>
 
-          {/* ✅ MÊME MODALE DE PROFIL */}
           {isProfileModalOpen && (
             <>
               <div 
@@ -311,7 +303,7 @@ const SidebarParent = () => {
 
       <div className="hidden lg:block lg:w-64 flex-shrink-0" />
 
-      {/* ✅ EXACTEMENT LA MÊME MODALE DE DÉCONNEXION */}
+      {/* MODALE DE DÉCONNEXION */}
       {isLogoutModalOpen && (
         <>
           <div 

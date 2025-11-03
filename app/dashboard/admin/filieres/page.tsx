@@ -438,14 +438,11 @@ const AdminFilieresPage = () => {
                 {/* En-tête du modal */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                      <FaGraduationCap className="w-8 h-8 text-blue-600" />
-                    </div>
                     <div>
                       <h2 className="text-2xl font-bold">{selectedFiliere.name}</h2>
                     </div>
                   </div>
-                  <Button variant="outline" onClick={closeModal}>
+                  <Button className="w-24" variant="outline" onClick={closeModal}>
                     Fermer
                   </Button>
                 </div>
@@ -491,7 +488,7 @@ const AdminFilieresPage = () => {
                   <CardContent>
                     <div className="space-y-3">
                       {selectedFiliere.modules.map((module) => (
-                        <div key={module.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div key={module.id} className="flex flex-col gap-2 items-center justify-between sm:flex-row p-3 border rounded-lg">
                           <div>
                             <span className="font-medium">{module.name}</span>
                             <div className="text-sm text-gray-500 mt-1">{module.vague}</div>
