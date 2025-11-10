@@ -8,7 +8,7 @@ interface DashboardData {
   childInfo: {
     name: string;
     className: string;
-    latestGrade: string;
+    latestGrade: string; 
     absencesLastWeek: number;
     attendanceRate: number;
     overallAverage: number;
@@ -249,6 +249,14 @@ async function calculateAttendanceRate(studentId: string): Promise<number> {
   }
 }
 
+// Fonction pour parser les créneaux horaires
+function parseScheduleSlots(slots: any): any[] {
+  if (!slots || !Array.isArray(slots)) {
+    return [];
+  }
+  return slots;
+}
+
 // Service : Prochain cours - VERSION CORRIGÉE pour table planningAssignation
 async function getNextSchedule(student: any) {
   try {
@@ -299,14 +307,11 @@ async function getNextSchedule(student: any) {
       console.log(`   Vague: ${assignation.vague?.nom}`);
       
       // Afficher les créneaux horaires
-      if (assignation.scheduleSlots && Array.isArray(assignation.scheduleSlots)) {
-        console.log(`   Créneaux: ${assignation.scheduleSlots.length}`);
-        assignation.scheduleSlots.forEach((slot: any, slotIndex: number) => {
-          console.log(`     ${slotIndex + 1}. ${slot.day} ${slot.startTime}-${slot.endTime} (Salle: ${slot.classroom})`);
-        });
-      } else {
-        console.log(`   Aucun créneau horaire`);
-      }
+      const scheduleSlots = parseScheduleSlots(assignation.scheduleSlots);
+      console.log(`   Créneaux: ${scheduleSlots.length}`);
+      scheduleSlots.forEach((slot: any, slotIndex: number) => {
+        console.log(`     ${slotIndex + 1}. ${slot.day} ${slot.startTime}-${slot.endTime} (Salle: ${slot.classroom})`);
+      });
     });
 
     if (assignations.length === 0) {
@@ -322,9 +327,8 @@ async function getNextSchedule(student: any) {
     let assignationSelectionnee = null;
     
     for (const assignation of assignations) {
-      if (assignation.scheduleSlots && 
-          Array.isArray(assignation.scheduleSlots) && 
-          assignation.scheduleSlots.length > 0) {
+      const scheduleSlots = parseScheduleSlots(assignation.scheduleSlots);
+      if (scheduleSlots.length > 0) {
         assignationSelectionnee = assignation;
         break;
       }
@@ -344,8 +348,18 @@ async function getNextSchedule(student: any) {
     console.log('Teacher:', assignationSelectionnee.teacher?.user?.firstName, assignationSelectionnee.teacher?.user?.lastName);
     
     // Prendre le premier créneau horaire
-    const premierCreneau = assignationSelectionnee.scheduleSlots[0];
+    const scheduleSlots = parseScheduleSlots(assignationSelectionnee.scheduleSlots);
+    const premierCreneau = scheduleSlots[0];
     console.log('Créneau sélectionné:', premierCreneau);
+
+    if (!premierCreneau) {
+      console.log('=== AUCUN CRÉNEAU DISPONIBLE ===');
+      return {
+        subject: "Aucun cours programmé",
+        time: "Non disponible",
+        location: "-"
+      };
+    }
 
     // Formater l'affichage
     const jourCapitalized = premierCreneau.day ? 

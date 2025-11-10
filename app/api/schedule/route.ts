@@ -1,9 +1,7 @@
 // app/api/schedule/route.ts - VERSION CORRIGÉE
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 interface Cours {
   id: string;
@@ -11,10 +9,10 @@ interface Cours {
   enseignant: string;
   emailEnseignant?: string;
   filiere: string;
-  vague: string;
+  vague: string; 
   coefficient: number;
   type: string;
-  description?: string;
+  description?: string; 
   jour: string;
   heureDebut: string;
   heureFin: string;
@@ -69,13 +67,35 @@ export async function GET(req: NextRequest) {
     switch (user.role) {
       case "ETUDIANT":
         if (user.student && user.student.filiereId) {
-          cours = await getCoursFiliere(user.student.filiereId);
-          userInfo = {
-            role: "Étudiant",
-            filiere: user.student.filiere?.nom || "Non assigné",
-            vague: user.student.vague?.nom || "Non assigné",
-            nom: `${user.firstName} ${user.lastName}`
-          };
+          // CORRECTION: Récupérer les détails complets de l'étudiant
+          const studentWithDetails = await prisma.student.findUnique({
+            where: { id: user.student.id },
+            include: {
+              filiere: true,
+              vague: true,
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true
+                }
+              }
+            }
+          });
+
+          if (studentWithDetails) {
+            cours = await getCoursFiliere(studentWithDetails.filiereId!);
+            userInfo = {
+              role: "Étudiant",
+              filiere: studentWithDetails.filiere?.nom || "Non assigné",
+              vague: studentWithDetails.vague?.nom || "Non assigné",
+              nom: `${studentWithDetails.user.firstName} ${studentWithDetails.user.lastName}`
+            };
+          } else {
+            return NextResponse.json({
+              error: "Profil étudiant incomplet",
+              message: "Votre profil étudiant n'est pas complètement configuré"
+            }, { status: 400 });
+          }
         } else {
           return NextResponse.json({
             error: "Profil étudiant incomplet",
@@ -165,8 +185,6 @@ export async function GET(req: NextRequest) {
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -247,18 +265,18 @@ async function findStudentByName(enfantName: string) {
     return student;
   }
 
-  // Recherche 2: Recherche partielle
+  // Recherche 2: Recherche partielle avec QueryMode correct
   student = await prisma.student.findFirst({
     where: {
       user: {
         OR: [
-          { firstName: { contains: searchTerms, mode: "insensitive" } },
-          { lastName: { contains: searchTerms, mode: "insensitive" } },
+          { firstName: { contains: searchTerms, mode: "insensitive" as any } },
+          { lastName: { contains: searchTerms, mode: "insensitive" as any } },
           ...terms.map(term => ({
-            firstName: { contains: term, mode: "insensitive" }
+            firstName: { contains: term, mode: "insensitive" as any }
           })),
           ...terms.map(term => ({
-            lastName: { contains: term, mode: "insensitive" }
+            lastName: { contains: term, mode: "insensitive" as any }
           }))
         ]
       }

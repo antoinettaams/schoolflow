@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     if (action === 'all-records') {
       try {
-        // Récupérer toutes les présences avec les relations CORRIGÉES
+        // Récupérer toutes les présences avec les relations
         const attendanceRecords = await prisma.attendance.findMany({
           include: {
             student: {
@@ -189,12 +189,12 @@ export async function GET(request: NextRequest) {
           select: { nom: true }
         });
         
-        const modules = await prisma.attendance.findMany({
-          distinct: ['subject'],
-          select: { subject: true },
+        // CORRECTION : Utilisation de groupBy pour éviter l'erreur TypeScript
+        const modules = await prisma.attendance.groupBy({
+          by: ['subject'],
           where: {
             subject: {
-              not: null
+              not: "" // Filtrer les chaînes vides
             }
           }
         });
@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
           success: true,
           filieres: filieres.map(f => f.nom),
           vagues: vagues.map(v => v.nom),
-          modules: modules.map(m => m.subject).filter(Boolean),
+          modules: modules.map(m => m.subject).filter(subject => subject && subject.trim() !== ''),
           teachers: teachers.map(t => `${t.user.firstName} ${t.user.lastName}`)
         });
       } catch (error) {

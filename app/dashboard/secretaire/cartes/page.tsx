@@ -17,7 +17,7 @@ import { Search, Download, Printer, MoreHorizontal, CreditCard, Mail } from "luc
 
 interface CarteEtudiante {
   id: string;
-  eleve: string;
+  eleve: string; 
   email: string;
   filiere: string;
   vague: string;

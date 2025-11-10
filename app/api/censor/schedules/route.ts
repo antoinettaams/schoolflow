@@ -1,8 +1,6 @@
 // app/api/censor/schedules/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma";
 
 // Types pour les données
 interface ScheduleSlot {
@@ -91,8 +89,8 @@ export async function GET(request: Request) {
         lastName: assignation.teacher.user.lastName,
         email: assignation.teacher.user.email
       },
-      slots: assignation.scheduleSlots as ScheduleSlot[],
-      period: assignation.schedulePeriod as SchedulePeriod,
+      slots: assignation.scheduleSlots as unknown as ScheduleSlot[],
+      period: assignation.schedulePeriod as unknown as SchedulePeriod,
       createdAt: assignation.createdAt.toISOString(),
       updatedAt: assignation.updatedAt.toISOString()
     }));
@@ -152,8 +150,8 @@ export async function POST(request: Request) {
         filiereId: parseInt(filiereId),
         moduleId: parseInt(moduleId),
         teacherId,
-        scheduleSlots: slots,
-        schedulePeriod: period
+        scheduleSlots: slots as any,
+        schedulePeriod: period as any
       },
       include: {
         vague: { 
@@ -209,8 +207,8 @@ export async function POST(request: Request) {
         lastName: newAssignation.teacher.user.lastName,
         email: newAssignation.teacher.user.email
       },
-      slots: newAssignation.scheduleSlots as ScheduleSlot[],
-      period: newAssignation.schedulePeriod as SchedulePeriod,
+      slots: newAssignation.scheduleSlots as unknown as ScheduleSlot[],
+      period: newAssignation.schedulePeriod as unknown as SchedulePeriod,
       createdAt: newAssignation.createdAt.toISOString(),
       updatedAt: newAssignation.updatedAt.toISOString()
     };

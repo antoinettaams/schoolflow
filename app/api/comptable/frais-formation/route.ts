@@ -26,18 +26,51 @@ interface FraisFormationData {
   dateModification: string;
 }
 
+// Fonction pour valider et transformer les services inclus
+function parseServicesInclus(data: any): ServicesInclus {
+  // Valeurs par défaut
+  const defaultServices: ServicesInclus = {
+    connexionIllimitee: true,
+    ordinateurPortable: true,
+    materielPedagogique: true,
+    accesPlateforme: true,
+    supportTechnique: true,
+  };
+
+  if (!data || typeof data !== 'object') {
+    return defaultServices;
+  }
+
+  // Validation et transformation sécurisée
+  return {
+    connexionIllimitee: typeof data.connexionIllimitee === 'boolean' ? data.connexionIllimitee : defaultServices.connexionIllimitee,
+    ordinateurPortable: typeof data.ordinateurPortable === 'boolean' ? data.ordinateurPortable : defaultServices.ordinateurPortable,
+    materielPedagogique: typeof data.materielPedagogique === 'boolean' ? data.materielPedagogique : defaultServices.materielPedagogique,
+    accesPlateforme: typeof data.accesPlateforme === 'boolean' ? data.accesPlateforme : defaultServices.accesPlateforme,
+    supportTechnique: typeof data.supportTechnique === 'boolean' ? data.supportTechnique : defaultServices.supportTechnique,
+  };
+}
+
+// CORRECTION : Fonction pour convertir ServicesInclus en objet JSON compatible Prisma
+function servicesInclusToJson(services: ServicesInclus): any {
+  return {
+    connexionIllimitee: services.connexionIllimitee,
+    ordinateurPortable: services.ordinateurPortable,
+    materielPedagogique: services.materielPedagogique,
+    accesPlateforme: services.accesPlateforme,
+    supportTechnique: services.supportTechnique,
+  };
+}
+
 // Fonction pour convertir les nombres avec séparateurs en nombre simple
 function parseMontant(montant: any): number {
   if (typeof montant === 'number') return montant;
   if (typeof montant === 'string') {
-    // Supprimer les espaces et convertir les virgules en points
     const cleaned = montant
-      .replace(/\s/g, '') // Supprimer les espaces
-      .replace(/,/g, '.'); // Remplacer les virgules par des points
-    
-    // Convertir en nombre
+      .replace(/\s/g, '')
+      .replace(/,/g, '.');
     const nombre = parseFloat(cleaned);
-    return isNaN(nombre) ? 0 : Math.round(nombre); // Arrondir pour éviter les décimales
+    return isNaN(nombre) ? 0 : Math.round(nombre);
   }
   return 0;
 }
@@ -82,7 +115,6 @@ export async function GET(request: Request) {
     
     if (!fraisFormationAvailable) {
       console.error('🚨 MODÈLE FRAISFORMATION NON DISPONIBLE DANS PRISMA CLIENT');
-      console.log('💡 Solution: Exécutez "npx prisma generate" puis redémarrez le serveur');
       
       return NextResponse.json({
         success: true,
@@ -127,7 +159,7 @@ export async function GET(request: Request) {
           filiereName: fraisFormation.filiere.nom,
           fraisInscription: FRAIS_INSCRIPTION_UNIVERSEL,
           fraisScolarite: fraisFormation.fraisScolarite,
-          servicesInclus: fraisFormation.servicesInclus as ServicesInclus,
+          servicesInclus: parseServicesInclus(fraisFormation.servicesInclus),
           total: FRAIS_INSCRIPTION_UNIVERSEL + fraisFormation.fraisScolarite,
           statut: fraisFormation.statut,
           dateCreation: fraisFormation.createdAt.toISOString().split('T')[0],
@@ -177,7 +209,7 @@ export async function GET(request: Request) {
         filiereName: frais.filiere.nom,
         fraisInscription: FRAIS_INSCRIPTION_UNIVERSEL,
         fraisScolarite: frais.fraisScolarite,
-        servicesInclus: frais.servicesInclus as ServicesInclus,
+        servicesInclus: parseServicesInclus(frais.servicesInclus),
         total: FRAIS_INSCRIPTION_UNIVERSEL + frais.fraisScolarite,
         statut: frais.statut,
         dateCreation: frais.createdAt.toISOString().split('T')[0],
@@ -295,19 +327,18 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
+    // CORRECTION : Convertir servicesInclus en JSON compatible Prisma
+    const servicesInclusJson = servicesInclus 
+      ? servicesInclusToJson(parseServicesInclus(servicesInclus))
+      : servicesInclusToJson(parseServicesInclus({}));
+
     // Créer la configuration
     const nouvelleConfiguration = await prisma.fraisFormation.create({
       data: {
         vagueId,
         filiereId: parseInt(filiereId),
         fraisScolarite: fraisScolariteConverti,
-        servicesInclus: servicesInclus || {
-          connexionIllimitee: true,
-          ordinateurPortable: true,
-          materielPedagogique: true,
-          accesPlateforme: true,
-          supportTechnique: true,
-        },
+        servicesInclus: servicesInclusJson, // CORRECTION : utilisation du JSON compatible
         statut: 'ACTIF'
       },
       include: {
@@ -335,7 +366,7 @@ export async function POST(request: Request) {
       filiereName: nouvelleConfiguration.filiere.nom,
       fraisInscription: FRAIS_INSCRIPTION_UNIVERSEL,
       fraisScolarite: nouvelleConfiguration.fraisScolarite,
-      servicesInclus: nouvelleConfiguration.servicesInclus as ServicesInclus,
+      servicesInclus: parseServicesInclus(nouvelleConfiguration.servicesInclus),
       total: FRAIS_INSCRIPTION_UNIVERSEL + nouvelleConfiguration.fraisScolarite,
       statut: nouvelleConfiguration.statut,
       dateCreation: nouvelleConfiguration.createdAt.toISOString().split('T')[0],
@@ -423,12 +454,23 @@ export async function PUT(request: Request) {
       }
     }
 
+    // CORRECTION : Gérer servicesInclus pour la mise à jour
+    let servicesInclusData: any;
+    
+    if (servicesInclus !== undefined) {
+      // Si servicesInclus est fourni, utiliser la nouvelle valeur
+      servicesInclusData = servicesInclusToJson(parseServicesInclus(servicesInclus));
+    } else {
+      // Sinon, conserver la valeur existante
+      servicesInclusData = existingConfig.servicesInclus;
+    }
+
     // Mettre à jour la configuration
     const updatedConfig = await prisma.fraisFormation.update({
       where: { id },
       data: {
         fraisScolarite: fraisScolariteConverti,
-        servicesInclus: servicesInclus || existingConfig.servicesInclus,
+        servicesInclus: servicesInclusData, // CORRECTION : utilisation sécurisée
         statut: statut || existingConfig.statut
       },
       include: {
@@ -456,7 +498,7 @@ export async function PUT(request: Request) {
       filiereName: updatedConfig.filiere.nom,
       fraisInscription: FRAIS_INSCRIPTION_UNIVERSEL,
       fraisScolarite: updatedConfig.fraisScolarite,
-      servicesInclus: updatedConfig.servicesInclus as ServicesInclus,
+      servicesInclus: parseServicesInclus(updatedConfig.servicesInclus),
       total: FRAIS_INSCRIPTION_UNIVERSEL + updatedConfig.fraisScolarite,
       statut: updatedConfig.statut,
       dateCreation: updatedConfig.createdAt.toISOString().split('T')[0],
