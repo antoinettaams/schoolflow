@@ -1,9 +1,7 @@
-// app/api/admin/dashboard/route.ts - VERSION COMPLÈTE ET CORRIGÉE
+// app/api/admin/dashboard/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { auth, clerkClient } from "@clerk/nextjs/server";
-
-const prisma = new PrismaClient();
 
 export async function GET() {
   try {
@@ -169,7 +167,6 @@ export async function GET() {
 
     console.log("📊 Données récupérées:", stats);
 
-    // ✅ Définition du type pour éviter TS7034 et TS7005
     interface RecentActivityItem {
       id: string;
       type: string;
@@ -181,7 +178,6 @@ export async function GET() {
 
     const recentActivity: RecentActivityItem[] = [];
 
-    // Fonction utilitaire pour ajouter des activités
     const pushActivity = (
       id: string,
       type: string,
@@ -290,7 +286,7 @@ export async function GET() {
   }
 }
 
-// ✅ Fonction de synchronisation utilisateur
+// Fonction de synchronisation utilisateur
 async function syncUserWithDatabase(clerkUserId: string) {
   try {
     const client = await clerkClient();
