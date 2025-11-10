@@ -1,9 +1,7 @@
 // app/api/censor/attendance/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) { 
   try {
@@ -43,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     if (action === 'all-records') {
       try {
-        // Récupérer toutes les présences avec les relations
+        // Récupérer toutes les présences avec les relations CORRIGÉES
         const attendanceRecords = await prisma.attendance.findMany({
           include: {
             student: {
@@ -75,12 +73,17 @@ export async function GET(request: NextRequest) {
               select: {
                 nom: true
               }
+            },
+            module: {
+              select: {
+                nom: true
+              }
             }
           },
           orderBy: {
             date: 'desc'
           },
-          take: 500 // Réduit pour les tests
+          take: 500
         });
 
         console.log('📊 Nombre de présences récupérées:', attendanceRecords.length);
@@ -104,6 +107,7 @@ export async function GET(request: NextRequest) {
             },
             course: {
               subject: record.subject,
+              module: record.module?.nom || record.subject,
               className: `${record.filiere?.nom || 'Non assigné'} - ${record.vague?.nom || 'Non assigné'}`,
               filiere: record.filiere?.nom || 'Non assigné',
               vague: record.vague?.nom || 'Non assigné',

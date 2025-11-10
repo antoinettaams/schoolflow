@@ -96,7 +96,7 @@ model Filiere {
   grades               Grade[]
   inscriptions         Inscription[]
   fraisFormations      FraisFormation[]
-
+  attendance           Attendance[]
   @@map("filieres")
 }
 
@@ -132,7 +132,7 @@ model Module {
   homeworks            Homework[]
   grades               Grade[]
   report               Report[]
-
+  attendance           Attendance[]
   @@map("modules")
 }
 
@@ -171,6 +171,7 @@ model Vague {
   report               Report[]
   inscriptions         Inscription[]
   fraisFormations      FraisFormation[]
+  attendance           Attendance[]
 
   @@map("vagues")
 }
@@ -326,6 +327,16 @@ model Attendance {
   teacherId   String
   teacher     Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
+  // Relations supplémentaires CORRIGÉES
+  filiereId   Int?
+  filiere     Filiere? @relation(fields: [filiereId], references: [id])
+  
+  vagueId     String?
+  vague       Vague?   @relation(fields: [vagueId], references: [id])
+  
+  moduleId    Int?
+  module      Module?  @relation(fields: [moduleId], references: [id])
+
   // Données de présence
   date        DateTime
   courseTime  String   // Ex: "08:00-10:00"
@@ -334,11 +345,6 @@ model Attendance {
   justified   Boolean  @default(false)
   reason      String?
   semester    String   // Ex: "t1", "t2", "t3"
-
-  // Relations supplémentaires pour faciliter les requêtes
-  filiereId   Int?
-  vagueId     String?
-  moduleId    Int?
 
   // Timestamps
   createdAt   DateTime @default(now())
