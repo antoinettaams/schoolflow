@@ -58,6 +58,61 @@ interface ApiResponse {
   };
 }
 
+// Composant Skeleton pour le tableau
+const TableSkeleton = () => {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <TableRow key={index}>
+          <TableCell>
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-10 h-10 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+          </TableCell>
+          <TableCell>
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-40" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </TableCell>
+          <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+          <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+          <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+          <TableCell className="text-right">
+            <Skeleton className="h-8 w-8 ml-auto" />
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+};
+
+// Composant Skeleton pour les cartes de statistiques
+const StatsSkeleton = () => {
+  return (
+    <>
+      {Array.from({ length: 4 }).map((_, index) => (
+        <Card key={index}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-4 rounded" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-8 w-16 mb-1" />
+            <Skeleton className="h-3 w-20" />
+          </CardContent>
+        </Card>
+      ))}
+    </>
+  );
+};
+
 export default function ListeElevesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFiliere, setSelectedFiliere] = useState<string>("toutes");
@@ -143,7 +198,7 @@ export default function ListeElevesPage() {
     }
   };
 
-  // FONCTIONS D'EXPORT (gardées identiques mais adaptées aux données réelles)
+  // FONCTIONS D'EXPORT
   const exportToPDF = () => {
     if (eleves.length === 0) {
       toast.error("Aucune donnée à exporter en PDF");
@@ -445,49 +500,55 @@ export default function ListeElevesPage() {
 
       {/* Statistiques */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Inscriptions</CardTitle>
-            <Euro className="h-4 w-4 text-gray-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalInscriptions}</div>
-            <p className="text-xs text-gray-600">Toutes inscriptions</p>
-          </CardContent>
-        </Card>
+        {isLoading ? (
+          <StatsSkeleton />
+        ) : (
+          <>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Inscriptions</CardTitle>
+                <Euro className="h-4 w-4 text-gray-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalInscriptions}</div>
+                <p className="text-xs text-gray-600">Toutes inscriptions</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Paiements Validés</CardTitle>
-            <Euro className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalPayes}</div>
-            <p className="text-xs text-gray-600">Inscriptions payées</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Paiements Validés</CardTitle>
+                <Euro className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalPayes}</div>
+                <p className="text-xs text-gray-600">Inscriptions payées</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taux de Validation</CardTitle>
-            <Euro className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.tauxValidation}%</div>
-            <p className="text-xs text-gray-600">Des inscriptions sont validées</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Taux de Validation</CardTitle>
+                <Euro className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.tauxValidation}%</div>
+                <p className="text-xs text-gray-600">Des inscriptions sont validées</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Chiffre d'Affaires</CardTitle>
-            <Euro className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.chiffreAffaires.toLocaleString('fr-FR')}</div>
-            <p className="text-xs text-gray-600">FCFA</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Chiffre d'Affaires</CardTitle>
+                <Euro className="h-4 w-4 text-purple-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.chiffreAffaires.toLocaleString('fr-FR')}</div>
+                <p className="text-xs text-gray-600">FCFA</p>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Filtres */}
@@ -562,34 +623,7 @@ export default function ListeElevesPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  // Skeleton loading effect
-                  Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="w-10 h-10 rounded-full" />
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-32" />
-                            <Skeleton className="h-3 w-20" />
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-2">
-                          <Skeleton className="h-3 w-40" />
-                          <Skeleton className="h-3 w-32" />
-                        </div>
-                      </TableCell>
-                      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-16" /></TableCell>
-                      <TableCell className="text-right">
-                        <Skeleton className="h-8 w-8 ml-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  <TableSkeleton />
                 ) : eleves.length > 0 ? (
                   eleves.map((eleve) => (
                     <TableRow key={eleve.id}>

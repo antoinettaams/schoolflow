@@ -14,31 +14,32 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Composants Skeleton
+// Composants Skeleton optimisés
 const SkeletonCard = () => (
   <Card className="w-full">
     <CardHeader className="pb-3">
-      <div className="h-4 bg-gray-200 rounded w-1/2 mb-2 animate-pulse"></div>
+      <Skeleton className="h-4 w-1/2" />
     </CardHeader>
     <CardContent>
-      <div className="h-6 bg-gray-200 rounded w-3/4 mb-2 animate-pulse"></div>
-      <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+      <Skeleton className="h-6 w-3/4 mb-2" />
+      <Skeleton className="h-3 w-1/2" />
     </CardContent>
   </Card>
 );
 
 const SkeletonTableRow = () => (
   <TableRow>
-    <TableCell><div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-4 bg-gray-200 rounded w-2/3 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div></TableCell>
-    <TableCell><div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-8 bg-gray-200 rounded w-16 animate-pulse"></div></TableCell>
+    <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
+    <TableCell><Skeleton className="h-4 w-2/3" /></TableCell>
+    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+    <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+    <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+    <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+    <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
+    <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+    <TableCell><Skeleton className="h-8 w-16" /></TableCell>
   </TableRow>
 );
 
@@ -47,11 +48,11 @@ const SkeletonFilterBar = () => (
     <CardContent className="pt-6">
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
-          <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+          <Skeleton className="h-10 w-full" />
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <div className="h-10 bg-gray-200 rounded w-[180px] animate-pulse"></div>
-          <div className="h-10 bg-gray-200 rounded w-[180px] animate-pulse"></div>
+          <Skeleton className="h-10 w-[180px]" />
+          <Skeleton className="h-10 w-[180px]" />
         </div>
       </div>
     </CardContent>
@@ -626,12 +627,12 @@ export default function PaiementsComptablePage() {
         <div className="flex-shrink-0 bg-white border-b border-gray-200 p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-3">
-              <div className="h-8 bg-gray-200 rounded w-64 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-96 animate-pulse"></div>
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-96" />
             </div>
             <div className="flex gap-3 mt-4 sm:mt-0">
-              <div className="h-9 bg-gray-200 rounded w-24 animate-pulse"></div>
-              <div className="h-9 bg-gray-200 rounded w-32 animate-pulse"></div>
+              <Skeleton className="h-9 w-24" />
+              <Skeleton className="h-9 w-32" />
             </div>
           </div>
         </div>
@@ -653,8 +654,8 @@ export default function PaiementsComptablePage() {
             {/* Table Skeleton */}
             <Card>
               <CardHeader>
-                <div className="h-6 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded w-64 animate-pulse"></div>
+                <Skeleton className="h-6 w-48 mb-2" />
+                <Skeleton className="h-4 w-64" />
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
