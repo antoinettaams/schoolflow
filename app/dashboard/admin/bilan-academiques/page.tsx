@@ -1,4 +1,4 @@
-// app/dashboard/notes/page.tsx
+// app/dashboard/admin/bilan-academiques/page.tsx
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -7,7 +7,7 @@ import {
   Search, Download, Eye, 
   BarChart3, TrendingUp, Award, Users, BookOpen,
   Star, Target, AlertCircle, CheckCircle, XCircle
-} from 'lucide-react';
+} from 'lucide-react'; 
 
 // Import des composants shadcn
 import { Button } from "@/components/ui/button";
@@ -60,12 +60,11 @@ interface Stats {
 }
 
 export default function NotesPage() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [students, setStudents] = useState<Student[]>([]);
-  const [setVagues] = useState<Vague[]>([]);
+  const [vagues, setVagues] = useState<Vague[]>([]); // CORRECTION : Déclaration correcte
   const [filieres, setFilieres] = useState<Filiere[]>([]);
-  const [selectedVague] = useState<string>('all');
-  const [selectedFiliere] = useState<string>('all');
+  const [selectedVague, setSelectedVague] = useState<string>('all');
+  const [selectedFiliere, setSelectedFiliere] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -185,7 +184,7 @@ export default function NotesPage() {
       }
     ];
 
-    setVagues(mockVagues);
+    setVagues(mockVagues); // CORRECTION : Utilisation correcte
     setFilieres(mockFilieres);
     setStudents(mockStudents);
     setIsLoading(false);
@@ -221,23 +220,23 @@ export default function NotesPage() {
 
   // Fonctions utilitaires
   const getStatusBadge = (statut: Student['statut']) => {
-  const config = {
-    excellent: { variant: "default" as const, text: 'Excellent', icon: Award },
-    tres_bien: { variant: "default" as const, text: 'Très bien', icon: CheckCircle },
-    bien: { variant: "secondary" as const, text: 'Bien', icon: Target },
-    moyen: { variant: "outline" as const, text: 'Moyen', icon: Star },
-    insuffisant: { variant: "destructive" as const, text: 'Insuffisant', icon: AlertCircle },
-    echec: { variant: "destructive" as const, text: 'Échec', icon: XCircle }
+    const config = {
+      excellent: { variant: "default" as const, text: 'Excellent', icon: Award },
+      tres_bien: { variant: "default" as const, text: 'Très bien', icon: CheckCircle },
+      bien: { variant: "secondary" as const, text: 'Bien', icon: Target },
+      moyen: { variant: "outline" as const, text: 'Moyen', icon: Star },
+      insuffisant: { variant: "destructive" as const, text: 'Insuffisant', icon: AlertCircle },
+      echec: { variant: "destructive" as const, text: 'Échec', icon: XCircle }
+    };
+    
+    const { variant, text, icon: Icon } = config[statut];
+    return (
+      <Badge variant={variant} className="flex items-center gap-1">
+        <Icon className="h-3 w-3" />
+        {text}
+      </Badge>
+    );
   };
-  
-  const { variant, text, icon: Icon } = config[statut];
-  return (
-    <Badge variant={variant} className="flex items-center gap-1">
-      <Icon className="h-3 w-3" />
-      {text}
-    </Badge>
-  );
-};
 
   const getRangBadge = (rang: number) => {
     if (rang === 1) return '🥇';
@@ -259,7 +258,6 @@ export default function NotesPage() {
     return 'text-red-600';
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getPresenceColor = (presence: number) => {
     if (presence >= 90) return 'bg-green-600';
     if (presence >= 80) return 'bg-yellow-600';

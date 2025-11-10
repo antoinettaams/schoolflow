@@ -3,13 +3,12 @@ import React, { useState, useEffect, useMemo } from "react";
 import { 
   Calendar, 
   Play, 
-  Pause, 
+  Pause,  
   Check, 
   List,  
   Users, 
   Eye,
   X,
-  Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -362,6 +361,18 @@ export default function VaguesPageAdmin() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterSemestre, setFilterSemestre] = useState<string>("Tous");
 
+  // Fonction utilitaire pour extraire le message d'erreur
+  const getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) {
+      return error.message;
+    } else if (typeof error === 'string') {
+      return error;
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      return String(error.message);
+    }
+    return "Erreur inconnue lors du chargement des vagues";
+  };
+
   // Charger depuis l'API
   const chargerVagues = async () => {
     try {
@@ -377,7 +388,7 @@ export default function VaguesPageAdmin() {
       setVagues(vaguesData);
     } catch (error) {
       console.error("Erreur chargement vagues:", error);
-      toast.error(error.message || "Erreur lors du chargement des vagues");
+      toast.error(getErrorMessage(error));
       setVagues([]);
     } finally {
       setIsLoaded(true);
