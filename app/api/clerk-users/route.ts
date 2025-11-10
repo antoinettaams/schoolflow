@@ -31,7 +31,7 @@ interface ClerkUserData {
     status: string;
     createdBy: string;
     createdAt: string;
-    phone?: string | null;
+    phone?: string | undefined;
     studentNumber?: string;
     filiere?: string;
     matiere?: string;
@@ -49,12 +49,40 @@ interface ClerkError {
   }>;
 }
 
-// Type pour la réponse utilisateur Clerk
+// Type pour la réponse utilisateur Clerk - CORRIGÉ
 interface ClerkUserResponse {
   id: string;
   email_addresses: Array<{ email_address: string }>;
-  first_name?: string;
-  last_name?: string;
+  first_name: string | null;
+  last_name: string | null;
+  primary_email_address_id: string | null;
+  primary_phone_number_id: string | null;
+  primary_web3_wallet_id: string | null;
+  username: string | null;
+  profile_image_url: string;
+  image_url: string;
+  has_image: boolean;
+  public_metadata: Record<string, any>;
+  private_metadata: Record<string, any>;
+  unsafe_metadata: Record<string, any>;
+  external_id: string | null;
+  created_at: number;
+  updated_at: number;
+  last_sign_in_at: number | null;
+  banned: boolean;
+  locked: boolean;
+  lockout_expires_in_seconds: number | null;
+  verification_attempts_remaining: number;
+  last_active_at: number | null;
+  create_organization_enabled: boolean;
+  totp_enabled: boolean;
+  backup_code_enabled: boolean;
+  two_factor_enabled: boolean;
+  phone_numbers: Array<any>;
+  web3_wallets: Array<any>;
+  external_accounts: Array<any>;
+  password_enabled: boolean;
+  saml_accounts: Array<any>;
 }
 
 export async function POST(req: NextRequest) {
@@ -106,9 +134,9 @@ export async function POST(req: NextRequest) {
     if (!existingAdmin) {
       console.log("🔄 Admin non trouvé dans Prisma, création automatique...");
       
-      // Créer l'admin dans Prisma avec les infos de Clerk
-      const clerkUser: ClerkUserResponse = await client.users.getUser(currentUserId);
-      const adminEmail = clerkUser.email_addresses[0]?.email_address;
+      // CORRECTION : Ne pas typer la réponse de client.users.getUser()
+      const clerkUser = await client.users.getUser(currentUserId);
+      const adminEmail = clerkUser.emailAddresses[0]?.emailAddress;
       
       if (!adminEmail) {
         return NextResponse.json(
@@ -121,8 +149,8 @@ export async function POST(req: NextRequest) {
         data: {
           clerkUserId: currentUserId,
           email: adminEmail,
-          firstName: clerkUser.first_name || "Admin",
-          lastName: clerkUser.last_name || "System",
+          firstName: clerkUser.firstName || "Admin",
+          lastName: clerkUser.lastName || "System",
           role: "ADMIN",
         }
       });
@@ -175,7 +203,7 @@ export async function POST(req: NextRequest) {
     const username = email.split('@')[0];
     const cleanUsername = username.replace(/[^a-zA-Z0-9_]/g, '_');
 
-    // Données pour Clerk
+    // CORRECTION : Utiliser undefined au lieu de null pour les propriétés optionnelles
     const userData: ClerkUserData = {
       email_address: [email],
       username: cleanUsername,
@@ -187,7 +215,7 @@ export async function POST(req: NextRequest) {
         status: "active",
         createdBy: currentUserId,
         createdAt: new Date().toISOString(),
-        phone: phone || null,
+        phone: phone || undefined,
       }
     };
 
@@ -202,7 +230,7 @@ export async function POST(req: NextRequest) {
       userData.public_metadata.vagueNumber = vagueNumber;
     } else if (role === "Enseignant") {
       userData.public_metadata.matiere = matiere;
-      userData.public_metadata.filiere = filiere || null;
+      userData.public_metadata.filiere = filiere || undefined;
     } else if (role === "Parent") {
       userData.public_metadata.enfantName = enfantName;
       userData.public_metadata.filiere = filiere;
@@ -235,6 +263,7 @@ export async function POST(req: NextRequest) {
       throw new Error(errorData.errors?.[0]?.message || "Erreur API Clerk");
     }
 
+    // CORRECTION : Typer uniquement la réponse de l'API REST Clerk
     const clerkUser: ClerkUserResponse = await response.json();
     console.log("✅ Utilisateur Clerk créé:", clerkUser.id);
 
@@ -254,13 +283,17 @@ export async function POST(req: NextRequest) {
       console.log("✅ Utilisateur DB créé:", dbUser.id);
 
       if (role === "Etudiant") {
+        // CORRECTION : Convertir vagueNumber en number si nécessaire, ou utiliser une valeur par défaut
+        const vagueNum = vagueNumber ? parseInt(vagueNumber) || 0 : 0;
+        const filiereId = filiere ? parseInt(filiere) || 0 : 0;
+
         await prisma.student.create({
           data: {
             userId: dbUser.id,
             studentNumber: studentNumber || `ETU-${Date.now()}`,
-            vagueNumber: vagueNumber || "Non spécifié",
-            filiereId: "", 
-            vagueId: "",   
+            vagueNumber: vagueNum,
+            filiereId: filiereId,
+            vagueId: "",
           }
         });
         console.log("Étudiant créé");
