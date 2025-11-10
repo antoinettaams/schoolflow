@@ -1,16 +1,22 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-
+import { toast } from "sonner";
 import {
   FaAward,
   FaChartLine,
   FaArrowDown,
   FaClipboardList,
   FaFilter,
+  FaDownload,
+  FaFilePdf,
+  FaFileExcel,
+  FaFileCsv,
+  FaPrint,
 } from "react-icons/fa";
 
-import { Card, CardContent,CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -27,6 +33,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+// Import des bibliothèques d'export
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { utils, writeFile } from 'xlsx';
 
 /* ---------- Types ---------- */
 
@@ -41,19 +58,10 @@ interface GradeDetail {
   semestre: string;
 }
 
-interface Exam {
-  subject: string;
-  date: string;
-  examType: ExamType;
-  grade: number;
-  coefficient: number;
-  teacher: string;
-}
-
 interface GradeSummaryItem {
   title: string;
   value: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: string;
   color: string;
   description: string;
 }
@@ -84,6 +92,16 @@ interface StudentData {
   vague: string;
 }
 
+interface ApiResponse {
+  studentData: StudentData;
+  gradesSummary: GradeSummaryItem[];
+  detailedGrades: GradeDetail[];
+  generalAverage: number;
+  allSemestres: string[];
+  allModules: string[];
+  success: boolean;
+}
+
 /* ---------- SVG Icons ---------- */
 
 const FileText = (props: React.SVGProps<SVGSVGElement>) => (
@@ -96,70 +114,6 @@ const FileText = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-/* ---------- Données de simulation ---------- */
-
-const gradesSummary: GradeSummaryItem[] = [
-  {
-    title: "Moyenne Générale",
-    value: "15.3 / 20",
-    icon: FaAward,
-    color: "text-green-600",
-    description: "Moyenne de votre enfant sur l'ensemble des matières",
-  },
-  {
-    title: "Progression (Semestre)",
-    value: "+1.2 pts",
-    icon: FaChartLine,
-    color: "text-blue-600",
-    description: "Amélioration par rapport au semestre précédent",
-  },
-  {
-    title: "Matière la plus faible",
-    value: "Next JS",
-    icon: FaArrowDown,
-    color: "text-red-600",
-    description: "Moyenne: 12.88/20. À travailler.",
-  },
-  {
-    title: "Prochains Évaluations",
-    value: "3",
-    icon: FaClipboardList,
-    color: "text-blue-600",
-    description: "Examens prévus la semaine prochaine",
-  },
-];
-
-const detailedGrades: GradeDetail[] = [
-  { module: "Next JS", examType: "Interrogation", grade: 12.0, coefficient: 4, key: "I1", semestre: "S1" },
-  { module: "Next JS", examType: "Interrogation", grade: 14.5, coefficient: 4, key: "I2", semestre: "S1" },
-  { module: "Next JS", examType: "Devoir", grade: 16.0, coefficient: 4, key: "D1", semestre: "S1" },
-  { module: "Next JS", examType: "Composition", grade: 9.0, coefficient: 4, key: "C1", semestre: "S1" },
-
-  { module: "Base de Données", examType: "Interrogation", grade: 17.0, coefficient: 3, key: "I1", semestre: "S1" },
-  { module: "Base de Données", examType: "Devoir", grade: 15.0, coefficient: 3, key: "D1", semestre: "S1" },
-  { module: "Base de Données", examType: "Composition", grade: 18.0, coefficient: 3, key: "C1", semestre: "S1" },
-
-  { module: "Gestion de Projet", examType: "Interrogation", grade: 10.0, coefficient: 2, key: "I1", semestre: "S2" },
-  { module: "Gestion de Projet", examType: "Interrogation", grade: 11.0, coefficient: 2, key: "I2", semestre: "S2" },
-  { module: "Gestion de Projet", examType: "Interrogation", grade: 12.5, coefficient: 2, key: "I3", semestre: "S2" },
-  { module: "Gestion de Projet", examType: "Devoir", grade: 14.0, coefficient: 2, key: "D1", semestre: "S2" },
-
-  { module: "Anglais Technique", examType: "Devoir", grade: 19.0, coefficient: 2, key: "D1", semestre: "S2" },
-  { module: "Anglais Technique", examType: "Composition", grade: 15.5, coefficient: 2, key: "C1", semestre: "S2" },
-  { module: "Anglais Technique", examType: "Interrogation", grade: 14.0, coefficient: 2, key: "I1", semestre: "S2" },
-  { module: "Gestion de Projet", examType: "Composition", grade: 15.0, coefficient: 2, key: "C1", semestre: "S2" },
-];
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const recentExams: Exam[] = [
-  { subject: "Next JS", date: "15/12/2024", examType: "Devoir", grade: 16.0, coefficient: 4, teacher: "M. Martin" },
-  { subject: "Base de Données", date: "12/12/2024", examType: "Interrogation", grade: 14.5, coefficient: 3, teacher: "Mme. Dubois" },
-  { subject: "Gestion de Projet", date: "10/12/2024", examType: "Composition", grade: 13.0, coefficient: 2, teacher: "Mme. Bernard" },
-  { subject: "Anglais Technique", date: "08/12/2024", examType: "Devoir", grade: 15.5, coefficient: 2, teacher: "M. Leroy" },
-  { subject: "Next JS", date: "05/12/2024", examType: "Interrogation", grade: 11.5, coefficient: 4, teacher: "Mme. Johnson" },
-  { subject: "Base de Données", date: "02/12/2024", examType: "Devoir", grade: 17.0, coefficient: 3, teacher: "M. Petit" },
-];
-
 /* ---------- Hook utilitaire ---------- */
 
 const useGradeData = (grades: GradeDetail[]) =>
@@ -169,26 +123,30 @@ const useGradeData = (grades: GradeDetail[]) =>
     let totalCoefficientSum = 0;
     const allExamTitles = new Set<string>();
 
+    // Initialiser tous les modules avec des données vides
+    const allModules = Array.from(new Set(grades.map(g => g.module)));
+    allModules.forEach(module => {
+      moduleMap[module] = {
+        grades: [],
+        totalWeightedGrade: 0,
+        totalCoefficient: 0,
+        moduleCoefficient: grades.find(g => g.module === module)?.coefficient || 1,
+      };
+    });
+
     grades.forEach((g) => {
-      if (!moduleMap[g.module]) {
-        moduleMap[g.module] = {
-          grades: [],
-          totalWeightedGrade: 0,
-          totalCoefficient: 0,
-          moduleCoefficient: g.coefficient,
-        };
-      }
-
       const moduleData = moduleMap[g.module];
-
       const title = g.key;
       allExamTitles.add(title);
 
       const withTitle: GradeDetailWithTitle = { ...g, title };
       moduleData.grades.push(withTitle);
 
-      moduleData.totalWeightedGrade += g.grade * g.coefficient;
-      moduleData.totalCoefficient += g.coefficient;
+      // Ne compter que les notes existantes (grade > 0)
+      if (g.grade > 0) {
+        moduleData.totalWeightedGrade += g.grade * g.coefficient;
+        moduleData.totalCoefficient += g.coefficient;
+      }
     });
 
     const modulesList = Object.keys(moduleMap).sort();
@@ -196,10 +154,13 @@ const useGradeData = (grades: GradeDetail[]) =>
     const finalData: FinalRow[] = modulesList.map((moduleName) => {
       const data = moduleMap[moduleName];
 
+      // Calculer la moyenne seulement si des notes existent
       const moduleAvg = data.totalCoefficient > 0 ? data.totalWeightedGrade / data.totalCoefficient : 0;
 
-      totalWeightedGradeSum += data.totalWeightedGrade;
-      totalCoefficientSum += data.totalCoefficient;
+      if (data.totalCoefficient > 0) {
+        totalWeightedGradeSum += data.totalWeightedGrade;
+        totalCoefficientSum += data.totalCoefficient;
+      }
 
       const row: FinalRow = {
         module: moduleName,
@@ -234,55 +195,367 @@ const useGradeData = (grades: GradeDetail[]) =>
     return { finalData, generalAverage, sortedExamTitles };
   }, [grades]);
 
+// Mapping des icônes
+const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = {
+  FaAward,
+  FaChartLine,
+  FaArrowDown,
+  FaClipboardList,
+};
+
 /* ---------- Composant principal ---------- */
 
 const ParentExams: React.FC = () => {
-  const [selectedSemestre, setSelectedSemestre] = useState<string>("S1");
+  const [selectedSemestre, setSelectedSemestre] = useState<string>("all");
   const [showFullCoeff] = useState<boolean>(false);
   const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [gradesSummary, setGradesSummary] = useState<GradeSummaryItem[]>([]);
+  const [detailedGrades, setDetailedGrades] = useState<GradeDetail[]>([]);
+  const [generalAverage, setGeneralAverage] = useState<number>(0);
+  const [allSemestres, setAllSemestres] = useState<string[]>([]);
+  const [allModules, setAllModules] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Charger les données de l'enfant
-  useEffect(() => {
-    const loadStudentData = () => {
-      try {
-        const savedData = localStorage.getItem('parent_student_data');
-        if (savedData) {
-          const data = JSON.parse(savedData);
-          setStudentData({
-            studentName: data.studentName,
-            studentClass: data.studentClass,
-            studentStatus: data.studentStatus,
-            filiere: data.filiere,
-            vague: data.vague
-          });
-        } else {
-          // Données par défaut
-          setStudentData({
-            studentName: "Jean Dupont",
-            studentClass: "Terminale S",
-            studentStatus: "inscrit",
-            filiere: "Développement Web & Mobile",
-            vague: "Vague Janvier 2024"
-          });
-        }
-      } catch (error) {
-        console.error("Erreur lors du chargement des données élève:", error);
+  // Charger les données depuis l'API
+  const fetchGradesData = async () => {
+    try {
+      setIsLoading(true);
+      const loadingToast = toast.loading("Chargement des notes...");
+
+      const response = await fetch('/api/parents/grades');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Erreur lors du chargement');
       }
-    };
 
-    loadStudentData();
+      const data: ApiResponse = await response.json();
+      
+      setStudentData(data.studentData);
+      setGradesSummary(data.gradesSummary);
+      setDetailedGrades(data.detailedGrades);
+      setGeneralAverage(data.generalAverage);
+      setAllSemestres(data.allSemestres);
+      setAllModules(data.allModules);
+
+      toast.success("Notes chargées avec succès!", {
+        description: `${data.allModules.length} modules trouvés`,
+        id: loadingToast
+      });
+
+    } catch (error) {
+      console.error("Erreur lors du chargement des notes:", error);
+      toast.error("Erreur lors du chargement des notes", {
+        description: error instanceof Error ? error.message : "Erreur inconnue"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGradesData();
   }, []);
 
-  const uniqueSemestres = useMemo(() => Array.from(new Set(detailedGrades.map((g) => g.semestre))), []);
+  // FONCTIONS D'EXPORT
+  const exportToPDF = () => {
+    if (!studentData || detailedGrades.length === 0) {
+      toast.error("Aucune donnée à exporter");
+      return;
+    }
+
+    const toastId = toast.loading("Génération du PDF en cours...");
+
+    setTimeout(() => {
+      try {
+        const doc = new jsPDF();
+        
+        // En-tête du document
+        doc.setFontSize(20);
+        doc.setTextColor(40, 40, 40);
+        doc.text(`Relevé de Notes - ${studentData.studentName}`, 14, 15);
+        
+        // Informations de l'étudiant
+        doc.setFontSize(11);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Filière: ${studentData.filiere}`, 14, 25);
+        doc.text(`Classe: ${studentData.studentClass}`, 14, 32);
+        doc.text(`Vague: ${studentData.vague}`, 14, 39);
+        doc.text(`Moyenne Générale: ${generalAverage.toFixed(2)}/20`, 14, 46);
+        doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 14, 53);
+        
+        // Préparation des données du tableau
+        const { finalData, sortedExamTitles } = useGradeData(detailedGrades);
+        
+        const tableData = finalData.map(moduleData => {
+          const row = [
+            moduleData.module,
+            moduleData.coefficient.toString(),
+            ...sortedExamTitles.map(titleKey => {
+              const note = moduleData.notes[titleKey];
+              return note && note.grade > 0 ? note.grade.toFixed(1) : '-';
+            }),
+            moduleData.moduleAvg > 0 ? moduleData.moduleAvg.toFixed(2) : '-'
+          ];
+          return row;
+        });
+
+        // En-têtes du tableau
+        const headers = [
+          'Module', 
+          'Coeff', 
+          ...sortedExamTitles.map(formatExamTitle), 
+          'Moyenne'
+        ];
+
+        // Tableau principal
+        autoTable(doc, {
+          head: [headers],
+          body: tableData,
+          startY: 65,
+          styles: { 
+            fontSize: 8,
+            cellPadding: 2,
+          },
+          headStyles: { 
+            fillColor: [59, 130, 246],
+            textColor: 255,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: {
+            fillColor: [248, 250, 252]
+          },
+          margin: { top: 65 },
+          theme: 'grid'
+        });
+
+        // Résumé statistique
+        const summaryY = (doc as any).lastAutoTable.finalY + 15;
+        if (summaryY < 250) {
+          doc.setFontSize(12);
+          doc.setTextColor(40, 40, 40);
+          doc.text("Résumé Statistique", 14, summaryY);
+          
+          const summaryData = [
+            ['Total Modules', allModules.length.toString()],
+            ['Moyenne Générale', generalAverage.toFixed(2)],
+            ['Statut', studentData.studentStatus],
+            ['Semestres', allSemestres.join(', ')]
+          ];
+
+          autoTable(doc, {
+            body: summaryData,
+            startY: summaryY + 5,
+            styles: { fontSize: 9 },
+            columnStyles: {
+              0: { fontStyle: 'bold', cellWidth: 60 },
+              1: { cellWidth: 40 }
+            },
+            margin: { top: 10 }
+          });
+        }
+
+        // Pied de page
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setFontSize(8);
+          doc.setTextColor(150, 150, 150);
+          doc.text(
+            `Page ${i} / ${pageCount} - Relevé de notes ${studentData.studentName}`,
+            doc.internal.pageSize.width / 2,
+            doc.internal.pageSize.height - 10,
+            { align: 'center' }
+          );
+        }
+
+        // Sauvegarde du fichier
+        const fileName = `releve-notes-${studentData.studentName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+        
+        toast.success("PDF généré avec succès!", {
+          description: "Le fichier a été téléchargé",
+          id: toastId
+        });
+        
+      } catch (error) {
+        console.error("Erreur lors de l'export PDF:", error);
+        toast.error("Erreur lors de la génération du PDF", {
+          description: "Veuillez réessayer",
+          id: toastId
+        });
+      }
+    }, 1500);
+  };
+
+  const exportToExcel = () => {
+    if (!studentData || detailedGrades.length === 0) {
+      toast.error("Aucune donnée à exporter");
+      return;
+    }
+
+    const toastId = toast.loading("Export Excel en cours...");
+
+    setTimeout(() => {
+      try {
+        const { finalData, sortedExamTitles } = useGradeData(detailedGrades);
+        
+        // Préparation des données
+        const data = finalData.map(moduleData => {
+          const row: any = {
+            'Module': moduleData.module,
+            'Coefficient': moduleData.coefficient,
+          };
+
+          // Ajouter chaque examen
+          sortedExamTitles.forEach(titleKey => {
+            const note = moduleData.notes[titleKey];
+            row[formatExamTitle(titleKey)] = note && note.grade > 0 ? note.grade : '-';
+          });
+
+          row['Moyenne Module'] = moduleData.moduleAvg > 0 ? moduleData.moduleAvg : '-';
+          
+          return row;
+        });
+
+        // Création du workbook
+        const wb = utils.book_new();
+        
+        // Feuille principale
+        const ws = utils.json_to_sheet(data);
+        
+        // En-têtes et métadonnées
+        const metadata = [
+          [`Relevé de Notes - ${studentData.studentName}`],
+          [`Filière: ${studentData.filiere}`],
+          [`Classe: ${studentData.studentClass}`],
+          [`Vague: ${studentData.vague}`],
+          [`Moyenne Générale: ${generalAverage.toFixed(2)}/20`],
+          [`Statut: ${studentData.studentStatus}`],
+          [`Généré le: ${new Date().toLocaleDateString('fr-FR')}`],
+          [] // ligne vide
+        ];
+        
+        utils.sheet_add_aoa(ws, metadata, { origin: 'A1' });
+        
+        // Ajuster la largeur des colonnes
+        const colWidths = [
+          { wch: 25 }, // Module
+          { wch: 12 }, // Coefficient
+          ...sortedExamTitles.map(() => ({ wch: 15 })), // Examens
+          { wch: 15 }  // Moyenne
+        ];
+        ws['!cols'] = colWidths;
+
+        utils.book_append_sheet(wb, ws, 'Relevé de Notes');
+
+        // Sauvegarde
+        const fileName = `releve-notes-${studentData.studentName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.xlsx`;
+        writeFile(wb, fileName);
+        
+        toast.success("Fichier Excel exporté!", {
+          description: "Le fichier a été téléchargé",
+          id: toastId
+        });
+        
+      } catch (error) {
+        console.error("Erreur lors de l'export Excel:", error);
+        toast.error("Erreur lors de l'export Excel", {
+          description: "Veuillez réessayer",
+          id: toastId
+        });
+      }
+    }, 1000);
+  };
+
+  const exportToCSV = () => {
+    if (!studentData || detailedGrades.length === 0) {
+      toast.error("Aucune donnée à exporter");
+      return;
+    }
+
+    const toastId = toast.loading("Export CSV en cours...");
+
+    setTimeout(() => {
+      try {
+        const { finalData, sortedExamTitles } = useGradeData(detailedGrades);
+        
+        const headers = [
+          'Module',
+          'Coefficient',
+          ...sortedExamTitles.map(formatExamTitle),
+          'Moyenne Module'
+        ];
+        
+        const csvContent = [
+          `Relevé de Notes - ${studentData.studentName}`,
+          `Filière: ${studentData.filiere}`,
+          `Classe: ${studentData.studentClass}`,
+          `Moyenne Générale: ${generalAverage.toFixed(2)}/20`,
+          `Généré le: ${new Date().toLocaleDateString('fr-FR')}`,
+          '',
+          headers.join(','),
+          ...finalData.map(moduleData => {
+            const row = [
+              `"${moduleData.module}"`,
+              moduleData.coefficient,
+              ...sortedExamTitles.map(titleKey => {
+                const note = moduleData.notes[titleKey];
+                return note && note.grade > 0 ? note.grade.toFixed(1) : '';
+              }),
+              moduleData.moduleAvg > 0 ? moduleData.moduleAvg.toFixed(2) : ''
+            ];
+            return row.join(',');
+          })
+        ].join('\n');
+
+        // Création et téléchargement du fichier
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `releve-notes-${studentData.studentName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.success("Fichier CSV généré!", {
+          description: "Le fichier a été téléchargé",
+          id: toastId
+        });
+        
+      } catch (error) {
+        console.error("Erreur lors de l'export CSV:", error);
+        toast.error("Erreur lors de l'export CSV", {
+          description: "Veuillez réessayer",
+          id: toastId
+        });
+      }
+    }, 800);
+  };
+
+  const handlePrint = () => {
+    toast.info("Impression en cours de préparation...", {
+      description: "Ouverture de la fenêtre d'impression"
+    });
+    
+    setTimeout(() => {
+      window.print();
+    }, 500);
+  };
 
   const filteredDetailedGrades = useMemo(
     () => detailedGrades.filter((grade) => selectedSemestre === "all" || grade.semestre === selectedSemestre),
-    [selectedSemestre]
+    [selectedSemestre, detailedGrades]
   );
 
-  const { finalData, generalAverage, sortedExamTitles } = useGradeData(filteredDetailedGrades);
+  const { finalData, generalAverage: filteredAverage, sortedExamTitles } = useGradeData(filteredDetailedGrades);
 
   const getGradeColor = (grade: number) => {
+    if (grade === 0) return "bg-gray-100 text-gray-500 border-gray-200"; // Pas de note
     if (grade >= 16) return "bg-green-100 text-green-800 border-green-200";
     if (grade >= 14) return "bg-blue-100 text-blue-800 border-blue-200";
     if (grade >= 12) return "bg-yellow-100 text-yellow-800 border-yellow-200";
@@ -296,26 +569,90 @@ const ParentExams: React.FC = () => {
     return titleKey;
   };
 
+  const formatGradeDisplay = (grade: number) => {
+    return grade === 0 ? "-" : grade.toFixed(1);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-10">
+        <div className="p-4 sm:p-6 space-y-6">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-32 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+            <div className="h-64 bg-gray-200 rounded mt-6"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-10">
       <div className="p-4 sm:p-6 space-y-6">
-        {/* Grand titre */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-          <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Examens & Notes
-          </CardTitle>
-          <CardDescription className="text-lg sm:text-xl">
-            Élève : 
-            <span className="font-semibold text-gray-700">
-              {studentData?.studentName || "Jean Dupont"}
-            </span>
-          </CardDescription>
+        {/* En-tête avec bouton d'export */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="flex-1">
+            <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+              Examens & Notes
+            </CardTitle>
+            <CardDescription className="text-lg">
+              Élève : 
+              <span className="font-semibold text-gray-700 ml-2">
+                {studentData?.studentName || "Chargement..."}
+              </span>
+            </CardDescription>
+          </div>
+          
+          {/* Menu d'export */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="justify-center">
+                <FaDownload className="w-4 h-4 mr-2" />
+                Exporter
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 bg-white">
+              <DropdownMenuItem 
+                onClick={exportToPDF}
+                className="flex items-center cursor-pointer"
+              >
+                <FaFilePdf className="w-4 h-4 mr-2 text-red-500" />
+                <span>Export PDF</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={exportToExcel}
+                className="flex items-center cursor-pointer"
+              >
+                <FaFileExcel className="w-4 h-4 mr-2 text-green-500" />
+                <span>Export Excel</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={exportToCSV}
+                className="flex items-center cursor-pointer"
+              >
+                <FaFileCsv className="w-4 h-4 mr-2 text-blue-500" />
+                <span>Export CSV</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handlePrint}
+                className="flex items-center cursor-pointer"
+              >
+                <FaPrint className="w-4 h-4 mr-2 text-gray-500" />
+                <span>Imprimer</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         
         {/* Résumé des notes */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {gradesSummary.map((item, index) => {
-            const Icon = item.icon;
+            const Icon = iconMap[item.icon] || FaAward;
             return (
               <Card key={index} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4 sm:p-6">
@@ -338,6 +675,9 @@ const ParentExams: React.FC = () => {
               <span className="flex items-center gap-2 min-w-0">
                 <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
                 <span className="truncate">Relevé de Notes Détaillé</span>
+                <Badge variant="outline" className="ml-2">
+                  {allModules.length} modules
+                </Badge>
               </span>
 
               <div className="min-w-[120px] sm:min-w-[200px]">
@@ -350,7 +690,7 @@ const ParentExams: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent className="bg-white">
                     <SelectItem value="all">Tous les semestres</SelectItem>
-                    {uniqueSemestres.map((sem) => (
+                    {allSemestres.map((sem) => (
                       <SelectItem key={sem} value={sem}>
                         Semestre {sem}
                       </SelectItem>
@@ -367,8 +707,8 @@ const ParentExams: React.FC = () => {
                 <span className="whitespace-nowrap">
                   Moyenne Générale du {selectedSemestre !== "all" ? `Semestre ${selectedSemestre}` : "Global"} :
                 </span>
-                <Badge className={`ml-2 text-xl py-1 px-3 ${getGradeColor(generalAverage)}`}>
-                  {generalAverage.toFixed(2)}
+                <Badge className={`ml-2 text-xl py-1 px-3 ${getGradeColor(filteredAverage)}`}>
+                  {filteredAverage > 0 ? filteredAverage.toFixed(2) : "N/A"}
                 </Badge>
               </div>
             </div>
@@ -409,26 +749,22 @@ const ParentExams: React.FC = () => {
 
                         {sortedExamTitles.map((titleKey) => {
                           const note = moduleData.notes[titleKey];
-                          const grade = note?.grade;
+                          const grade = note?.grade || 0;
                           const coeff = note?.coefficient;
 
                           return (
                             <TableCell key={titleKey} className="text-center border-l border-gray-100 p-2">
-                              {grade !== undefined ? (
-                                <Badge className={`px-2 py-1 text-xs sm:text-sm ${getGradeColor(grade)}`}>
-                                  {grade.toFixed(1)}
-                                  {showFullCoeff && <span className="ml-1 text-xs">({coeff})</span>}
-                                </Badge>
-                              ) : (
-                                <span className="text-gray-400 text-xs sm:text-sm">-</span>
-                              )}
+                              <Badge className={`px-2 py-1 text-xs sm:text-sm ${getGradeColor(grade)}`}>
+                                {formatGradeDisplay(grade)}
+                                {showFullCoeff && grade > 0 && <span className="ml-1 text-xs">({coeff})</span>}
+                              </Badge>
                             </TableCell>
                           );
                         })}
 
                         <TableCell className="text-center bg-blue-50/20 border-l border-gray-200">
                           <Badge className={`font-bold text-sm sm:text-base ${getGradeColor(moduleData.moduleAvg)}`}>
-                            {moduleData.moduleAvg.toFixed(2)}
+                            {moduleData.moduleAvg > 0 ? moduleData.moduleAvg.toFixed(2) : "-"}
                           </Badge>
                         </TableCell>
                       </TableRow>

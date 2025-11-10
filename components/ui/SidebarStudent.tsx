@@ -9,7 +9,6 @@ import {
   FaUserGraduate,
   FaCalendarAlt,
   FaBookOpen,
-  FaFileAlt,
   FaGraduationCap,
   FaClipboardList,
   FaCog,
@@ -18,7 +17,6 @@ import {
   FaTimes,
   FaUser,
   FaChevronDown,
-  FaBell,
   FaExclamationTriangle,
 } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
@@ -90,10 +88,9 @@ const SidebarStudent = () => {
   const navItems = [
     { label: "Tableau de Bord", href: "/dashboard/student", icon: <FaUserGraduate /> },
     { label: "Emploi du Temps", href: "/dashboard/student/schedule", icon: <FaCalendarAlt />, category: "ACADÉMIQUE" },
-    { label: "Examens & Notes", href: "/dashboard/student/exams", icon: <FaClipboardList />, category: "ACADÉMIQUE" },
     { label: "Exercices", href: "/dashboard/student/homeworks", icon: <FaBookOpen />, category: "ACADÉMIQUE" },
+    { label: "Examens & Notes", href: "/dashboard/student/exams", icon: <FaClipboardList />, category: "ACADÉMIQUE" },
     { label: "Évènements Scolaires", href: "/dashboard/student/events", icon: <FaGraduationCap />, category: "ACADÉMIQUE" },
-    { label: "Bulletins", href: "/dashboard/student/grades", icon: <FaFileAlt />, category: "ACADÉMIQUE" },
   ];
 
   const groupedItems = {
@@ -277,15 +274,6 @@ const SidebarStudent = () => {
                   >
                     <FaUser className="text-gray-600 text-sm" />
                     <span>Mon Profil</span>
-                  </Link>
-
-                  <Link
-                    href="/dashboard/student/notifications"
-                    className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium"
-                    onClick={handleCloseModal}
-                  >
-                    <FaBell className="text-gray-600 text-sm" />
-                    <span>Notifications</span>
                   </Link>
                   
                   <Link

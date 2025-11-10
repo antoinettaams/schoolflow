@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaPlus, FaEdit, FaTrash, FaBook, FaWeight, FaList, FaTimes, FaFilter,
-  FaSave, FaCheck, FaChevronDown 
+  FaSave
 } from 'react-icons/fa';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 
 // Interface des modules
 interface ModuleType {
-  id: string;
+  id: number;
   name: string;
   coefficient: number;
   type: 'theorique' | 'pratique' | 'mixte' | 'projet';
@@ -24,12 +24,14 @@ interface ModuleType {
 
 // Interface principale pour chaque filière
 interface Filiere {
-  id: string;
+  id: number;
   name: string;
   duration: string;
   description: string;
-  vagues: string[];
+  vagues: Array<{id: string, name: string}>; 
   modules: ModuleType[];
+  totalStudents?: number;
+  createdAt?: string;
 }
 
 // Interface pour les vagues
@@ -62,6 +64,189 @@ interface NewFiliere {
   vagues: string[];
 }
 
+// Composants Skeleton
+const FiliereCardSkeleton: React.FC = () => {
+  return (
+    <Card className="overflow-hidden animate-pulse">
+      <CardContent className="p-0">
+        <div className="p-6 border-b">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div className="flex-1 space-y-3">
+              <div className="h-6 w-48 bg-gray-300 rounded"></div>
+              <div className="flex gap-2">
+                <div className="h-5 w-20 bg-gray-200 rounded-full"></div>
+                <div className="h-5 w-24 bg-gray-200 rounded-full"></div>
+                <div className="h-5 w-32 bg-gray-200 rounded-full"></div>
+              </div>
+              <div className="h-4 w-full bg-gray-200 rounded"></div>
+            </div>
+            <div className="flex gap-2">
+              <div className="h-9 w-20 bg-gray-300 rounded"></div>
+              <div className="h-9 w-20 bg-gray-300 rounded"></div>
+            </div>
+          </div>
+        </div>
+        <div className="p-6">
+          <div className="h-5 w-32 bg-gray-300 rounded mb-4"></div>
+          <div className="space-y-3">
+            {[...Array(3)].map((_, index) => (
+              <div key={index} className="flex items-center gap-4">
+                <div className="h-4 w-40 bg-gray-200 rounded"></div>
+                <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
+                <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
+                <div className="h-4 w-60 bg-gray-200 rounded"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const FilterSkeleton: React.FC = () => {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-4 animate-pulse">
+      {[...Array(4)].map((_, index) => (
+        <div key={index} className="space-y-2">
+          <div className="h-4 w-20 bg-gray-300 rounded"></div>
+          <div className="h-10 w-full bg-gray-200 rounded"></div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const StatsSkeleton: React.FC = () => {
+  return (
+    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 animate-pulse">
+      <div className="space-y-2">
+        <div className="h-8 w-64 bg-gray-300 rounded"></div>
+        <div className="h-4 w-48 bg-gray-200 rounded"></div>
+      </div>
+      <div className="h-10 w-40 bg-gray-300 rounded"></div>
+    </div>
+  );
+};
+
+// Service API pour les filières - CORRIGÉ
+class FiliereApiService {
+  private baseUrl = "/api/censor/filieres";
+
+  async getAllFilieres(): Promise<Filiere[]> {
+    try {
+      const response = await fetch(this.baseUrl);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de la récupération des filières");
+      }
+      return response.json();
+    } catch (error) {
+      console.error('❌ [FiliereApiService] Erreur getAllFilieres:', error);
+      throw error;
+    }
+  }
+
+  async createFiliere(data: {
+    name: string;
+    duration: string;
+    description: string;
+    vagues: string[];
+    modules: Array<{
+      name: string;
+      coefficient: number;
+      type: 'theorique' | 'pratique' | 'mixte' | 'projet';
+      description: string;
+    }>;
+  }): Promise<Filiere> {
+    try {
+      const response = await fetch(this.baseUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de la création de la filière");
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('❌ [FiliereApiService] Erreur createFiliere:', error);
+      throw error;
+    }
+  }
+
+  async updateFiliere(id: number, data: {
+    name: string;
+    duration: string;
+    description: string;
+    vagues: string[];
+    modules: Array<{
+      name: string;
+      coefficient: number;
+      type: 'theorique' | 'pratique' | 'mixte' | 'projet';
+      description: string;
+    }>;
+  }): Promise<Filiere> {
+    try {
+      console.log("🔍 [updateFiliere] Envoi données:", { id, data });
+      
+      const response = await fetch(this.baseUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          id, 
+          name: data.name,
+          duration: data.duration,
+          description: data.description,
+          vagues: data.vagues,
+          modules: data.modules
+        }),
+      });
+      
+      console.log("🔍 [updateFiliere] Status réponse:", response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("❌ [updateFiliere] Erreur API:", errorData);
+        throw new Error(errorData.error || "Erreur lors de la modification de la filière");
+      }
+      
+      const result = await response.json();
+      console.log("✅ [updateFiliere] Succès:", result);
+      return result;
+      
+    } catch (error) {
+      console.error('❌ [FiliereApiService] Erreur updateFiliere:', error);
+      throw error;
+    }
+  }
+
+  async deleteFiliere(id: number): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}?id=${id}`, {
+        method: "DELETE",
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de la suppression de la filière");
+      }
+    } catch (error) {
+      console.error('❌ [FiliereApiService] Erreur deleteFiliere:', error);
+      throw error;
+    }
+  }
+}
+
+const filiereApiService = new FiliereApiService();
+
 export default function FilieresModulesPage() {
   const [filieres, setFilieres] = useState<Filiere[]>([]);
   const [vagues, setVagues] = useState<Vague[]>([]);
@@ -84,7 +269,10 @@ export default function FilieresModulesPage() {
     description: ''
   });
   const [isLoadingVagues, setIsLoadingVagues] = useState(true);
+  const [isLoadingFilieres, setIsLoadingFilieres] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showVagueSelection, setShowVagueSelection] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Charger les vagues
   useEffect(() => {
@@ -98,18 +286,38 @@ export default function FilieresModulesPage() {
         }
         
         const vaguesData: Vague[] = await response.json();
-        console.log('Vagues chargées depuis API:', vaguesData);
+        console.log('✅ Vagues chargées:', vaguesData);
         
         setVagues(vaguesData);
       } catch (error) {
-        console.error('Erreur lors du chargement des vagues:', error);
+        console.error('❌ Erreur lors du chargement des vagues:', error);
         setVagues([]);
+        setError("Erreur lors du chargement des vagues");
       } finally {
         setIsLoadingVagues(false);
       }
     };
 
     fetchVagues();
+  }, []);
+
+  // Charger les filières
+  useEffect(() => {
+    const fetchFilieres = async () => {
+      try {
+        console.log("🔄 Chargement des filières depuis l'API...");
+        const data = await filiereApiService.getAllFilieres();
+        console.log('✅ Filières chargées:', data);
+        setFilieres(data);
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des filières:', error);
+        setError("Erreur lors du chargement des filières");
+      } finally {
+        setIsLoadingFilieres(false);
+      }
+    };
+
+    fetchFilieres();
   }, []);
 
   // Obtenir les modules uniques pour le filtre
@@ -119,21 +327,29 @@ export default function FilieresModulesPage() {
     return uniqueModules;
   };
 
-  // Obtenir le nom des vagues à partir de leurs IDs
-  const getVagueNames = (vagueIds: string[]): string => {
-    if (vagueIds.length === 0) return "Aucune vague";
+  // Obtenir le nom des vagues - FONCTION UNIVERSELLE CORRIGÉE
+  const getVagueNames = (vaguesData: Array<{id: string, name: string}> | string[]): string => {
+    if (vaguesData.length === 0) return "Aucune vague";
     
-    const names = vagueIds.map(id => {
-      const vague = vagues.find(v => v.id === id);
-      return vague ? vague.name : "Vague inconnue";
-    });
+    // Si c'est un tableau de strings (IDs)
+    if (typeof vaguesData[0] === 'string') {
+      const vagueIds = vaguesData as string[];
+      const names = vagueIds.map(id => {
+        const vague = vagues.find(v => v.id === id);
+        return vague ? vague.name : `Vague ${id.substring(0, 8)}...`;
+      });
+      return names.join(", ");
+    }
     
-    return names.join(", ");
+    // Si c'est un tableau d'objets
+    const vagueObjects = vaguesData as Array<{id: string, name: string}>;
+    return vagueObjects.map(v => v.name).join(", ");
   };
 
-  // Filtrage des filières
+  // Filtrage des filières - CORRIGÉ
   const filteredFilieres = filieres.filter(filiere => {
-    const matchesVague = selectedVague === "all" || filiere.vagues.includes(selectedVague);
+    const matchesVague = selectedVague === "all" || 
+      filiere.vagues.some(vagueObj => vagueObj.id === selectedVague);
     const matchesFiliere = selectedFiliere === "all" || filiere.name === selectedFiliere;
     const matchesModule = selectedModule === "all" || 
       filiere.modules.some(m => m.name === selectedModule);
@@ -159,69 +375,118 @@ export default function FilieresModulesPage() {
     });
   };
 
-  const ajouterFiliere = (): void => {
-    if (!newFiliere.name.trim() || !newFiliere.duration.trim()) {
-      alert("Veuillez remplir tous les champs obligatoires de la filière");
+  // Fonction pour normaliser les données avant envoi
+  const normalizeFiliereData = (filiereData: any) => {
+    return {
+      name: filiereData.name?.trim() || '',
+      duration: filiereData.duration?.trim() || '',
+      description: filiereData.description?.trim() || '',
+      vagues: Array.isArray(filiereData.vagues) ? filiereData.vagues : [],
+      modules: Array.isArray(filiereData.modules) ? filiereData.modules.map((module: any) => ({
+        name: module.name?.trim() || '',
+        coefficient: Number(module.coefficient) || 1,
+        type: module.type || 'theorique',
+        description: module.description?.trim() || ''
+      })) : []
+    };
+  };
+
+  const ajouterFiliere = async (): Promise<void> => {
+    if (!newFiliere.name?.trim() || !newFiliere.duration?.trim()) {
+      setError("Veuillez remplir tous les champs obligatoires de la filière");
       return;
     }
 
     if (currentModules.length === 0) {
-      alert("Veuillez ajouter au moins un module à la filière");
+      setError("Veuillez ajouter au moins un module à la filière");
       return;
     }
 
     if (newFiliere.vagues.length === 0) {
-      alert("Veuillez sélectionner au moins une vague");
+      setError("Veuillez sélectionner au moins une vague");
       return;
     }
 
-    const filiere: Filiere = {
-      id: editingFiliere ? editingFiliere.id : Date.now().toString(),
-      name: newFiliere.name.trim(),
-      duration: newFiliere.duration.trim(),
-      description: newFiliere.description.trim(),
-      vagues: newFiliere.vagues,
-      modules: [...currentModules]
-    };
+    try {
+      setIsSubmitting(true);
+      setError(null);
 
-    if (editingFiliere) {
-      setFilieres(prev => prev.map(f => f.id === editingFiliere.id ? filiere : f));
-    } else {
-      setFilieres(prev => [...prev, filiere]);
+      console.log("📤 Données envoyées:", {
+        name: newFiliere.name,
+        duration: newFiliere.duration,
+        vaguesCount: newFiliere.vagues.length,
+        modulesCount: currentModules.length
+      });
+
+      // Normalisation des données avant envoi
+      const filiereData = normalizeFiliereData({
+        name: newFiliere.name,
+        duration: newFiliere.duration,
+        description: newFiliere.description,
+        vagues: newFiliere.vagues,
+        modules: currentModules
+      });
+
+      let result: Filiere;
+      
+      if (editingFiliere) {
+        console.log("✏️ Modification de la filière:", editingFiliere.id);
+        result = await filiereApiService.updateFiliere(editingFiliere.id, filiereData);
+        setFilieres(prev => prev.map(f => f.id === editingFiliere.id ? result : f));
+      } else {
+        console.log("🆕 Création d'une nouvelle filière");
+        result = await filiereApiService.createFiliere(filiereData);
+        setFilieres(prev => [...prev, result]);
+      }
+      
+      // Réinitialiser le formulaire
+      setShowAddForm(false);
+      setEditingFiliere(null);
+      setNewFiliere({ name: '', duration: '', description: '', vagues: [] });
+      setCurrentModules([]);
+      setShowVagueSelection(false);
+      
+      console.log("✅ Opération réussie!");
+      
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la sauvegarde de la filière:', error);
+      setError(error.message || "Erreur lors de la sauvegarde de la filière");
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    // Réinitialiser le formulaire
-    setShowAddForm(false);
-    setEditingFiliere(null);
-    setNewFiliere({ name: '', duration: '', description: '', vagues: [] });
-    setCurrentModules([]);
-    setShowVagueSelection(false);
   };
 
   const modifierFiliere = (filiere: Filiere): void => {
+    console.log("✏️ Modification de la filière:", filiere);
     setEditingFiliere(filiere);
     setNewFiliere({
-      name: filiere.name,
-      duration: filiere.duration,
-      description: filiere.description,
-      vagues: filiere.vagues
+      name: filiere.name || '',
+      duration: filiere.duration || '',
+      description: filiere.description || '',
+      vagues: filiere.vagues.map(v => v.id) || [] // Extraction des IDs
     });
-    setCurrentModules([...filiere.modules]);
+    setCurrentModules(filiere.modules?.map(module => ({
+      id: module.id,
+      name: module.name || '',
+      coefficient: module.coefficient || 1,
+      type: module.type || 'theorique',
+      description: module.description || ''
+    })) || []);
     setShowAddForm(true);
   };
 
   const ajouterModule = (): void => {
-    if (!newModule.name.trim()) {
-      alert("Veuillez remplir le nom du module");
+    if (!newModule.name?.trim()) {
+      setError("Veuillez remplir le nom du module");
       return;
     }
 
     const moduleData: ModuleType = {
-      id: Date.now().toString(),
+      id: Date.now(),
       name: newModule.name.trim(),
       coefficient: newModule.coefficient,
       type: newModule.type,
-      description: newModule.description.trim()
+      description: newModule.description?.trim() || ''
     };
 
     setCurrentModules(prev => [...prev, moduleData]);
@@ -231,15 +496,23 @@ export default function FilieresModulesPage() {
       type: 'theorique',
       description: ''
     });
+    setError(null);
   };
 
-  const supprimerModule = (moduleId: string): void => {
+  const supprimerModule = (moduleId: number): void => {
     setCurrentModules(prev => prev.filter(m => m.id !== moduleId));
   };
 
-  const supprimerFiliere = (filiereId: string): void => {
+  const supprimerFiliere = async (filiereId: number): Promise<void> => {
     if (confirm("Êtes-vous sûr de vouloir supprimer cette filière ? Cette action est irréversible.")) {
-      setFilieres(prev => prev.filter(f => f.id !== filiereId));
+      try {
+        setError(null);
+        await filiereApiService.deleteFiliere(filiereId);
+        setFilieres(prev => prev.filter(f => f.id !== filiereId));
+      } catch (error: any) {
+        console.error('❌ Erreur lors de la suppression de la filière:', error);
+        setError(error.message || "Erreur lors de la suppression de la filière");
+      }
     }
   };
 
@@ -269,15 +542,31 @@ export default function FilieresModulesPage() {
     setNewFiliere({ name: '', duration: '', description: '', vagues: [] });
     setCurrentModules([]);
     setShowVagueSelection(false);
+    setError(null);
   };
 
-  // Afficher un indicateur de chargement
-  if (isLoadingVagues) {
+  // Afficher un indicateur de chargement principal
+  if (isLoadingVagues || isLoadingFilieres) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center lg:pl-5 pt-20 lg:pt-6">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement des vagues...</p>
+      <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
+        <div className="p-6 space-y-6">
+          {/* En-tête avec skeleton */}
+          <Card>
+            <CardContent className="p-6">
+              <StatsSkeleton />
+              <FilterSkeleton />
+              <div className="flex justify-end">
+                <div className="h-9 w-40 bg-gray-300 rounded animate-pulse"></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Liste des filières skeleton */}
+          <div className="space-y-6">
+            {[...Array(3)].map((_, index) => (
+              <FiliereCardSkeleton key={index} />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -311,6 +600,28 @@ export default function FilieresModulesPage() {
                 )}
               </Button>
             </div>
+
+            {/* Affichage des erreurs */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <FaTimes className="h-5 w-5 text-red-400" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-800">{error}</p>
+                  </div>
+                  <div className="ml-auto pl-3">
+                    <button
+                      onClick={() => setError(null)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <FaTimes className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Filtres */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4 mb-4">
@@ -423,6 +734,7 @@ export default function FilieresModulesPage() {
                     size="icon"
                     onClick={annulerEdition}
                     className="flex-shrink-0"
+                    disabled={isSubmitting}
                   >
                     <FaTimes className="h-4 w-4" />
                   </Button>
@@ -449,6 +761,7 @@ export default function FilieresModulesPage() {
                           value={newFiliere.name}
                           onChange={(e) => setNewFiliere(prev => ({ ...prev, name: e.target.value }))}
                           className="text-sm"
+                          disabled={isSubmitting}
                         />
                       </div>
                       <div className="space-y-2">
@@ -460,6 +773,7 @@ export default function FilieresModulesPage() {
                           value={newFiliere.duration}
                           onChange={(e) => setNewFiliere(prev => ({ ...prev, duration: e.target.value }))}
                           className="text-sm"
+                          disabled={isSubmitting}
                         />
                       </div>
                       
@@ -478,6 +792,7 @@ export default function FilieresModulesPage() {
                               size="sm"
                               onClick={() => setShowVagueSelection(!showVagueSelection)}
                               className="text-xs"
+                              disabled={isSubmitting}
                             >
                               {showVagueSelection ? 'Masquer' : 'Afficher'} les vagues
                             </Button>
@@ -496,6 +811,7 @@ export default function FilieresModulesPage() {
                                       id={`vague-${vague.id}`}
                                       checked={newFiliere.vagues.includes(vague.id)}
                                       onCheckedChange={() => handleVagueToggle(vague.id)}
+                                      disabled={isSubmitting}
                                     />
                                     <Label
                                       htmlFor={`vague-${vague.id}`}
@@ -537,6 +853,7 @@ export default function FilieresModulesPage() {
                           value={newFiliere.description}
                           onChange={(e) => setNewFiliere(prev => ({ ...prev, description: e.target.value }))}
                           className="text-sm"
+                          disabled={isSubmitting}
                         />
                       </div>
                     </div>
@@ -566,6 +883,7 @@ export default function FilieresModulesPage() {
                               value={newModule.name}
                               onChange={(e) => setNewModule(prev => ({ ...prev, name: e.target.value }))}
                               className="text-xs sm:text-sm h-8 sm:h-10"
+                              disabled={isSubmitting}
                             />
                           </div>
                           <div className="space-y-1 sm:space-y-2">
@@ -580,6 +898,7 @@ export default function FilieresModulesPage() {
                               value={newModule.coefficient}
                               onChange={(e) => setNewModule(prev => ({ ...prev, coefficient: parseFloat(e.target.value) || 1 }))}
                               className="text-xs sm:text-sm h-8 sm:h-10"
+                              disabled={isSubmitting}
                             />
                           </div>
                           <div className="space-y-1 sm:space-y-2">
@@ -591,6 +910,7 @@ export default function FilieresModulesPage() {
                               onValueChange={(value: 'theorique' | 'pratique' | 'mixte' | 'projet') => 
                                 setNewModule(prev => ({ ...prev, type: value }))
                               }
+                              disabled={isSubmitting}
                             >
                               <SelectTrigger className="text-xs sm:text-sm h-8 sm:h-10">
                                 <SelectValue />
@@ -612,6 +932,7 @@ export default function FilieresModulesPage() {
                               value={newModule.description}
                               onChange={(e) => setNewModule(prev => ({ ...prev, description: e.target.value }))}
                               className="text-xs sm:text-sm h-8 sm:h-10"
+                              disabled={isSubmitting}
                             />
                           </div>
                         </div>
@@ -619,6 +940,7 @@ export default function FilieresModulesPage() {
                           onClick={ajouterModule}
                           className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
                           size="sm"
+                          disabled={isSubmitting}
                         >
                           <FaPlus className="mr-2 h-3 w-3" />
                           Ajouter le module
@@ -659,6 +981,7 @@ export default function FilieresModulesPage() {
                                     size="icon"
                                     onClick={() => supprimerModule(moduleItem.id)}
                                     className="text-red-600 hover:text-red-800 hover:bg-red-50 flex-shrink-0 ml-2"
+                                    disabled={isSubmitting}
                                   >
                                     <FaTrash className="h-3 w-3 sm:h-4 sm:w-4" />
                                   </Button>
@@ -704,16 +1027,26 @@ export default function FilieresModulesPage() {
                       variant="outline"
                       onClick={annulerEdition}
                       className="flex-1 sm:flex-none"
+                      disabled={isSubmitting}
                     >
                       Annuler
                     </Button>
                     <Button 
                       onClick={ajouterFiliere}
-                      disabled={currentModules.length === 0 || newFiliere.vagues.length === 0}
+                      disabled={currentModules.length === 0 || newFiliere.vagues.length === 0 || isSubmitting}
                       className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 flex-1 sm:flex-none"
                     >
-                      <FaSave className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                      {editingFiliere ? 'Modifier' : 'Créer'}
+                      {isSubmitting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          {editingFiliere ? 'Modification...' : 'Création...'}
+                        </>
+                      ) : (
+                        <>
+                          <FaSave className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                          {editingFiliere ? 'Modifier' : 'Créer'}
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -742,6 +1075,7 @@ export default function FilieresModulesPage() {
               <Button
                 onClick={() => setShowAddForm(true)}
                 className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                disabled={vagues.length === 0}
               >
                 Créer une filière
               </Button>
@@ -766,6 +1100,11 @@ export default function FilieresModulesPage() {
                           {filiere.vagues.length > 0 && (
                             <Badge variant="outline" className="text-xs">
                               {getVagueNames(filiere.vagues)}
+                            </Badge>
+                          )}
+                          {filiere.totalStudents !== undefined && (
+                            <Badge variant="outline" className="bg-purple-100 text-purple-800 text-xs">
+                              {filiere.totalStudents} étudiant(s)
                             </Badge>
                           )}
                         </div>

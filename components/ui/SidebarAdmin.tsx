@@ -17,7 +17,6 @@ import {
   FaMoneyBillWave,
   FaChartLine,
   FaCog,
-  FaBell,
   FaGraduationCap,
   FaSignOutAlt,
   FaBars,
@@ -200,14 +199,6 @@ const SidebarAdmin = () => {
                 <div className="p-2 space-y-1">
                   <Link href="/dashboard/admin/profile" className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 font-medium" onClick={handleCloseModal}>
                     <FaUser className="text-gray-600 text-sm" /><span>Profil</span>
-                  </Link>
-                  <Link
-                    href="/dashboard/admin/notifications"
-                    className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium"
-                    onClick={handleCloseModal}
-                  >
-                    <FaBell className="text-gray-600 text-sm" />
-                    <span>Notifications</span>
                   </Link>
                   <Link href="/dashboard/admin/settings" className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 font-medium" onClick={handleCloseModal}>
                     <FaCog className="text-gray-600 text-sm" /><span>Paramètres</span>

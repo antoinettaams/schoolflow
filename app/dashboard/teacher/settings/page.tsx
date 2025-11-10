@@ -5,7 +5,6 @@ import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import {
   Sun,
-  Globe,
   Lock,
   Eye,
   EyeOff,
@@ -84,7 +83,7 @@ const TeacherSettingsPage = () => {
       router.push("/sign-in");
     } else if (isLoaded && user) {
       const role = user.publicMetadata?.role || "inconnu";
-      if (role !== "teacher") {
+      if (role !== "Enseignant") {
         toast.error("Accès réservé aux professeurs uniquement !");
         router.push("/dashboard");
       } else {
@@ -572,68 +571,6 @@ const TeacherSettingsPage = () => {
                     id="dark-mode"
                     checked={darkMode}
                     onCheckedChange={setDarkMode}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Section Général */}
-          <Card className="border-0 shadow-lg overflow-hidden">
-            <CardHeader className="pb-4 sm:pb-6">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0">
-                  <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 break-words">
-                    Général
-                  </CardTitle>
-                  <CardDescription className="text-sm sm:text-base text-gray-500 break-words">
-                    Langue et notifications
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-4 sm:space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg gap-3 sm:gap-0 min-w-0">
-                  <div className="space-y-0.5 min-w-0 flex-1">
-                    <Label htmlFor="language" className="text-sm sm:text-base font-medium block break-words">
-                      Langue
-                    </Label>
-                    <p className="text-xs sm:text-sm text-gray-500 break-words">
-                      Définir la langue d&apos;affichage
-                    </p>
-                  </div>
-                  <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger className="w-full sm:w-[180px] text-sm sm:text-base min-w-0">
-                      <SelectValue className="truncate" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fr" className="text-sm sm:text-base truncate">Français</SelectItem>
-                      <SelectItem value="en" className="text-sm sm:text-base truncate">English</SelectItem>
-                      <SelectItem value="es" className="text-sm sm:text-base truncate">Español</SelectItem>
-                      <SelectItem value="de" className="text-sm sm:text-base truncate">Deutsch</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg min-w-0">
-                  <div className="space-y-0.5 min-w-0 flex-1 mr-4">
-                    <Label htmlFor="notifications" className="text-sm sm:text-base font-medium block break-words">
-                      Notifications
-                    </Label>
-                    <p className="text-xs sm:text-sm text-gray-500 break-words">
-                      Recevoir des notifications sur les cours et annonces
-                    </p>
-                  </div>
-                  <Switch
-                    id="notifications"
-                    checked={notificationsEnabled}
-                    onCheckedChange={setNotificationsEnabled}
                   />
                 </div>
               </div>

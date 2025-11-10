@@ -7,9 +7,38 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import toast, { Toaster } from "react-hot-toast";
 import Image from "next/image";
 
-// Interface pour typer les métadonnées
+// Interfaces pour les types
 interface UserPublicMetadata {
   role?: string;
+} 
+
+interface Filiere {
+  id: string;
+  name: string;
+  description?: string;
+  duree?: string;
+  vagues?: Vague[];
+}
+
+interface Vague {
+  id: string;
+  name: string;
+  description?: string;
+  periode?: string;
+}
+
+interface UserData {
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  phone: string;
+  studentNumber?: string;
+  filiereId?: string;     
+  vagueNumber?: string;    
+  matiere?: string;
+  enfantName?: string;
+  relation?: string;
 }
 
 export default function SignUpPage() {
@@ -20,15 +49,38 @@ export default function SignUpPage() {
   const [role, setRole] = useState("Etudiant");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFiliere, setSelectedFiliere] = useState("");
+  const [selectedVague, setSelectedVague] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
   const [isSecretaire, setIsSecretaire] = useState(false);
+  const [filieres, setFilieres] = useState<Filiere[]>([]);
+  const [vagues, setVagues] = useState<Vague[]>([]);
+  const [loadingFilieres, setLoadingFilieres] = useState(true);
 
-  // Tableau des filières 
-  const filieres = [
-    { id: "informatique", name: "Informatique" },
-    { id: "mathematiques", name: "Mathématiques" },
-  ];
+  // Charger les filières et vagues disponibles
+  useEffect(() => {
+    const fetchFilieresVagues = async () => {
+      try {
+        setLoadingFilieres(true);
+        const response = await fetch('/api/filieres-vagues');
+        
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement des filières et vagues');
+        }
+
+        const data = await response.json();
+        setFilieres(data.filieres || []);
+        setVagues(data.vagues || []);
+      } catch (error) {
+        console.error("Erreur chargement filières/vagues:", error);
+        toast.error("Erreur lors du chargement des filières et vagues");
+      } finally {
+        setLoadingFilieres(false);
+      }
+    };
+
+    fetchFilieresVagues();
+  }, []);
 
   // Vérification des permissions ADMIN ou SECRETAIRE
   useEffect(() => {
@@ -43,9 +95,8 @@ export default function SignUpPage() {
       return;
     }
 
-    // CORRIGÉ : Typage approprié pour les métadonnées
     const userRole = (user?.publicMetadata as UserPublicMetadata)?.role;
-    console.log("EBUG - User role:", userRole);
+    console.log("DEBUG - User role:", userRole);
     
     const isAdmin = userRole && (
       userRole.toLowerCase().includes("admin") || 
@@ -89,6 +140,23 @@ export default function SignUpPage() {
     setIsLoading(false);
   }, [authLoaded, userLoaded, userId, user, router]);
 
+  // Réinitialiser la vague quand la filière change
+  useEffect(() => {
+    setSelectedVague("");
+  }, [selectedFiliere]);
+
+  // Obtenir les vagues disponibles pour la filière sélectionnée
+  const getVaguesForFiliere = () => {
+    if (!selectedFiliere) return vagues;
+    
+    const filiere = filieres.find(f => f.id === selectedFiliere);
+    if (filiere && filiere.vagues && filiere.vagues.length > 0) {
+      return filiere.vagues;
+    }
+    
+    return vagues;
+  };
+
   const renderRoleFields = () => {
     switch (role) {
       case "Etudiant":
@@ -96,7 +164,7 @@ export default function SignUpPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="studentNumber" className="block mb-2 font-title font-medium text-dark">
-                Numéro d&apos;étudiant
+                Numéro d&apos;étudiant *
               </label>
               <input
                 id="studentNumber"
@@ -104,22 +172,10 @@ export default function SignUpPage() {
                 type="text"
                 placeholder="Ex: ETU-2024-001"
                 className="w-full p-2 bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-bluvy"
+                required
               />
             </div>
 
-            <div>
-              <label htmlFor="vagueNumber" className="block mb-2 font-title font-medium text-dark">
-                Numéro de Vague
-              </label>
-              <input
-                id="vagueNumber"
-                name="vagueNumber"
-                type="text"
-                placeholder="Ex: Janvier: 2024-2025"
-                className="w-full p-2 bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-bluvy"
-              />
-            </div>
-  
             <div>
               <label htmlFor="filiere" className="block mb-2 font-title font-medium text-dark">
                 Filière *
@@ -131,42 +187,69 @@ export default function SignUpPage() {
                 onChange={(e) => setSelectedFiliere(e.target.value)}
                 className="w-full p-2 bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-bluvy"
                 required
+                disabled={loadingFilieres}
               >
                 <option value="">-- Sélectionnez une filière --</option>
-                {filieres.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
+                {loadingFilieres ? (
+                  <option value="" disabled>Chargement des filières...</option>
+                ) : filieres.length === 0 ? (
+                  <option value="" disabled>Aucune filière disponible</option>
+                ) : (
+                  filieres.map((filiere) => (
+                    <option key={filiere.id} value={filiere.id}>
+                      {filiere.name} {filiere.duree && `- ${filiere.duree}`}
+                    </option>
+                  ))
+                )}
               </select>
+              {loadingFilieres && (
+                <p className="text-xs text-gray-500 mt-1">Chargement des filières...</p>
+              )}
             </div>
-          </div>
-        );
-  
-      case "Enseignant":
-        return (
-          <div className="space-y-4">
+
             <div>
-              <label htmlFor="matiere" className="block mb-2 font-title font-medium text-dark">
-                Matière enseignée
+              <label htmlFor="vague" className="block mb-2 font-title font-medium text-dark">
+                Vague *
               </label>
-              <input
-                id="matiere"
-                name="matiere"
-                type="text"
-                placeholder="Ex: Mathématiques, Physique, etc."
+              <select
+                id="vague"
+                name="vague"
+                value={selectedVague}
+                onChange={(e) => setSelectedVague(e.target.value)}
                 className="w-full p-2 bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-bluvy"
-              />
+                required
+                disabled={loadingFilieres || !selectedFiliere}
+              >
+                <option value="">-- Sélectionnez une vague --</option>
+                {loadingFilieres ? (
+                  <option value="" disabled>Chargement des vagues...</option>
+                ) : !selectedFiliere ? (
+                  <option value="" disabled>Sélectionnez d'abord une filière</option>
+                ) : getVaguesForFiliere().length === 0 ? (
+                  <option value="" disabled>Aucune vague disponible pour cette filière</option>
+                ) : (
+                  getVaguesForFiliere().map((vague) => (
+                    <option key={vague.id} value={vague.id}>
+                      {vague.name} {vague.periode && `- ${vague.periode}`}
+                    </option>
+                  ))
+                )}
+              </select>
+              {selectedFiliere && getVaguesForFiliere().length === 0 && !loadingFilieres && (
+                <p className="text-xs text-yellow-600 mt-1">
+                  Aucune vague disponible pour cette filière. Contactez l'administration.
+                </p>
+              )}
             </div>
           </div>
         );
-  
+        
       case "Parent":
         return (
           <div className="space-y-4">
             <div>
               <label htmlFor="enfantName" className="block mb-2 font-title font-medium text-dark">
-                Nom de l&apos;enfant *
+                Nom complet de l&apos;enfant *
               </label>
               <input
                 id="enfantName"
@@ -176,24 +259,34 @@ export default function SignUpPage() {
                 className="w-full p-2 bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-bluvy"
                 required
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Important : Le nom doit correspondre exactement à celui de l'étudiant
+              </p>
             </div>
-  
+
             <div>
-              <label htmlFor="filiere" className="block mb-2 font-title font-medium text-dark">
+              <label htmlFor="enfantFiliere" className="block mb-2 font-title font-medium text-dark">
                 Filière de l&apos;enfant *
               </label>
               <select
-                id="filiere"
+                id="enfantFiliere"
                 name="filiere"
                 className="w-full p-2 bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-bluvy"
                 required
+                disabled={loadingFilieres}
               >
                 <option value="">-- Sélectionnez la filière de l&apos;enfant --</option>
-                {filieres.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
+                {loadingFilieres ? (
+                  <option value="" disabled>Chargement des filières...</option>
+                ) : filieres.length === 0 ? (
+                  <option value="" disabled>Aucune filière disponible</option>
+                ) : (
+                  filieres.map((filiere) => (
+                    <option key={filiere.id} value={filiere.id}>
+                      {filiere.name}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
             
@@ -214,33 +307,81 @@ export default function SignUpPage() {
                 <option value="Autre">Autre</option>
               </select>
             </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                💡 <strong>Important :</strong> Vous pourrez voir l'emploi du temps et les notes de votre enfant 
+                une fois le compte créé. Assurez-vous que le nom correspond exactement.
+              </p>
+            </div>
+          </div>
+        );
+
+      case "Enseignant":
+        return (
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="matiere" className="block mb-2 font-title font-medium text-dark">
+                Matière enseignée *
+              </label>
+              <input
+                id="matiere"
+                name="matiere"
+                type="text"
+                placeholder="Ex: Mathématiques, Informatique, Physique..."
+                className="w-full p-2 bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-bluvy"
+                required
+              />
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                📚 <strong>Information :</strong> Vous serez assigné à des cours selon votre matière 
+                et pourrez gérer vos emplois du temps.
+              </p>
+            </div>
           </div>
         );
   
       case "Secretaire":
         return (
           <div className="space-y-4">
-            <p className="text-sm text-gray-600 text-center">
-              Aucune information supplémentaire requise pour la secrétaire.
-            </p>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+              <p className="text-sm text-green-800 font-medium">
+                👩‍💼 Aucune information supplémentaire requise pour la secrétaire.
+              </p>
+              <p className="text-xs text-green-600 mt-1">
+                Vous pourrez gérer les inscriptions et les emplois du temps.
+              </p>
+            </div>
           </div>
         );
   
       case "Comptable":
         return (
           <div className="space-y-4">
-            <p className="text-sm text-gray-600 text-center">
-              Aucune information supplémentaire requise pour le comptable.
-            </p>
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+              <p className="text-sm text-purple-800 font-medium">
+                💰 Aucune information supplémentaire requise pour le comptable.
+              </p>
+              <p className="text-xs text-purple-600 mt-1">
+                Vous pourrez gérer les paiements et les finances de l'établissement.
+              </p>
+            </div>
           </div>
         );
   
       case "Censeur":
         return (
           <div className="space-y-4">
-            <p className="text-sm text-gray-600 text-center">
-              Aucune information supplémentaire requise pour le censeur.
-            </p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+              <p className="text-sm text-red-800 font-medium">
+                🎓 Aucune information supplémentaire requise pour le censeur.
+              </p>
+              <p className="text-xs text-red-600 mt-1">
+                Vous pourrez superviser le bon déroulement des activités académiques.
+              </p>
+            </div>
           </div>
         );
   
@@ -248,20 +389,6 @@ export default function SignUpPage() {
         return null;
     }
   };
-
-  // Interface pour les données utilisateur
-  interface UserData {
-    email: string;
-    firstName: string;
-    lastName: string;
-    role: string;
-    phone: string;
-    studentNumber?: string;
-    filiere?: string;
-    matiere?: string;
-    enfantName?: string;
-    relation?: string;
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -276,25 +403,51 @@ export default function SignUpPage() {
       const email = formData.get("email") as string;
       const phone = formData.get("phone") as string;
       
-      const nameParts = name.split(" ");
-      const firstName = nameParts[0];
-      const lastName = nameParts.slice(1).join(" ") || firstName;
+      // Validation du nom complet
+      const nameParts = name.trim().split(" ");
+      if (nameParts.length < 2) {
+        throw new Error("Veuillez entrer un nom complet (prénom et nom)");
+      }
 
-      // Données utilisateur
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(" ");
+
+      // Validation des champs requis selon le rôle
+      if (role === "Etudiant") {
+        if (!formData.get("filiere") || !formData.get("vague")) {
+          throw new Error("Veuillez sélectionner une filière et une vague pour l'étudiant");
+        }
+        if (!formData.get("studentNumber")) {
+          throw new Error("Le numéro d'étudiant est requis");
+        }
+      }
+
+      if (role === "Parent") {
+        if (!formData.get("enfantName") || !formData.get("filiere") || !formData.get("relation")) {
+          throw new Error("Veuillez remplir tous les champs requis pour le parent");
+        }
+      }
+
+      if (role === "Enseignant" && !formData.get("matiere")) {
+        throw new Error("La matière enseignée est requise");
+      }
+
+      // 🚨 CORRECTION : Utiliser les bons noms de champs pour l'API
       const userData: UserData = {
-        email,
-        firstName,
-        lastName,
+        email: email.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         role: isSecretaire ? "Etudiant" : role,
-        phone: phone || "",
+        phone: phone ? phone.trim() : "",
         studentNumber: formData.get("studentNumber") as string,
-        filiere: formData.get("filiere") as string,
+        filiereId: formData.get("filiere") as string,      // ← CORRIGÉ : filiereId au lieu de filiere
+        vagueNumber: formData.get("vague") as string,      // ← CORRIGÉ : vagueNumber au lieu de vague
         matiere: formData.get("matiere") as string,
         enfantName: formData.get("enfantName") as string,
         relation: formData.get("relation") as string,
       };
 
-      console.log("Données envoyées à l&apos;API:", userData);
+      console.log("🚨 DONNÉES CORRIGÉES envoyées à l'API:", userData);
 
       const response = await fetch('/api/admin/create-user', {
         method: 'POST',
@@ -307,7 +460,7 @@ export default function SignUpPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Erreur lors de la création');
+        throw new Error(result.error || 'Erreur lors de la création du compte');
       }
 
       // SUCCÈS - Toast de succès avec informations détaillées
@@ -315,28 +468,40 @@ export default function SignUpPage() {
       toast.success(
         <div className="max-w-md">
           <div className="font-bold text-green-800 mb-2">
-            Compte {isSecretaire ? "Étudiant" : role} créé avec succès !
+            ✅ Compte {isSecretaire ? "Étudiant" : role} créé avec succès !
           </div>
           <div className="text-sm space-y-1">
-            <div><strong>📧 Email:</strong> {email}</div>
-            <div><strong>📞 Téléphone:</strong> {phone || 'Non renseigné'}</div>
-            <div><strong>🔑 Mot de passe temporaire:</strong> {result.user.temporaryPassword}</div>
+            <div><strong>👤 Nom :</strong> {firstName} {lastName}</div>
+            <div><strong>📧 Email :</strong> {email}</div>
+            <div><strong>📞 Téléphone :</strong> {phone || 'Non renseigné'}</div>
+            {role === "Etudiant" && (
+              <>
+                <div><strong>🎓 Filière :</strong> {filieres.find(f => f.id === selectedFiliere)?.name}</div>
+                <div><strong>🌊 Vague :</strong> {getVaguesForFiliere().find(v => v.id === selectedVague)?.name}</div>
+                <div><strong>🎫 Numéro étudiant :</strong> {userData.studentNumber}</div>
+              </>
+            )}
+            {role === "Parent" && (
+              <div><strong>👶 Enfant :</strong> {userData.enfantName}</div>
+            )}
+            <div><strong>🔑 Mot de passe temporaire :</strong> {result.user.temporaryPassword}</div>
             <div className="mt-2 text-xs text-gray-600">
-              L&apos;utilisateur devra changer son mot de passe à la première connexion.
+              L'utilisateur devra changer son mot de passe à la première connexion.
             </div>
           </div>
         </div>,
         { 
-          duration: 120000, // Reste affiché 2 minutes
+          duration: 15000,
           icon: '🎉'
         }
       );
       
       // Réinitialisation
       if (!isSecretaire) {
-        setRole("");
+        setRole("Etudiant");
       }
       setSelectedFiliere("");
+      setSelectedVague("");
       
       const form = e.target as HTMLFormElement;
       form.reset();
@@ -347,10 +512,10 @@ export default function SignUpPage() {
       const errorMessage = err instanceof Error ? err.message : "Erreur lors de la création du compte";
       toast.error(
         <div>
-          <div className="font-bold">❌ Erreur</div>
+          <div className="font-bold">❌ Erreur de création</div>
           <div>{errorMessage}</div>
         </div>,
-        { duration: 5000 }
+        { duration: 8000 }
       );
     } finally {
       setIsSubmitting(false);
@@ -394,7 +559,6 @@ export default function SignUpPage() {
 
   return (
     <>
-      {/* Composant Toaster pour afficher les notifications */}
       <Toaster 
         position="top-right"
         toastOptions={{
@@ -407,14 +571,14 @@ export default function SignUpPage() {
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
           },
           success: {
-            duration: 8000,
+            duration: 15000,
             iconTheme: {
               primary: '#10B981',
               secondary: '#fff',
             },
           },
           error: {
-            duration: 6000,
+            duration: 8000,
             iconTheme: {
               primary: '#EF4444',
               secondary: '#fff',
@@ -429,15 +593,15 @@ export default function SignUpPage() {
       <div className="min-h-screen bg-white flex items-center justify-center p-4 sm:p-6 lg:p-8">
         <div className="relative w-full max-w-5xl h-auto min-h-[800px] md:h-[calc(100vh-32px)] rounded-lg shadow-xl overflow-hidden flex flex-col md:flex-row">
           <div className="bg-principal relative w-full md:w-1/2 flex flex-col items-center justify-center p-8 md:p-10 text-white text-center">     
-              <Link href="/" className="flex items-center justify-center">
-                <Image 
-                  src="/images/logo.png" 
-                  alt="SchoolFlow Logo"
-                  width={192}       
-                  height={192}      
-                  className="h-48 w-48"
-                />
-              </Link>
+            <Link href="/" className="flex items-center justify-center">
+              <Image 
+                src="/images/logo.png" 
+                alt="SchoolFlow Logo"
+                width={192}       
+                height={192}      
+                className="h-48 w-48"
+              />
+            </Link>
             <h1 className="text-3xl font-title sm:text-4xl md:text-5xl font-bold">Bienvenue</h1>
             <p className="mt-2 text-lg opacity-90 max-w-md">
               {isSecretaire 
@@ -472,21 +636,21 @@ export default function SignUpPage() {
                     onChange={(e) => {
                       setRole(e.target.value);
                       setSelectedFiliere("");
+                      setSelectedVague("");
                     }}
                     className="w-full p-2 bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-bluvy"
                     required
                   >
                     <option value="">-- Choisir un rôle --</option>
-                    <option value="Enseignant">Enseignant</option>
-                    <option value="Etudiant">Étudiant</option>
-                    <option value="Parent">Parent</option>
-                    <option value="Secretaire">Secrétaire</option>
-                    <option value="Comptable">Comptable</option>
-                    <option value="Censeur">Censeur</option>
+                    <option value="Enseignant">👨‍🏫 Enseignant</option>
+                    <option value="Etudiant">👨‍🎓 Étudiant</option>
+                    <option value="Parent">👨‍👦 Parent</option>
+                    <option value="Secretaire">👩‍💼 Secrétaire</option>
+                    <option value="Comptable">💰 Comptable</option>
+                    <option value="Censeur">🎓 Censeur</option>
                   </select>
                 </div>
               ) : (
-                // AFFICHAGE DU ROLE FIXE POUR LA SECRETAIRE
                 <div className="mb-6">
                   <label className="block mb-2 font-title font-medium text-dark">
                     Rôle
@@ -509,10 +673,11 @@ export default function SignUpPage() {
                     id="name"
                     name="name"
                     type="text"
-                    placeholder="Entrer votre nom complet"
+                    placeholder="Ex: Jean Dupont"
                     className="w-full p-2 bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-bluvy"
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">Prénom et nom séparés par un espace</p>
                 </div>
 
                 <div>
@@ -529,7 +694,6 @@ export default function SignUpPage() {
                   />
                 </div>
 
-                {/* CHAMP NUMÉRO DE TÉLÉPHONE */}
                 <div>
                   <label htmlFor="phone" className="block mb-2 font-title font-medium text-dark">
                     Numéro de téléphone
@@ -538,9 +702,10 @@ export default function SignUpPage() {
                     id="phone"
                     name="phone"
                     type="tel"
-                    placeholder="Ex: +225 07 12 34 56 78"
+                    placeholder="Ex: +2250700000000 (recommandé) ou 0700000000"
                     className="w-full p-2 bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-bluvy"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Format international recommandé</p>
                 </div>
               </div>
 
@@ -548,14 +713,16 @@ export default function SignUpPage() {
 
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || loadingFilieres}
                 className="mt-4 mb-4 w-full bg-lien font-link text-white p-2 rounded-md font-semibold hover:bg-principal transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting 
-                  ? "Création en cours..." 
+                  ? "⏳ Création en cours..." 
+                  : loadingFilieres
+                  ? "📥 Chargement des données..."
                   : isSecretaire 
-                    ? "Inscrire l&apos;étudiant" 
-                    : "Créer le compte"
+                    ? "👨‍🎓 Inscrire l'étudiant" 
+                    : `👤 Créer le compte ${role}`
                 }
               </button>
 
@@ -570,8 +737,11 @@ export default function SignUpPage() {
             </form>
             <div className="pt-4 border-t border-gray-200 text-center">
               <p className="text-gray-600 text-sm">
-                Gestionnaire d&apos;école{" "}
+                Gestionnaire d'école{" "}
                 <span className="font-bold font-title text-dark">SchoolFlow</span>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {filieres.length} filières • {vagues.length} vagues
               </p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 // app/dashboard/professeur/exercices/page.tsx
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   BookOpen,
   Calculator,
@@ -22,6 +22,8 @@ import {
   Upload,
   Save,
   X,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +33,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // --- Interfaces ---
 interface Exercise {
@@ -46,77 +50,30 @@ interface Exercise {
   deadline: string;
   status: "actif" | "archivé";
   fileUrl?: string;
+  filiereId?: number;
+  vagueId?: string;
+  moduleId?: number;
 }
 
 interface ExerciseForm {
   id?: string;
-  filiere: string;
+  filiereId: string;
   title: string;
   exerciseType: string;
   pages: string;
   content: string;
   date: string;
-  vague: string;
-  module: string;
+  vagueId: string;
+  moduleId: string;
   deadline: string;
   file?: File;
 }
 
-// --- Données fictives ---
-const initialExercises: Exercise[] = [
-  {
-    id: "1",
-    filiere: "Développement Web",
-    title: "Exercices React & Next.js",
-    exerciseType: "Projet Frontend",
-    pages: "Pages 45 à 52",
-    content: "Création d'une application React avec Next.js. Implémenter le routing et les composants fonctionnels.",
-    date: "2024-10-15",
-    vague: "Vague Janvier 2024",
-    module: "React Avancé",
-    deadline: "2024-10-25",
-    status: "actif"
-  },
-  {
-    id: "2",
-    filiere: "Data Science",
-    title: "Analyse de données avec Pandas",
-    exerciseType: "TP Data Analysis",
-    pages: "Chapitre 3",
-    content: "Manipulation de datasets avec Pandas. Nettoyage des données et création de visualisations.",
-    date: "2024-10-16",
-    vague: "Vague Janvier 2024",
-    module: "Python pour Data Science",
-    deadline: "2024-10-26",
-    status: "actif"
-  },
-  {
-    id: "3",
-    filiere: "Cybersécurité",
-    title: "Tests de pénétration réseau",
-    exerciseType: "Lab Sécurité",
-    pages: "Module 2 - Sécurité Réseau",
-    content: "Analyse de vulnérabilités réseau et tests d'intrusion. Utilisation de Nmap et Metasploit.",
-    date: "2024-10-13",
-    vague: "Vague Mars 2024",
-    module: "Sécurité Réseau",
-    deadline: "2024-10-23",
-    status: "actif"
-  },
-  {
-    id: "4",
-    filiere: "Développement Mobile",
-    title: "Application React Native",
-    exerciseType: "Projet Mobile",
-    pages: "Partie 1 - Fondamentaux",
-    content: "Développement d'une application mobile cross-platform avec React Native. Gestion d'état avec Redux.",
-    date: "2024-10-12",
-    vague: "Vague Mars 2024",
-    module: "React Native",
-    deadline: "2024-10-22",
-    status: "archivé"
-  }
-];
+interface AvailableData {
+  filieres: { id: number; nom: string }[];
+  vagues: { id: string; nom: string }[];
+  modules: { id: number; nom: string; filiere: string; filiereId: number }[];
+}
 
 const iconMap = {
   "Développement Web": Code,
@@ -128,119 +85,35 @@ const iconMap = {
   "Design UX/UI": Pencil,
 };
 
-const filieres = [
-  "Développement Web",
-  "Data Science",
-  "Cybersécurité",
-  "Développement Mobile",
-  "Cloud Computing",
-  "Intelligence Artificielle",
-  "Design UX/UI"
-];
-
-// Modules par filière
-const modulesParFiliere = {
-  "Développement Web": [
-    "HTML/CSS Avancé",
-    "JavaScript Moderne",
-    "React Avancé",
-    "Next.js",
-    "Node.js & Express",
-    "Base de données",
-    "API REST",
-    "Testing Frontend"
-  ],
-  "Data Science": [
-    "Python pour Data Science",
-    "Pandas & NumPy",
-    "Visualisation de données",
-    "Machine Learning",
-    "Deep Learning",
-    "Analyse statistique",
-    "Big Data",
-    "Data Mining"
-  ],
-  "Cybersécurité": [
-    "Sécurité Réseau",
-    "Cryptographie",
-    "Ethical Hacking",
-    "Forensique numérique",
-    "Sécurité Cloud",
-    "Sécurité Mobile",
-    "Audit de sécurité",
-    "Gestion des vulnérabilités"
-  ],
-  "Développement Mobile": [
-    "React Native",
-    "Flutter",
-    "iOS Development",
-    "Android Development",
-    "Mobile UX/UI",
-    "APIs Mobiles",
-    "Performance Mobile",
-    "Publication d'apps"
-  ],
-  "Cloud Computing": [
-    "AWS Fundamentals",
-    "Azure Services",
-    "Google Cloud Platform",
-    "Docker & Kubernetes",
-    "DevOps Practices",
-    "Serverless Architecture",
-    "Cloud Security",
-    "Microservices"
-  ],
-  "Intelligence Artificielle": [
-    "Machine Learning",
-    "Deep Learning",
-    "Computer Vision",
-    "Natural Language Processing",
-    "Reinforcement Learning",
-    "AI Ethics",
-    "Neural Networks",
-    "AI Project Management"
-  ],
-  "Design UX/UI": [
-    "Design Thinking",
-    "Wireframing",
-    "Prototypage",
-    "User Research",
-    "UI Design Principles",
-    "Design Systems",
-    "Accessibilité",
-    "Design Tools"
-  ]
-};
-
-const vagues = [
-  "Vague Janvier 2024",
-  "Vague Mars 2024",
-  "Vague Mai 2024",
-  "Vague Septembre 2024"
-];
-
 // --- Composant Item d'Exercice ---
 interface ExerciseItemProps {
   exercise: Exercise;
   onEdit: (exercise: Exercise) => void;
   onDelete: (id: string) => void;
   onToggleStatus: (id: string) => void;
+  isUpdating?: boolean;
 }
 
-const ExerciseItem = ({ exercise, onEdit, onDelete, onToggleStatus }: ExerciseItemProps) => {
+const ExerciseItem = ({ exercise, onEdit, onDelete, onToggleStatus, isUpdating = false }: ExerciseItemProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const Icon = iconMap[exercise.filiere as keyof typeof iconMap] || BookOpen;
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
   };
 
+  const isOverdue = new Date(exercise.deadline) < new Date();
+
   return (
-    <Card className="hover:shadow-lg transition-all duration-300">
+    <Card className={`hover:shadow-lg transition-all duration-300 ${isOverdue ? 'border-red-200 bg-red-50' : ''}`}>
       <CardContent className="p-4 sm:p-6">
         {/* En-tête */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -258,6 +131,11 @@ const ExerciseItem = ({ exercise, onEdit, onDelete, onToggleStatus }: ExerciseIt
                     <Badge variant={exercise.status === "actif" ? "default" : "secondary"} className="text-xs">
                       {exercise.status}
                     </Badge>
+                    {isOverdue && (
+                      <Badge variant="destructive" className="text-xs">
+                        En retard
+                      </Badge>
+                    )}
                     <span className="flex items-center gap-1 text-xs sm:text-sm text-gray-600">
                       <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                       {formatDate(exercise.date)}
@@ -269,7 +147,9 @@ const ExerciseItem = ({ exercise, onEdit, onDelete, onToggleStatus }: ExerciseIt
               <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
                 <span className="break-words"><strong>Vague:</strong> {exercise.vague}</span>
                 <span className="break-words"><strong>Module:</strong> {exercise.module}</span>
-                <span className="break-words"><strong>Échéance:</strong> {formatDate(exercise.deadline)}</span>
+                <span className={`break-words ${isOverdue ? "text-red-600 font-semibold" : ""}`}>
+                  <strong>Échéance:</strong> {formatDate(exercise.deadline)}
+                </span>
               </div>
             </div>
           </div>
@@ -281,9 +161,14 @@ const ExerciseItem = ({ exercise, onEdit, onDelete, onToggleStatus }: ExerciseIt
                 variant="outline"
                 size="sm"
                 onClick={() => onToggleStatus(exercise.id)}
+                disabled={isUpdating}
                 className="h-8 sm:h-9 text-xs"
               >
-                {exercise.status === "actif" ? "Archiver" : "Activer"}
+                {isUpdating ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  exercise.status === "actif" ? "Archiver" : "Activer"
+                )}
               </Button>
               <Button
                 variant="outline"
@@ -320,11 +205,11 @@ const ExerciseItem = ({ exercise, onEdit, onDelete, onToggleStatus }: ExerciseIt
               <div className="space-y-2">
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                   <span className="font-medium text-gray-700 text-sm">Type d&apos;exercice:</span>
-                  <span className="text-sm">{exercise.exerciseType}</span>
+                  <span className="text-sm">{exercise.exerciseType || "Non spécifié"}</span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                   <span className="font-medium text-gray-700 text-sm">Pages:</span>
-                  <span className="text-sm">{exercise.pages}</span>
+                  <span className="text-sm">{exercise.pages || "Non spécifié"}</span>
                 </div>
               </div>
               <div className="space-y-2">
@@ -334,7 +219,7 @@ const ExerciseItem = ({ exercise, onEdit, onDelete, onToggleStatus }: ExerciseIt
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                   <span className="font-medium text-gray-700 text-sm">Date limite:</span>
-                  <span className={`text-sm ${new Date(exercise.deadline) < new Date() ? "text-red-600 font-semibold" : ""}`}>
+                  <span className={`text-sm ${isOverdue ? "text-red-600 font-semibold" : ""}`}>
                     {formatDate(exercise.deadline)}
                   </span>
                 </div>
@@ -344,9 +229,21 @@ const ExerciseItem = ({ exercise, onEdit, onDelete, onToggleStatus }: ExerciseIt
             <div>
               <h4 className="font-medium text-gray-700 text-sm mb-2">Instructions:</h4>
               <p className="text-gray-600 bg-gray-50 p-3 rounded-lg text-sm leading-relaxed">
-                {exercise.content}
+                {exercise.content || "Aucune instruction spécifiée."}
               </p>
             </div>
+
+            {exercise.fileUrl && (
+              <div>
+                <h4 className="font-medium text-gray-700 text-sm mb-2">Fichier joint:</h4>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={exercise.fileUrl} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-4 w-4 mr-2" />
+                    Télécharger le fichier
+                  </a>
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
@@ -354,15 +251,53 @@ const ExerciseItem = ({ exercise, onEdit, onDelete, onToggleStatus }: ExerciseIt
   );
 };
 
+// --- Skeleton Loader ---
+const ExerciseSkeleton = () => {
+  return (
+    <Card className="animate-pulse">
+      <CardContent className="p-6">
+        <div className="flex items-start gap-4">
+          <Skeleton className="w-12 h-12 rounded-xl" />
+          <div className="flex-1 space-y-3">
+            <Skeleton className="h-6 w-3/4" />
+            <div className="flex gap-2">
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+            <div className="flex gap-4">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-8 w-8 rounded" />
+            <Skeleton className="h-8 w-8 rounded" />
+            <Skeleton className="h-8 w-8 rounded" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 // --- Page Principale ---
 export default function ProfesseurExercices() {
-  const [exercises, setExercises] = useState<Exercise[]>(initialExercises);
-  const [filteredExercises, setFilteredExercises] = useState<Exercise[]>(initialExercises);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([]);
+  const [availableData, setAvailableData] = useState<AvailableData>({
+    filieres: [],
+    vagues: [],
+    modules: []
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFiliere, setSelectedFiliere] = useState<string>("all");
   const [selectedVague, setSelectedVague] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [updatingExerciseId, setUpdatingExerciseId] = useState<string | null>(null);
   
   // États pour les modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -371,32 +306,65 @@ export default function ProfesseurExercices() {
   
   // État du formulaire
   const [exerciseForm, setExerciseForm] = useState<ExerciseForm>({
-    filiere: "",
+    filiereId: "",
     title: "",
     exerciseType: "",
     pages: "",
     content: "",
     date: new Date().toISOString().split('T')[0],
-    vague: "",
-    module: "",
+    vagueId: "",
+    moduleId: "",
     deadline: ""
   });
   const [isEditing, setIsEditing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Charger les données depuis l'API
+  const fetchExercises = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await fetch('/api/teacher/homeworks');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors du chargement des exercices');
+      }
+
+      const data = await response.json();
+      setExercises(data.homeworks || []);
+      setAvailableData(data.availableData || {
+        filieres: [],
+        vagues: [],
+        modules: []
+      });
+    } catch (error) {
+      console.error('Erreur:', error);
+      setError(error instanceof Error ? error.message : 'Erreur lors du chargement des exercices');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExercises();
+  }, []);
 
   // Récupérer les modules selon la filière sélectionnée
-  const getModulesForFiliere = (filiere: string) => {
-    return modulesParFiliere[filiere as keyof typeof modulesParFiliere] || [];
+  const getModulesForFiliere = (filiereId: string) => {
+    return availableData.modules.filter(module => module.filiereId === parseInt(filiereId));
   };
 
   // Filtrage des exercices
-  React.useEffect(() => {
+  useEffect(() => {
     let result = exercises;
 
     if (searchTerm) {
       result = result.filter(ex =>
         ex.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ex.filiere.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ex.module.toLowerCase().includes(searchTerm.toLowerCase())
+        ex.module.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ex.exerciseType.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -416,117 +384,178 @@ export default function ProfesseurExercices() {
   }, [exercises, searchTerm, selectedFiliere, selectedVague, selectedStatus]);
 
   // Gestion du formulaire
-  const handleFormChange = (field: keyof ExerciseForm, value: string | File) => {
+  const handleFormChange = (field: keyof ExerciseForm, value: string) => {
     setExerciseForm(prev => ({
       ...prev,
       [field]: value
     }));
 
     // Réinitialiser le module si la filière change
-    if (field === 'filiere' && value !== exerciseForm.filiere) {
+    if (field === 'filiereId' && value !== exerciseForm.filiereId) {
       setExerciseForm(prev => ({
         ...prev,
-        module: ""
+        moduleId: ""
       }));
     }
   };
 
   const resetForm = () => {
     setExerciseForm({
-      filiere: "",
+      filiereId: "",
       title: "",
       exerciseType: "",
       pages: "",
       content: "",
       date: new Date().toISOString().split('T')[0],
-      vague: "",
-      module: "",
+      vagueId: "",
+      moduleId: "",
       deadline: ""
     });
     setIsEditing(false);
+    setIsSubmitting(false);
   };
 
-  const handleSubmit = () => {
-    if (!exerciseForm.filiere || !exerciseForm.title || !exerciseForm.vague || !exerciseForm.module) {
-      alert("Veuillez remplir tous les champs obligatoires");
+  const handleSubmit = async () => {
+    if (!exerciseForm.filiereId || !exerciseForm.title || !exerciseForm.vagueId || !exerciseForm.moduleId || !exerciseForm.deadline) {
+      setError("Veuillez remplir tous les champs obligatoires");
       return;
     }
 
-    if (isEditing && exerciseForm.id) {
-      // Modification
-      setExercises(prev => prev.map(ex =>
-        ex.id === exerciseForm.id
-          ? {
-              ...ex,
-              filiere: exerciseForm.filiere,
-              title: exerciseForm.title,
-              exerciseType: exerciseForm.exerciseType,
-              pages: exerciseForm.pages,
-              content: exerciseForm.content,
-              vague: exerciseForm.vague,
-              module: exerciseForm.module,
-              deadline: exerciseForm.deadline
-            }
-          : ex
-      ));
-    } else {
-      // Ajout
-      const newExercise: Exercise = {
-        id: Date.now().toString(),
-        filiere: exerciseForm.filiere,
-        title: exerciseForm.title,
-        exerciseType: exerciseForm.exerciseType,
-        pages: exerciseForm.pages,
-        content: exerciseForm.content,
-        date: exerciseForm.date,
-        vague: exerciseForm.vague,
-        module: exerciseForm.module,
-        deadline: exerciseForm.deadline,
-        status: "actif"
-      };
-      setExercises(prev => [newExercise, ...prev]);
-    }
+    setIsSubmitting(true);
+    setError(null);
 
-    setIsAddModalOpen(false);
-    resetForm();
+    try {
+      const url = '/api/teacher/homeworks';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(isEditing ? exerciseForm : {
+          filiereId: exerciseForm.filiereId,
+          title: exerciseForm.title,
+          exerciseType: exerciseForm.exerciseType,
+          pages: exerciseForm.pages,
+          content: exerciseForm.content,
+          date: exerciseForm.date,
+          vagueId: exerciseForm.vagueId,
+          moduleId: exerciseForm.moduleId,
+          deadline: exerciseForm.deadline
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Erreur lors de la ${isEditing ? 'modification' : 'création'}`);
+      }
+
+      const result = await response.json();
+      
+      if (isEditing) {
+        setExercises(prev => prev.map(ex =>
+          ex.id === exerciseForm.id ? result.homework : ex
+        ));
+      } else {
+        setExercises(prev => [result.homework, ...prev]);
+      }
+
+      setIsAddModalOpen(false);
+      resetForm();
+      setError(null);
+    } catch (error) {
+      console.error('Erreur:', error);
+      setError(error instanceof Error ? error.message : `Erreur lors de la ${isEditing ? 'modification' : 'création'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEdit = (exercise: Exercise) => {
     setExerciseForm({
       id: exercise.id,
-      filiere: exercise.filiere,
+      filiereId: exercise.filiereId?.toString() || "",
       title: exercise.title,
       exerciseType: exercise.exerciseType,
       pages: exercise.pages,
       content: exercise.content,
       date: exercise.date,
-      vague: exercise.vague,
-      module: exercise.module,
+      vagueId: exercise.vagueId || "",
+      moduleId: exercise.moduleId?.toString() || "",
       deadline: exercise.deadline
     });
     setIsEditing(true);
     setIsAddModalOpen(true);
+    setError(null);
   };
 
   const handleDelete = (id: string) => {
     setExerciseToDelete(id);
     setIsDeleteModalOpen(true);
+    setError(null);
   };
 
-  const confirmDelete = () => {
-    if (exerciseToDelete) {
+  const confirmDelete = async () => {
+    if (!exerciseToDelete) return;
+
+    try {
+      const response = await fetch(`/api/teacher/homeworks?id=${exerciseToDelete}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de la suppression');
+      }
+
       setExercises(prev => prev.filter(ex => ex.id !== exerciseToDelete));
       setIsDeleteModalOpen(false);
       setExerciseToDelete(null);
+      setError(null);
+    } catch (error) {
+      console.error('Erreur:', error);
+      setError(error instanceof Error ? error.message : 'Erreur lors de la suppression');
     }
   };
 
-  const handleToggleStatus = (id: string) => {
-    setExercises(prev => prev.map(ex =>
-      ex.id === id
-        ? { ...ex, status: ex.status === "actif" ? "archivé" : "actif" }
-        : ex
-    ));
+  const handleToggleStatus = async (id: string) => {
+    setUpdatingExerciseId(id);
+    setError(null);
+
+    try {
+      const exercise = exercises.find(ex => ex.id === id);
+      if (!exercise) return;
+
+      const newStatus = exercise.status === "actif" ? "archivé" : "actif";
+      
+      const response = await fetch('/api/teacher/homeworks', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: id,
+          status: newStatus
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors du changement de statut');
+      }
+
+      setExercises(prev => prev.map(ex =>
+        ex.id === id ? { ...ex, status: newStatus } : ex
+      ));
+      
+      setError(null);
+    } catch (error) {
+      console.error('Erreur:', error);
+      setError(error instanceof Error ? error.message : 'Erreur lors du changement de statut');
+    } finally {
+      setUpdatingExerciseId(null);
+    }
   };
 
   const resetFilters = () => {
@@ -544,8 +573,50 @@ export default function ProfesseurExercices() {
     actifs: exercises.filter(ex => ex.status === "actif").length,
     archives: exercises.filter(ex => ex.status === "archivé").length,
     differentesVagues: [...new Set(exercises.map(ex => ex.vague))].length,
-    differentesFilieres: [...new Set(exercises.map(ex => ex.filiere))].length
+    differentesFilieres: [...new Set(exercises.map(ex => ex.filiere))].length,
+    enRetard: exercises.filter(ex => new Date(ex.deadline) < new Date() && ex.status === "actif").length
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+            {/* Header Skeleton */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+              <div className="flex gap-2">
+                <Skeleton className="h-9 w-24" />
+                <Skeleton className="h-9 w-32" />
+              </div>
+            </div>
+
+            {/* Stats Skeleton */}
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              {[...Array(5)].map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4">
+                    <Skeleton className="h-4 w-20 mb-2" />
+                    <Skeleton className="h-6 w-12" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Exercises Skeleton */}
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <ExerciseSkeleton key={i} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
@@ -557,9 +628,15 @@ export default function ProfesseurExercices() {
             <p className="text-gray-600 mt-1 text-sm sm:text-base">Créez et gérez les exercices pour vos étudiants</p>
           </div>
           <div className="flex flex-col xs:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
-              <Download className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Exporter</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1 sm:flex-none"
+              onClick={fetchExercises}
+              disabled={isLoading}
+            >
+              <Loader2 className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : 'hidden'}`} />
+              Actualiser
             </Button>
             <Button onClick={() => setIsAddModalOpen(true)} size="sm" className="flex-1 sm:flex-none">
               <Plus className="h-4 w-4 mr-2" />
@@ -570,12 +647,22 @@ export default function ProfesseurExercices() {
         </div>
       </div>
 
+      {/* Alert d'erreur */}
+      {error && (
+        <div className="p-4 sm:p-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       {/* Contenu scrollable */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
           {/* Cartes de statistiques */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-            <Card className="col-span-2 lg:col-span-1">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-6">
+            <Card>
               <CardHeader className="pb-2 sm:pb-3">
                 <CardTitle className="text-xs sm:text-sm font-medium">Total Exercices</CardTitle>
               </CardHeader>
@@ -585,7 +672,7 @@ export default function ProfesseurExercices() {
               </CardContent>
             </Card>
 
-            <Card className="col-span-2 lg:col-span-1">
+            <Card>
               <CardHeader className="pb-2 sm:pb-3">
                 <CardTitle className="text-xs sm:text-sm font-medium">Exercices Actifs</CardTitle>
               </CardHeader>
@@ -595,7 +682,7 @@ export default function ProfesseurExercices() {
               </CardContent>
             </Card>
 
-            <Card className="col-span-2 lg:col-span-1">
+            <Card>
               <CardHeader className="pb-2 sm:pb-3">
                 <CardTitle className="text-xs sm:text-sm font-medium">Archivés</CardTitle>
               </CardHeader>
@@ -605,13 +692,23 @@ export default function ProfesseurExercices() {
               </CardContent>
             </Card>
 
-            <Card className="col-span-2 lg:col-span-1">
+            <Card>
               <CardHeader className="pb-2 sm:pb-3">
                 <CardTitle className="text-xs sm:text-sm font-medium">Filières</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-xl sm:text-2xl font-bold text-purple-600">{stats.differentesFilieres}</div>
                 <p className="text-xs text-gray-600 mt-1">filières différentes</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-xs sm:text-sm font-medium">En retard</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold text-red-600">{stats.enRetard}</div>
+                <p className="text-xs text-gray-600 mt-1">échéance dépassée</p>
               </CardContent>
             </Card>
           </div>
@@ -657,8 +754,8 @@ export default function ProfesseurExercices() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Toutes filières</SelectItem>
-                      {filieres.map(filiere => (
-                        <SelectItem key={filiere} value={filiere}>{filiere}</SelectItem>
+                      {availableData.filieres.map(filiere => (
+                        <SelectItem key={filiere.id} value={filiere.nom}>{filiere.nom}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -669,8 +766,8 @@ export default function ProfesseurExercices() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Toutes vagues</SelectItem>
-                      {vagues.map(vague => (
-                        <SelectItem key={vague} value={vague}>{vague}</SelectItem>
+                      {availableData.vagues.map(vague => (
+                        <SelectItem key={vague.id} value={vague.nom}>{vague.nom}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -711,8 +808,8 @@ export default function ProfesseurExercices() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Toutes filières</SelectItem>
-                          {filieres.map(filiere => (
-                            <SelectItem key={filiere} value={filiere}>{filiere}</SelectItem>
+                          {availableData.filieres.map(filiere => (
+                            <SelectItem key={filiere.id} value={filiere.nom}>{filiere.nom}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -723,8 +820,8 @@ export default function ProfesseurExercices() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Toutes vagues</SelectItem>
-                          {vagues.map(vague => (
-                            <SelectItem key={vague} value={vague}>{vague}</SelectItem>
+                          {availableData.vagues.map(vague => (
+                            <SelectItem key={vague.id} value={vague.nom}>{vague.nom}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -778,7 +875,7 @@ export default function ProfesseurExercices() {
                   )}
                   {searchTerm && (
                     <Badge variant="secondary" className="text-xs">
-                      "{searchTerm}"
+                      &quot;{searchTerm}&quot;
                     </Badge>
                   )}
                 </div>
@@ -794,7 +891,7 @@ export default function ProfesseurExercices() {
             <CardHeader>
               <CardTitle>Exercices Créés</CardTitle>
               <CardDescription>
-                {filteredExercises.length} exercice(s) trouvé(s)
+                {filteredExercises.length} exercice(s) trouvé(s) sur {exercises.length} au total
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -803,7 +900,10 @@ export default function ProfesseurExercices() {
                   <div className="text-center py-8 sm:py-12">
                     <BookOpen className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-3" />
                     <p className="text-gray-700 font-medium text-sm sm:text-base">
-                      Aucun exercice ne correspond à vos critères.
+                      {exercises.length === 0 
+                        ? "Vous n'avez pas encore créé d'exercices." 
+                        : "Aucun exercice ne correspond à vos critères."
+                      }
                     </p>
                     <Button 
                       onClick={() => setIsAddModalOpen(true)}
@@ -822,6 +922,7 @@ export default function ProfesseurExercices() {
                       onEdit={handleEdit}
                       onDelete={handleDelete}
                       onToggleStatus={handleToggleStatus}
+                      isUpdating={updatingExerciseId === exercise.id}
                     />
                   ))
                 )}
@@ -832,7 +933,10 @@ export default function ProfesseurExercices() {
       </div>
 
       {/* Modal d'ajout/modification */}
-      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+      <Dialog open={isAddModalOpen} onOpenChange={(open) => {
+        setIsAddModalOpen(open);
+        if (!open) resetForm();
+      }}>
         <DialogContent className="max-w-2xl bg-white h-screen sm:h-auto sm:max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">
@@ -843,19 +947,26 @@ export default function ProfesseurExercices() {
             </DialogDescription>
           </DialogHeader>
           
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 bg-white">
             <div className="space-y-2">
               <Label htmlFor="filiere" className="text-gray-700 text-sm sm:text-base">Filière *</Label>
               <Select 
-                value={exerciseForm.filiere}
-                onValueChange={(value) => handleFormChange('filiere', value)}
+                value={exerciseForm.filiereId}
+                onValueChange={(value) => handleFormChange('filiereId', value)}
               >
                 <SelectTrigger className="bg-white border-gray-300">
                   <SelectValue placeholder="Sélectionner une filière" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filieres.map(filiere => (
-                    <SelectItem key={filiere} value={filiere}>{filiere}</SelectItem>
+                  {availableData.filieres.map(filiere => (
+                    <SelectItem key={filiere.id} value={filiere.id.toString()}>{filiere.nom}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -864,15 +975,15 @@ export default function ProfesseurExercices() {
             <div className="space-y-2">
               <Label htmlFor="vague" className="text-gray-700 text-sm sm:text-base">Vague *</Label>
               <Select 
-                value={exerciseForm.vague}
-                onValueChange={(value) => handleFormChange('vague', value)}
+                value={exerciseForm.vagueId}
+                onValueChange={(value) => handleFormChange('vagueId', value)}
               >
                 <SelectTrigger className="bg-white border-gray-300">
                   <SelectValue placeholder="Sélectionner une vague" />
                 </SelectTrigger>
                 <SelectContent>
-                  {vagues.map(vague => (
-                    <SelectItem key={vague} value={vague}>{vague}</SelectItem>
+                  {availableData.vagues.map(vague => (
+                    <SelectItem key={vague.id} value={vague.id}>{vague.nom}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -881,20 +992,20 @@ export default function ProfesseurExercices() {
             <div className="space-y-2">
               <Label htmlFor="module" className="text-gray-700 text-sm sm:text-base">Module *</Label>
               <Select 
-                value={exerciseForm.module}
-                onValueChange={(value) => handleFormChange('module', value)}
-                disabled={!exerciseForm.filiere}
+                value={exerciseForm.moduleId}
+                onValueChange={(value) => handleFormChange('moduleId', value)}
+                disabled={!exerciseForm.filiereId}
               >
                 <SelectTrigger className="bg-white border-gray-300">
                   <SelectValue placeholder={
-                    exerciseForm.filiere 
+                    exerciseForm.filiereId 
                       ? "Sélectionner un module" 
                       : "Choisissez d'abord une filière"
                   } />
                 </SelectTrigger>
                 <SelectContent>
-                  {getModulesForFiliere(exerciseForm.filiere).map(module => (
-                    <SelectItem key={module} value={module}>{module}</SelectItem>
+                  {getModulesForFiliere(exerciseForm.filiereId).map(module => (
+                    <SelectItem key={module.id} value={module.id.toString()}>{module.nom}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -947,6 +1058,7 @@ export default function ProfesseurExercices() {
                 value={exerciseForm.deadline}
                 onChange={(e) => handleFormChange('deadline', e.target.value)}
                 className="bg-white border-gray-300"
+                min={exerciseForm.date}
               />
             </div>
 
@@ -958,12 +1070,22 @@ export default function ProfesseurExercices() {
                 <Input 
                   type="file" 
                   className="hidden"
-                  onChange={(e) => handleFormChange('file', e.target.files?.[0] as File)}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      // Pour l'instant, on stocke juste le nom du fichier
+                      // L'upload réel serait implémenté séparément
+                      handleFormChange('exerciseType', `Avec fichier: ${file.name}`);
+                    }
+                  }}
                 />
                 <Button 
                   variant="outline" 
                   type="button"
-                  onClick={() => document.querySelector('input[type="file"]')?.click()}
+                  onClick={() => {
+                    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+                    fileInput?.click();
+                  }}
                   className="mt-2 text-xs sm:text-sm"
                   size="sm"
                 >
@@ -985,14 +1107,27 @@ export default function ProfesseurExercices() {
           </div>
 
           <DialogFooter className="bg-white flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => {
-              setIsAddModalOpen(false);
-              resetForm();
-            }} className="w-full sm:w-auto">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsAddModalOpen(false);
+                resetForm();
+              }} 
+              className="w-full sm:w-auto"
+              disabled={isSubmitting}
+            >
               Annuler
             </Button>
-            <Button onClick={handleSubmit} className="w-full sm:w-auto">
-              <Save className="h-4 w-4 mr-2" />
+            <Button 
+              onClick={handleSubmit} 
+              className="w-full sm:w-auto"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
               {isEditing ? "Modifier" : "Créer"} l&apos;Exercice
             </Button>
           </DialogFooter>

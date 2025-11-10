@@ -17,7 +17,11 @@ import {
   FaEnvelope,
   FaUserGraduate,
   FaSchool,
-  FaCalendarAlt
+  FaCalendarAlt,
+  FaSync,
+  FaExclamationTriangle,
+  FaFilter,
+  FaGraduationCap
 } from "react-icons/fa";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// Types pour les parents
+// Types basés sur votre schéma Prisma
 interface Enfant {
   id: string;
   firstName: string;
@@ -37,6 +41,7 @@ interface Enfant {
 
 interface Parent {
   id: string;
+  clerkUserId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -47,16 +52,49 @@ interface Parent {
   createdAt: string;
 }
 
+interface ApiResponse {
+  parents: Parent[];
+  total: number;
+  stats: {
+    total: number;
+    active: number;
+    inactive: number;
+    suspended: number;
+  };
+  filters: {
+    vagues: Array<{ id: string; name: string }>;
+    filieres?: Array<{ id: string; name: string }>;
+  };
+}
+
+interface Filters {
+  search: string;
+  status: string;
+  vague: string;
+  filiere: string;
+}
+
 const AdminParentsPage = () => {
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
 
   const [parents, setParents] = useState<Parent[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [selectedVague, setSelectedVague] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<Filters>({
+    search: "",
+    status: "all",
+    vague: "all",
+    filiere: "all"
+  });
+  const [stats, setStats] = useState<any>({});
+  const [availableFilters, setAvailableFilters] = useState<any>({
+    vagues: [],
+    filieres: []
+  });
   const [sortField, setSortField] = useState<keyof Parent>("lastName");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [deleting, setDeleting] = useState<string | null>(null);
   
   // Modal "Voir" état
   const [selectedParent, setSelectedParent] = useState<Parent | null>(null);
@@ -66,6 +104,119 @@ const AdminParentsPage = () => {
   const [parentToDelete, setParentToDelete] = useState<Parent | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
+  // Charger les données depuis l'API
+  const fetchParents = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams();
+      if (filters.search) params.append("search", filters.search);
+      if (filters.status !== "all") params.append("status", filters.status);
+      if (filters.vague !== "all") params.append("vague", filters.vague);
+      if (filters.filiere !== "all") params.append("filiere", filters.filiere);
+
+      console.log("🔍 Fetching parents with params:", Object.fromEntries(params));
+
+      const response = await fetch(`/api/admin/parents?${params}`);
+
+      if (!response.ok) {
+        throw new Error("Erreur lors du chargement des parents");
+      }
+
+      const data: ApiResponse = await response.json();
+      
+      console.log("📊 Données reçues:", {
+        totalParents: data.parents.length,
+        firstParent: data.parents[0] ? {
+          name: `${data.parents[0].firstName} ${data.parents[0].lastName}`,
+          phone: data.parents[0].phone,
+          enfants: data.parents[0].enfants.length
+        } : 'Aucun parent',
+        stats: data.stats,
+        filters: data.filters
+      });
+
+      setParents(data.parents);
+      setStats(data.stats);
+      setAvailableFilters(data.filters);
+    } catch (err) {
+      console.error("Erreur:", err);
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Supprimer un parent
+  const deleteParent = async (parentId: string, clerkUserId?: string) => {
+    try {
+      setDeleting(parentId);
+      
+      const response = await fetch("/api/admin/parents", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ parentId, clerkUserId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de la suppression");
+      }
+
+      // Mettre à jour la liste localement
+      setParents(prev => prev.filter(parent => parent.id !== parentId));
+      closeDeleteModal();
+      
+      // Recharger les données pour mettre à jour les stats
+      await fetchParents();
+      
+    } catch (err) {
+      console.error("Erreur suppression:", err);
+      setError(err instanceof Error ? err.message : "Erreur lors de la suppression");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  // Vérification du rôle admin
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      const userRole = user?.publicMetadata?.role as string;
+      if (userRole !== "Administrateur") {
+        router.push("/unauthorized");
+      } else {
+        fetchParents();
+      }
+    }
+  }, [isLoaded, isSignedIn, user, router]);
+
+  // Recharger quand les filtres changent
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchParents();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [filters]);
+
+  // Gestion des filtres
+  const handleFilterChange = (key: keyof Filters, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: "",
+      status: "all",
+      vague: "all",
+      filiere: "all"
+    });
+  };
+
+  // Fonctions modals
   const openModal = (parent: Parent) => {
     setSelectedParent(parent);
     setIsModalOpen(true);
@@ -86,110 +237,6 @@ const AdminParentsPage = () => {
     setIsDeleteModalOpen(false);
   };
 
-  const handleDeleteParent = () => {
-    if (parentToDelete) {
-      setParents(prev => prev.filter(p => p.id !== parentToDelete.id));
-      closeDeleteModal();
-    }
-  };
-
-  // Vérification du rôle admin
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      const userRole = user?.publicMetadata?.role as string;
-      if (userRole !== "Administrateur") {
-        router.push("/unauthorized");
-      }
-    }
-  }, [isLoaded, isSignedIn, user, router]);
-
-  // Données simulées
-  useEffect(() => {
-    const mockParents: Parent[] = [
-      { 
-        id: "1", 
-        firstName: "Jean", 
-        lastName: "Dupont", 
-        email: "jean.dupont@mail.com", 
-        phone: "+229 90 12 34 56", 
-        status: "actif", 
-        vagues: ["Vague 2024 A"], 
-        enfants: [
-          { id: "e1", firstName: "Marie", lastName: "Dubois", filiere: "Informatique", studentNumber: "ETU-2024-001" },
-          { id: "e2", firstName: "Pierre", lastName: "Dubois", filiere: "Mathématiques", studentNumber: "ETU-2024-002" }
-        ],
-        createdAt: "2024-01-15" 
-      },
-      { 
-        id: "2", 
-        firstName: "Marie", 
-        lastName: "Lemoine", 
-        email: "marie.lemoine@mail.com", 
-        phone: "+229 91 23 45 67", 
-        status: "inactif", 
-        vagues: ["Vague 2024 B"], 
-        enfants: [
-          { id: "e3", firstName: "Sophie", lastName: "Lemoine", filiere: "Physique", studentNumber: "ETU-2024-003" }
-        ],
-        createdAt: "2024-02-10" 
-      },
-      { 
-        id: "3", 
-        firstName: "Paul", 
-        lastName: "Martin", 
-        email: "paul.martin@mail.com", 
-        phone: "+229 92 34 56 78", 
-        status: "suspendu", 
-        vagues: ["Vague 2024 A"], 
-        enfants: [
-          { id: "e4", firstName: "Luc", lastName: "Martin", filiere: "Chimie", studentNumber: "ETU-2024-004" },
-          { id: "e5", firstName: "Emma", lastName: "Martin", filiere: "Biologie", studentNumber: "ETU-2024-005" }
-        ],
-        createdAt: "2024-03-05" 
-      },
-      { 
-        id: "4", 
-        firstName: "Sophie", 
-        lastName: "Bernard", 
-        email: "sophie.bernard@mail.com", 
-        phone: "+229 93 45 67 89", 
-        status: "actif", 
-        vagues: ["Vague 2024 C"], 
-        enfants: [
-          { id: "e6", firstName: "Thomas", lastName: "Bernard", filiere: "Informatique", studentNumber: "ETU-2024-006" }
-        ],
-        createdAt: "2024-04-20" 
-      }
-    ];
-    setParents(mockParents);
-  }, []);
-
-  // Tri et filtrage
-  const filteredParents = parents
-    .filter(parent => {
-      const matchesSearch =
-        parent.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        parent.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        parent.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        parent.phone.includes(searchTerm);
-
-      const matchesStatus = selectedStatus === "all" || parent.status === selectedStatus;
-      const matchesVague = selectedVague === "all" || parent.vagues.includes(selectedVague);
-
-      return matchesSearch && matchesStatus && matchesVague;
-    })
-    .sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
-
-      if (aValue === undefined || bValue === undefined) return 0;
-
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-      }
-      return 0;
-    });
-
   const handleSort = (field: keyof Parent) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -199,21 +246,29 @@ const AdminParentsPage = () => {
     }
   };
 
-  const getUniqueVagues = () => {
-    const vagues = new Set<string>();
-    parents.forEach(parent => parent.vagues.forEach(v => vagues.add(v)));
-    return Array.from(vagues);
+  // Extraire les filières uniques des enfants
+  const getUniqueFilieres = (): string[] => {
+    const allFilieres = parents.flatMap(parent => 
+      parent.enfants.map(enfant => enfant.filiere)
+    );
+    return Array.from(new Set(allFilieres)).filter(filiere => filiere && filiere !== "Non assigné");
   };
 
-  const getStats = () => {
-    const total = parents.length;
-    const active = parents.filter(p => p.status === "actif").length;
-    const inactive = parents.filter(p => p.status === "inactif").length;
-    const suspended = parents.filter(p => p.status === "suspendu").length;
-    return { total, active, inactive, suspended };
-  };
+  // Filtrage et tri côté client pour réactivité
+  const filteredParents = parents
+    .sort((a, b) => {
+      const aValue = a[sortField];
+      const bValue = b[sortField];
 
-  const stats = getStats();
+      if (aValue === undefined || bValue === undefined) return 0;
+
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return sortDirection === "asc"
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      return 0;
+    });
 
   if (!isLoaded) {
     return (
@@ -221,6 +276,11 @@ const AdminParentsPage = () => {
         <div className="text-lg">Chargement de vos informations...</div>
       </div>
     );
+  }
+
+  if (!isSignedIn) {
+    router.push("/sign-in");
+    return null;
   }
 
   const userRole = user?.publicMetadata?.role as string;
@@ -247,24 +307,49 @@ const AdminParentsPage = () => {
     );
   }
 
+  const filieresUniques = getUniqueFilieres();
+
   return (
-    <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
-      <div className="p-6 space-y-6 h-full overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
+    <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
+      <div className="p-6 space-y-6">
+        
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Gestion des Parents</h1>
             <p className="text-gray-600 mt-2">
-              Vue d&apos;ensemble complète de tous les parents.
+              {loading ? "Chargement..." : `${stats.total || 0} parent(s) trouvé(s)`}
             </p>
           </div>
-          <Link href="/auth/signup">
-            <Button className="bg-principal hover:bg-principal/90">
-              <FaPlus className="mr-2 h-4 w-4" />
-              Ajouter un Parent
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={fetchParents}
+              disabled={loading}
+            >
+              <FaSync className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              Actualiser
             </Button>
-          </Link>
+            <Link href="/auth/signup">
+              <Button className="bg-principal hover:bg-principal/90">
+                <FaPlus className="mr-2 h-4 w-4" />
+                Ajouter un Parent
+              </Button>
+            </Link>
+          </div>
         </div>
+
+        {/* Affichage erreur */}
+        {error && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-red-700">
+                <FaExclamationTriangle className="h-4 w-4" />
+                <span>{error}</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -274,21 +359,45 @@ const AdminParentsPage = () => {
               <FaUsers className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">{stats.active} actifs</p>
+              <div className="text-2xl font-bold">{stats.total || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                Tous les parents inscrits
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Statuts</CardTitle>
-              <FaLayerGroup className="h-4 w-4 text-purple-500" />
+              <CardTitle className="text-sm font-medium">Parents Actifs</CardTitle>
+              <FaUsers className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">
-                {stats.inactive + stats.suspended}
-              </div>
+              <div className="text-2xl font-bold text-green-600">{stats.active || 0}</div>
               <p className="text-xs text-muted-foreground">
-                {stats.inactive} inactifs, {stats.suspended} suspendus
+                Comptes actifs
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Parents Inactifs</CardTitle>
+              <FaUsers className="h-4 w-4 text-gray-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-600">{stats.inactive || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                Comptes inactifs
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Parents Suspendus</CardTitle>
+              <FaUsers className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{stats.suspended || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                Comptes suspendus
               </p>
             </CardContent>
           </Card>
@@ -297,146 +406,278 @@ const AdminParentsPage = () => {
         {/* Filtres et recherche */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Filtres et Recherche</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <FaFilter className="h-5 w-5" />
+              Filtres Avancés
+            </CardTitle>
+            <CardDescription className="mt-4">
+              Filtrez les parents par recherche, statut, vague ou filière
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="relative md:col-span-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              
+              {/* Recherche */}
+              <div className="mt-8 relative lg:col-span-2">
                 <FaSearch className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Rechercher un parent..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange("search", e.target.value)}
                   className="pl-10"
                 />
               </div>
 
-              <Select value={selectedVague} onValueChange={setSelectedVague}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Vague" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes les vagues</SelectItem>
-                  {getUniqueVagues().map(vague => (
-                    <SelectItem key={vague} value={vague}>{vague}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Filtre Vague */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Vague</label>
+                <Select value={filters.vague} onValueChange={(value) => handleFilterChange("vague", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Toutes les vagues" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes les vagues</SelectItem>
+                    {availableFilters.vagues?.map((vague: any) => (
+                      <SelectItem key={vague.id} value={vague.id}>
+                        {vague.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les statuts</SelectItem>
-                  <SelectItem value="actif">Actifs</SelectItem>
-                  <SelectItem value="inactif">Inactifs</SelectItem>
-                  <SelectItem value="suspendu">Suspendus</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Filtre Filière */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Filière</label>
+                <Select value={filters.filiere} onValueChange={(value) => handleFilterChange("filiere", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Toutes les filières" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes les filières</SelectItem>
+                    {filieresUniques.map((filiere) => (
+                      <SelectItem key={filiere} value={filiere}>
+                        {filiere}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtre Statut */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Statut</label>
+                <Select value={filters.status} onValueChange={(value) => handleFilterChange("status", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous les statuts" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les statuts</SelectItem>
+                    <SelectItem value="actif">Actifs</SelectItem>
+                    <SelectItem value="inactif">Inactifs</SelectItem>
+                    <SelectItem value="suspendu">Suspendus</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Boutons d'action filtres */}
+            <div className="flex justify-between items-center mt-4">
+              <div className="text-sm text-gray-600">
+                {filteredParents.length} parent(s) correspondant aux critères
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={clearFilters}
+                disabled={filters.search === "" && filters.status === "all" && filters.vague === "all" && filters.filiere === "all"}
+              >
+                Effacer les filtres
+              </Button>
             </div>
           </CardContent>
         </Card>
+
+        {/* Indicateurs de filtres actifs */}
+        {(filters.search !== "" || filters.status !== "all" || filters.vague !== "all" || filters.filiere !== "all") && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-blue-800">Filtres actifs:</span>
+                
+                {filters.search && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    Recherche: "{filters.search}"
+                  </Badge>
+                )}
+                
+                {filters.status !== "all" && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    Statut: {filters.status}
+                  </Badge>
+                )}
+                
+                {filters.vague !== "all" && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    Vague: {filters.vague}
+                  </Badge>
+                )}
+                
+                {filters.filiere !== "all" && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    Filière: {filters.filiere}
+                  </Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tableau */}
         <Card>
           <CardHeader>
             <CardTitle>Liste des Parents</CardTitle>
             <CardDescription>
-              {filteredParents.length} parent(s) trouvé(s)
+              {filteredParents.length} parent(s) trouvé(s) - Vue administrative complète
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead 
-                    className="cursor-pointer"
-                    onClick={() => handleSort("lastName")}
-                  >
-                    <div className="flex items-center gap-2">
-                      Parent
-                      <FaSort className="h-3 w-3" />
-                    </div>
-                  </TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Vagues</TableHead>
-                  <TableHead 
-                    className="cursor-pointer text-center"
-                    onClick={() => handleSort("status")}
-                  >
-                    <div className="flex items-center gap-2 justify-center">
-                      Statut
-                      <FaSort className="h-3 w-3" />
-                    </div>
-                  </TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredParents.map((parent) => (
-                  <TableRow key={parent.id}>
-                    <TableCell className="font-medium">
-                      {parent.firstName} {parent.lastName}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-sm">{parent.email}</div>
-                        <div className="text-xs text-muted-foreground">{parent.phone}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {parent.vagues.map(v => (
-                          <Badge key={v} variant="outline">{v}</Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge 
-                        variant={
-                          parent.status === "actif" ? "default" : 
-                          parent.status === "inactif" ? "secondary" : "destructive"
-                        }
-                        className={
-                          parent.status === "actif" ? "bg-green-100 text-green-800" :
-                          parent.status === "inactif" ? "bg-gray-100 text-gray-800" :
-                          "bg-red-100 text-red-800"
-                        }
-                      >
-                        {parent.status === "actif" ? "Actif" : 
-                         parent.status === "inactif" ? "Inactif" : "Suspendu"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => openModal(parent)}
-                        >
-                          <FaEye className="h-3 w-3" />
-                        </Button>
-                        <Button 
-                          className="bg-red-500 text-white"
-                          variant="destructive" 
-                          size="sm" 
-                          onClick={() => openDeleteModal(parent)}
-                        >
-                          <FaTrash className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-
-            {filteredParents.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <FaUsers className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>Aucun parent trouvé avec les critères sélectionnés.</p>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-gray-600">Chargement des parents...</p>
               </div>
+            ) : filteredParents.length === 0 ? (
+              <div className="text-center py-8">
+                <FaUsers className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-4 text-lg font-medium text-gray-900">Aucun parent trouvé</h3>
+                <p className="mt-2 text-gray-600">
+                  {filters.search !== "" || filters.status !== "all" || filters.vague !== "all" || filters.filiere !== "all"
+                    ? "Aucun parent ne correspond à vos critères de recherche." 
+                    : "Aucun parent n'est inscrit pour le moment."}
+                </p>
+                {(filters.search !== "" || filters.status !== "all" || filters.vague !== "all" || filters.filiere !== "all") && (
+                  <Button onClick={clearFilters} variant="outline" className="mt-4">
+                    Effacer les filtres
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead 
+                      className="cursor-pointer"
+                      onClick={() => handleSort("lastName")}
+                    >
+                      <div className="flex items-center gap-2">
+                        Parent
+                        <FaSort className="h-3 w-3" />
+                      </div>
+                    </TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Enfants</TableHead>
+                    <TableHead>Filières</TableHead>
+                    <TableHead>Vagues</TableHead>
+                    <TableHead 
+                      className="cursor-pointer text-center"
+                      onClick={() => handleSort("status")}
+                    >
+                      <div className="flex items-center gap-2 justify-center">
+                        Statut
+                        <FaSort className="h-3 w-3" />
+                      </div>
+                    </TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredParents.map((parent) => (
+                    <TableRow key={parent.id}>
+                      <TableCell className="font-medium">
+                        {parent.firstName} {parent.lastName}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1 text-sm">
+                            <FaEnvelope className="h-3 w-3 text-gray-400" />
+                            {parent.email}
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <FaPhone className="h-3 w-3 text-gray-400" />
+                            {parent.phone || "Non renseigné"}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="text-sm font-medium">
+                            {parent.enfants.length} enfant(s)
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {parent.enfants.map(e => e.firstName).join(', ')}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {[...new Set(parent.enfants.map(e => e.filiere))].map((filiere, index) => (
+                            <Badge key={index} variant="outline" className="text-xs bg-purple-50">
+                              <FaGraduationCap className="h-2 w-2 mr-1" />
+                              {filiere}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {parent.vagues.map((vague, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              <FaLayerGroup className="h-2 w-2 mr-1" />
+                              {vague}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge 
+                          variant={
+                            parent.status === "actif" ? "default" : 
+                            parent.status === "inactif" ? "secondary" : "destructive"
+                          }
+                          className={
+                            parent.status === "actif" ? "bg-green-100 text-green-800" :
+                            parent.status === "inactif" ? "bg-gray-100 text-gray-800" :
+                            "bg-red-100 text-red-800"
+                          }
+                        >
+                          {parent.status === "actif" ? "Actif" : 
+                           parent.status === "inactif" ? "Inactif" : "Suspendu"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => openModal(parent)}
+                          >
+                            <FaEye className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            className="bg-red-500 text-white"
+                            variant="destructive" 
+                            size="sm" 
+                            onClick={() => openDeleteModal(parent)}
+                            disabled={deleting === parent.id}
+                          >
+                            <FaTrash className={`h-3 w-3 ${deleting === parent.id ? "animate-spin" : ""}`} />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
@@ -450,9 +691,10 @@ const AdminParentsPage = () => {
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
                     <div>
-                      <h2 className="mt-2 text-2xl font-bold">
+                      <h2 className="text-2xl font-bold">
                         {selectedParent.firstName} {selectedParent.lastName}
                       </h2>
+                      <p className="text-gray-600">Parent d'élève(s)</p>
                     </div>
                   </div>
                   <Button variant="outline" onClick={closeModal}>
@@ -472,15 +714,17 @@ const AdminParentsPage = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-center gap-3">
+                        <FaEnvelope className="h-4 w-4 text-gray-400" />
                         <div>
                           <p className="text-sm font-medium">Email</p>
                           <p className="text-sm text-gray-600">{selectedParent.email}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
+                        <FaPhone className="h-4 w-4 text-gray-400" />
                         <div>
                           <p className="text-sm font-medium">Téléphone</p>
-                          <p className="text-sm text-gray-600">{selectedParent.phone}</p>
+                          <p className="text-sm text-gray-600">{selectedParent.phone || "Non renseigné"}</p>
                         </div>
                       </div>
                       <div>
@@ -571,8 +815,13 @@ const AdminParentsPage = () => {
                 <Button variant="outline" onClick={closeDeleteModal}>
                   Annuler
                 </Button>
-                <Button className="bg-red-500 text-white" variant="destructive" onClick={handleDeleteParent}>
-                  Supprimer
+                <Button 
+                  className="bg-red-500 text-white" 
+                  variant="destructive" 
+                  onClick={() => deleteParent(parentToDelete.id, parentToDelete.clerkUserId)}
+                  disabled={deleting === parentToDelete.id}
+                >
+                  {deleting === parentToDelete.id ? "Suppression..." : "Supprimer"}
                 </Button>
               </div>
             </div>

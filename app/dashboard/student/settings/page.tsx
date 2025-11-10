@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState} from "react";
+import React, { useState, useEffect } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import {
   Sun,
-  Globe,
   Lock,
   Eye,
   EyeOff,
@@ -40,6 +39,55 @@ interface ClerkErrorResponse {
   errors?: ClerkError[];
   message?: string;
 }
+
+/* ---------- Composants Skeleton ---------- */
+const SkeletonCard = () => (
+  <Card className="border-0 shadow-lg overflow-hidden">
+    <CardHeader className="pb-4 sm:pb-6">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="p-2 bg-gray-200 rounded-lg flex-shrink-0 animate-pulse">
+          <div className="w-4 h-4 sm:w-5 sm:h-5"></div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent className="pt-0">
+      <div className="space-y-4">
+        <div className="border border-gray-200 rounded-lg p-4">
+          <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2 mb-3"></div>
+          <div className="h-10 bg-gray-200 rounded animate-pulse w-full"></div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const SkeletonHeader = () => (
+  <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
+    <div className="h-8 bg-gray-200 rounded animate-pulse w-1/3 mb-2"></div>
+    <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+  </div>
+);
+
+const SkeletonSection = () => (
+  <div className="border border-gray-200 rounded-lg p-4">
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex-1">
+        <div className="h-5 bg-gray-200 rounded animate-pulse w-2/3 mb-2"></div>
+        <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
+      </div>
+      <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+    </div>
+    <div className="space-y-3">
+      <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+      <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+    </div>
+  </div>
+);
+
 const StudentSettingsPage = () => {
   const { user, isLoaded } = useUser();
   const { signOut, openSignIn, session } = useClerk();
@@ -54,6 +102,7 @@ const StudentSettingsPage = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [needsReauth, setNeedsReauth] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -64,7 +113,25 @@ const StudentSettingsPage = () => {
     newPassword: "",
   });
 
-  
+  // Initialiser les données du formulaire quand l'utilisateur est chargé
+  useEffect(() => {
+    if (user && isLoaded) {
+      setFormData({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        username: user.username || "",
+        email: user.primaryEmailAddress?.emailAddress || "",
+        currentPassword: "",
+        newPassword: "",
+      });
+      
+      // Simuler un délai de chargement pour voir le skeleton
+      setTimeout(() => {
+        setPageLoading(false);
+      }, 1000);
+    }
+  }, [user, isLoaded]);
+
   // Vérifie si la session est récente (moins de 5 min)
   const isSessionRecent = () => {
     if (!session?.lastActiveAt) return false;
@@ -219,12 +286,20 @@ const StudentSettingsPage = () => {
     }
   };
 
-  if (!isLoaded) {
+  // Afficher le skeleton pendant le chargement
+  if (!isLoaded || pageLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
-          <p className="mt-4 text-gray-600">Chargement des paramètres...</p>
+      <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+        <div className="h-screen">
+          <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+            {/* Skeleton Header */}
+            <SkeletonHeader />
+            
+            {/* Skeleton Cards */}
+            {[...Array(3)].map((_, index) => (
+              <SkeletonCard key={index} />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -232,7 +307,7 @@ const StudentSettingsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
-      <div className="h-screen overflow-y-auto">
+      <div className="h-screen">
         <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
           
           {/* En-tête */}
@@ -467,69 +542,7 @@ const StudentSettingsPage = () => {
               </div>
             </CardContent>
           </Card>
-
-          {/* Section Général */}
-          <Card className="border-0 shadow-lg overflow-hidden">
-            <CardHeader className="pb-4 sm:pb-6">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0">
-                  <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 break-words">
-                    Général
-                  </CardTitle>
-                  <CardDescription className="text-sm sm:text-base text-gray-500 break-words">
-                    Langue et notifications
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-4 sm:space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg gap-3 sm:gap-0 min-w-0">
-                  <div className="space-y-0.5 min-w-0 flex-1">
-                    <Label htmlFor="language" className="text-sm sm:text-base font-medium block break-words">
-                      Langue
-                    </Label>
-                    <p className="text-xs sm:text-sm text-gray-500 break-words">
-                      Définir la langue d&apos;affichage
-                    </p>
-                  </div>
-                  <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger className="w-full sm:w-[180px] text-sm sm:text-base min-w-0">
-                      <SelectValue className="truncate" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fr" className="text-sm sm:text-base truncate">Français</SelectItem>
-                      <SelectItem value="en" className="text-sm sm:text-base truncate">English</SelectItem>
-                      <SelectItem value="es" className="text-sm sm:text-base truncate">Español</SelectItem>
-                      <SelectItem value="de" className="text-sm sm:text-base truncate">Deutsch</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg min-w-0">
-                  <div className="space-y-0.5 min-w-0 flex-1 mr-4">
-                    <Label htmlFor="notifications" className="text-sm sm:text-base font-medium block break-words">
-                      Notifications
-                    </Label>
-                    <p className="text-xs sm:text-sm text-gray-500 break-words">
-                      Recevoir des notifications sur les cours et annonces
-                    </p>
-                  </div>
-                  <Switch
-                    id="notifications"
-                    checked={notificationsEnabled}
-                    onCheckedChange={setNotificationsEnabled}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+          
           {/* Section Sécurité */}
           <Card className="border-0 shadow-lg overflow-hidden">
             <CardHeader className="pb-4 sm:pb-6">

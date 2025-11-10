@@ -2,10 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaPlus, FaSave, FaCalendarAlt, FaChalkboardTeacher, 
-  FaClock, FaMapMarkerAlt, FaFilter, FaTrash, FaTimes 
+  FaClock, FaMapMarkerAlt, FaFilter, FaTrash, FaTimes, FaEdit
 } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 
-// Interfaces
+// Interfaces (garder les mêmes)
 interface ScheduleSlot {
   id: string;
   day: string;
@@ -31,41 +32,46 @@ interface Assignment {
 
 interface Teacher {
   id: string;
-  name: string;
+  clerkId: string;
+  nom: string;
+  prenom: string;
   email: string;
-  role: string;
-  teacherNumber?: string;
-  statut?: string;
-  prenom?: string;
-  nom?: string;
+  telephone?: string;
+  statut: string;
   specialite?: string;
+  createdAt: number;
 }
 
 interface Vague {
   id: string;
   name: string;
+  startDate: string;
+  endDate: string;
+  status: "active" | "upcoming" | "completed";
+  description: string;
+  filieres: Array<{ id: string; name: string }>;
+  totalEtudiants: number;
+  totalFormateurs: number;
+  semestres: string[];
 }
 
 interface Filiere {
-  id: string;
+  id: number;
   name: string;
-  vagues?: string[];
-  modules?: Module[];
+  duration: string;
+  description: string;
+  vagues: Array<{id: string, name: string}>;
+  modules: Module[];
+  totalStudents?: number;
+  createdAt?: string;
 }
 
 interface Module {
-  id: string;
+  id: number;
   name: string;
-}
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  statut?: string;
-  prenom?: string;
-  nom?: string;
+  coefficient: number;
+  type: 'theorique' | 'pratique' | 'mixte' | 'projet';
+  description?: string;
 }
 
 export default function PlanningAssignationsPage() {
@@ -78,6 +84,8 @@ export default function PlanningAssignationsPage() {
   const [selectedModule, setSelectedModule] = useState<string>('');
   const [selectedTeacher, setSelectedTeacher] = useState<string>('');
   const [showAssignmentForm, setShowAssignmentForm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string>('');
   const [newAssignment, setNewAssignment] = useState({
     slots: [] as ScheduleSlot[],
     period: { startDate: '', endDate: '' }
@@ -89,56 +97,58 @@ export default function PlanningAssignationsPage() {
     classroom: ''
   });
 
-  // Chargement des données
-  const [isLoading, setIsLoading] = useState(true);
+  // NOUVEAU : États pour la modal de suppression
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState<Assignment | null>(null);
 
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Charger toutes les données (garder le même useEffect)
   useEffect(() => {
-    const loadData = () => {
+    const loadData = async () => {
       try {
-        const savedVagues = localStorage.getItem('schoolflow_vagues');
-        const savedFilieres = localStorage.getItem('schoolflow_filieres');
-        const savedUsers = localStorage.getItem('schoolflow_users');
-        const savedAssignations = localStorage.getItem('schoolflow_assignations');
-        
-        console.log('CHARGEMENT DES DONNÉES:');
-        
-        if (savedVagues) {
-          const vaguesData = JSON.parse(savedVagues) as Vague[];
-          console.log('Vagues chargées:', vaguesData);
-          setVagues(vaguesData);
-        }
-        
-        if (savedFilieres) {
-          const filieresData = JSON.parse(savedFilieres) as Filiere[];
-          console.log('🎓 Filières chargées:', filieresData);
-          setFilieres(filieresData);
-        }
-        
-        if (savedUsers) {
-          const users = JSON.parse(savedUsers) as User[];
-          console.log('👥 Tous les utilisateurs:', users);
-          
-          // Filtrer seulement les enseignants
-          const teachers = users.filter((user) => {
-            const isTeacher = user.role === 'Enseignant';
-            const isActive = user.statut !== 'inactif';
-            console.log(`${user.name} - Rôle: ${user.role}, Statut: ${user.statut}, Actif: ${isActive}`);
-            return isTeacher && isActive;
-          });
-          
-          console.log('Formateurs filtrés:', teachers);
-          setFormateurs(teachers);
+        console.log('🔄 CHARGEMENT DES DONNÉES...');
+        setError(null);
+
+        const vaguesResponse = await fetch('/api/censor/vagues');
+        if (!vaguesResponse.ok) throw new Error(`Erreur chargement vagues: ${vaguesResponse.status}`);
+        const vaguesData = await vaguesResponse.json();
+        setVagues(vaguesData);
+
+        const filieresResponse = await fetch('/api/censor/filieres');
+        if (!filieresResponse.ok) throw new Error(`Erreur chargement filières: ${filieresResponse.status}`);
+        const filieresData = await filieresResponse.json();
+        setFilieres(filieresData);
+
+        const professeursResponse = await fetch('/api/censor/teacher');
+        if (professeursResponse.ok) {
+          const professeursData = await professeursResponse.json();
+          setFormateurs(professeursData);
         } else {
-          console.log('Aucun utilisateur trouvé dans schoolflow_users');
+          setFormateurs([]);
         }
-        
-        if (savedAssignations) {
-          const assignationsData = JSON.parse(savedAssignations) as Assignment[];
-          console.log('Assignations existantes:', assignationsData);
-          setAssignations(assignationsData);
+
+        try {
+          const assignationsResponse = await fetch('/api/censor/assignations');
+          if (assignationsResponse.ok) {
+            const assignationsData = await assignationsResponse.json();
+            setAssignations(assignationsData);
+          } else {
+            setAssignations([]);
+          }
+        } catch (assignError) {
+          console.error('❌ Erreur chargement assignations:', assignError);
+          setAssignations([]);
         }
+
+        toast.success('Données chargées avec succès!');
+
       } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
+        console.error('❌ Erreur lors du chargement des données:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+        setError(errorMessage);
+        toast.error(`Erreur de chargement: ${errorMessage}`);
       } finally {
         setIsLoading(false);
       }
@@ -147,65 +157,40 @@ export default function PlanningAssignationsPage() {
     loadData();
   }, []);
 
-  // Sauvegarde des assignations
-  useEffect(() => {
-    if (!isLoading) {
-      try {
-        localStorage.setItem('schoolflow_assignations', JSON.stringify(assignations));
-        console.log('Assignations sauvegardées:', assignations);
-      } catch (error) {
-        console.error('Erreur lors de la sauvegarde des assignations:', error);
-      }
-    }
-  }, [assignations, isLoading]);
-
+  // Filtrer les filières disponibles pour la vague sélectionnée
   const filieresDisponibles = filieres.filter(filiere => {
-    const filiereNonAssignee = !filiere.vagues || filiere.vagues.length === 0;
-    const filiereDejaDansCetteVague = filiere.vagues && filiere.vagues.includes(selectedVague);
-    return filiereNonAssignee || filiereDejaDansCetteVague;
+    if (!selectedVague) return false;
+    const hasNoVagues = !filiere.vagues || filiere.vagues.length === 0;
+    const hasThisVague = filiere.vagues?.some(v => v.id === selectedVague);
+    return hasNoVagues || hasThisVague;
   });
 
+  // Modules disponibles pour la filière sélectionnée
   const modulesDisponibles = selectedFiliere 
-    ? filieres.find(f => f.id === selectedFiliere)?.modules || []
+    ? filieres.find(f => f.id === parseInt(selectedFiliere))?.modules || []
     : [];
 
-  const formateursDisponibles = formateurs.filter(f => 
-    f.role === 'Enseignant' && (f.statut !== 'inactif')
-  );
-
-  console.log('Formateurs disponibles pour sélection:', formateursDisponibles);
+  // Formateurs disponibles
+  const formateursDisponibles = formateurs.filter(f => f.statut === 'active');
 
   const getTeacherDisplayName = (teacher: Teacher) => {
-    if (teacher.prenom && teacher.nom) {
-      return `${teacher.prenom} ${teacher.nom}`;
-    }
-    return teacher.name;
+    return `${teacher.prenom} ${teacher.nom}`.trim() || teacher.email;
   };
 
+  // Vérifier si un module est déjà assigné
   const moduleDejaAssigne = (moduleId: string) => {
     return assignations.some(assignment => 
       assignment.vagueId === selectedVague && 
       assignment.filiereId === selectedFiliere &&
-      assignment.moduleId === moduleId
+      assignment.moduleId === moduleId &&
+      assignment.id !== editingAssignmentId
     );
   };
 
-  const verifierConflitHoraires = (teacherId: string, slots: ScheduleSlot[]) => {
-    return assignations.some(assignment => 
-      assignment.teacherId === teacherId &&
-      assignment.schedule.slots.some(existingSlot => 
-        slots.some(newSlot => 
-          newSlot.day === existingSlot.day &&
-          newSlot.startTime === existingSlot.startTime &&
-          newSlot.endTime === newSlot.endTime
-        )
-      )
-    );
-  };
-
+  // Ajouter un créneau horaire
   const ajouterCreneau = () => {
     if (!currentSlot.day || !currentSlot.startTime || !currentSlot.endTime) {
-      alert("Veuillez remplir tous les champs du créneau horaire");
+      toast.error('Veuillez remplir tous les champs du créneau horaire');
       return;
     }
 
@@ -225,46 +210,115 @@ export default function PlanningAssignationsPage() {
       endTime: '12:30',
       classroom: ''
     });
+
+    toast.success('Créneau ajouté avec succès!');
   };
 
+  // Supprimer un créneau
   const supprimerCreneau = (slotId: string) => {
     setNewAssignment(prev => ({
       ...prev,
       slots: prev.slots.filter(slot => slot.id !== slotId)
     }));
+    toast.success('Créneau supprimé');
   };
 
-  const ajouterAssignation = () => {
-    console.log('Tentative d&apos;ajout d&apos;assignation:');
-    console.log('Vague:', selectedVague);
-    console.log('Filière:', selectedFiliere);
-    console.log('Module:', selectedModule);
-    console.log('Formateur:', selectedTeacher);
-    console.log('Période:', newAssignment.period);
-    console.log('Créneaux:', newAssignment.slots);
+  // Ouvrir le formulaire en mode édition
+  const ouvrirModification = (assignment: Assignment) => {
+    console.log('📝 Ouverture en mode édition:', assignment);
+    
+    setSelectedVague(assignment.vagueId);
+    setSelectedFiliere(assignment.filiereId);
+    setSelectedModule(assignment.moduleId);
+    setSelectedTeacher(assignment.teacherId);
+    
+    setNewAssignment({
+      slots: assignment.schedule.slots,
+      period: assignment.schedule.period
+    });
 
+    setIsEditing(true);
+    setEditingAssignmentId(assignment.id);
+    setShowAssignmentForm(true);
+
+    toast.success('Mode modification activé');
+  };
+
+  // NOUVEAU : Ouvrir la modal de suppression
+  const ouvrirSuppression = (assignment: Assignment) => {
+    console.log('🗑️ Ouverture modal suppression pour:', assignment.id);
+    setAssignmentToDelete(assignment);
+    setShowDeleteModal(true);
+  };
+
+  // NOUVEAU : Confirmer la suppression
+  const confirmerSuppression = async () => {
+    if (!assignmentToDelete) return;
+
+    const toastId = toast.loading('Suppression en cours...');
+    
+    try {
+      console.log(`🗑️ Suppression de l'assignation: ${assignmentToDelete.id}`);
+      
+      const response = await fetch(`/api/censor/assignations?id=${assignmentToDelete.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de la suppression');
+      }
+
+      const result = await response.json();
+      console.log('✅ Réponse suppression:', result);
+
+      // Mettre à jour le state local
+      setAssignations(prev => prev.filter(a => a.id !== assignmentToDelete.id));
+      
+      // Fermer la modal
+      setShowDeleteModal(false);
+      setAssignmentToDelete(null);
+      
+      toast.success('Assignation supprimée avec succès!', { id: toastId });
+
+    } catch (error) {
+      console.error('❌ Erreur suppression:', error);
+      const errorMessage = error instanceof Error ? error.message : "Erreur lors de la suppression";
+      toast.error(errorMessage, { id: toastId });
+    }
+  };
+
+  // NOUVEAU : Annuler la suppression
+  const annulerSuppression = () => {
+    setShowDeleteModal(false);
+    setAssignmentToDelete(null);
+    toast('Suppression annulée', { icon: 'ℹ️' });
+  };
+
+  // Sauvegarder l'assignation
+  const sauvegarderAssignation = async () => {
+    console.log('Tentative de sauvegarde d\'assignation:');
+    console.log('Mode:', isEditing ? 'MODIFICATION' : 'AJOUT');
+
+    // Validation
     if (!selectedVague || !selectedFiliere || !selectedModule || !selectedTeacher) {
-      alert("Veuillez remplir tous les champs requis.");
+      toast.error('Veuillez remplir tous les champs requis');
       return;
     }
 
     if (!newAssignment.period.startDate || !newAssignment.period.endDate) {
-      alert("Veuillez définir la période.");
+      toast.error('Veuillez définir la période');
       return;
     }
 
     if (newAssignment.slots.length === 0) {
-      alert("Veuillez ajouter au moins un créneau horaire.");
+      toast.error('Veuillez ajouter au moins un créneau horaire');
       return;
     }
 
-    if (verifierConflitHoraires(selectedTeacher, newAssignment.slots)) {
-      alert("Ce formateur a déjà un cours à ces horaires !");
-      return;
-    }
-
+    // Créer l'assignation
     const assignment: Assignment = {
-      id: Date.now().toString(),
+      id: isEditing ? editingAssignmentId : Date.now().toString(),
       vagueId: selectedVague,
       filiereId: selectedFiliere,
       moduleId: selectedModule,
@@ -272,40 +326,54 @@ export default function PlanningAssignationsPage() {
       schedule: newAssignment
     };
 
-    console.log('Nouvelle assignation créée:', assignment);
+    const toastId = toast.loading(isEditing ? 'Modification en cours...' : 'Création en cours...');
 
-    setAssignations(prev => {
-      const newAssignations = [...prev, assignment];
-      console.log('Liste des assignations mise à jour:', newAssignations);
-      return newAssignations;
-    });
-
-    // Mettre à jour la filière avec la vague
-    const filiere = filieres.find(f => f.id === selectedFiliere);
-    if (filiere && (!filiere.vagues || !filiere.vagues.includes(selectedVague))) {
-      setFilieres(prev => prev.map(f => 
-        f.id === selectedFiliere 
-          ? { ...f, vagues: [...(f.vagues || []), selectedVague] }
-          : f
-      ));
+    try {
+      const method = isEditing ? 'PUT' : 'POST';
+      const url = '/api/censor/assignations';
       
-      try {
-        const savedFilieres = localStorage.getItem('schoolflow_filieres');
-        if (savedFilieres) {
-          const allFilieres = JSON.parse(savedFilieres) as Filiere[];
-          const updatedFilieres = allFilieres.map((f) => 
-            f.id === selectedFiliere 
-              ? { ...f, vagues: [...(f.vagues || []), selectedVague] }
-              : f
-          );
-          localStorage.setItem('schoolflow_filieres', JSON.stringify(updatedFilieres));
-        }
-      } catch (error) {
-        console.error('Erreur lors de la mise à jour de la filière:', error);
-      }
-    }
+      console.log(`📤 Envoi ${method} à ${url}`, assignment);
 
-    // Réinitialiser le formulaire
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(assignment)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Erreur lors de la ${isEditing ? 'modification' : 'sauvegarde'}`);
+      }
+
+      const result = await response.json();
+      console.log(`✅ Assignation ${isEditing ? 'modifiée' : 'sauvegardée'}:`, result);
+
+      // Recharger les assignations
+      const refreshResponse = await fetch('/api/censor/assignations');
+      if (refreshResponse.ok) {
+        const refreshedData = await refreshResponse.json();
+        setAssignations(refreshedData);
+      }
+
+      reinitialiserFormulaire();
+      setShowAssignmentForm(false);
+      
+      toast.success(
+        isEditing ? 'Assignation modifiée avec succès!' : 'Assignation créée avec succès!',
+        { id: toastId }
+      );
+
+    } catch (error) {
+      console.error(`❌ Erreur ${isEditing ? 'modification' : 'sauvegarde'}:`, error);
+      const errorMessage = error instanceof Error ? error.message : `Erreur lors de la ${isEditing ? 'modification' : 'sauvegarde'}`;
+      toast.error(errorMessage, { id: toastId });
+    }
+  };
+
+  // Réinitialiser le formulaire
+  const reinitialiserFormulaire = () => {
     setSelectedModule('');
     setSelectedTeacher('');
     setNewAssignment({
@@ -318,17 +386,11 @@ export default function PlanningAssignationsPage() {
       endTime: '12:30',
       classroom: ''
     });
-
-    setShowAssignmentForm(false);
-    alert("Assignation ajoutée !");
+    setIsEditing(false);
+    setEditingAssignmentId('');
   };
 
-  const supprimerAssignation = (id: string) => {
-    if (confirm("Supprimer cette assignation ?")) {
-      setAssignations(prev => prev.filter(a => a.id !== id));
-    }
-  };
-
+  // Jours de la semaine
   const joursSemaine = [
     { id: 'monday', label: 'Lundi' },
     { id: 'tuesday', label: 'Mardi' },
@@ -342,12 +404,39 @@ export default function PlanningAssignationsPage() {
     return joursSemaine.find(j => j.id === dayId)?.label || dayId;
   };
 
+  // Fermer le modal
+  const fermerModal = () => {
+    setShowAssignmentForm(false);
+    reinitialiserFormulaire();
+    toast('Formulaire annulé', { icon: 'ℹ️' });
+  };
+
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Chargement du planning...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-md">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <h2 className="text-lg font-bold mb-2">Erreur de chargement</h2>
+            <p>{error}</p>
+            <p className="text-sm mt-2">Vérifiez que les APIs vagues et filières sont accessibles</p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Réessayer
+          </button>
         </div>
       </div>
     );
@@ -392,6 +481,11 @@ export default function PlanningAssignationsPage() {
                   <option key={v.id} value={v.id}>{v.name}</option>
                 ))}
               </select>
+              {vagues.length === 0 && (
+                <p className="text-xs text-red-600 mt-1">
+                  Aucune vague disponible. Créez d'abord des vagues.
+                </p>
+              )}
             </div>
 
             <div>
@@ -399,21 +493,29 @@ export default function PlanningAssignationsPage() {
               <select
                 value={selectedFiliere}
                 onChange={(e) => setSelectedFiliere(e.target.value)}
-                disabled={!selectedVague}
+                disabled={!selectedVague || filieresDisponibles.length === 0}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
               >
                 <option value="">Sélectionnez une filière</option>
                 {filieresDisponibles.map(f => (
-                  <option key={f.id} value={f.id}>{f.name}</option>
+                  <option key={f.id} value={f.id.toString()}>{f.name}</option>
                 ))}
               </select>
+              {filieresDisponibles.length === 0 && selectedVague && (
+                <p className="text-xs text-red-600 mt-1">
+                  Aucune filière disponible pour cette vague.
+                </p>
+              )}
             </div>
           </div>
 
           {selectedVague && selectedFiliere && (
             <div className="flex justify-end">
               <button
-                onClick={() => setShowAssignmentForm(true)}
+                onClick={() => {
+                  reinitialiserFormulaire();
+                  setShowAssignmentForm(true);
+                }}
                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
               >
                 <FaPlus /> Nouvelle assignation
@@ -426,23 +528,20 @@ export default function PlanningAssignationsPage() {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h2 className="text-lg font-semibold mb-4">Assignations existantes</h2>
           {assignations.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">Aucune assignation pour l&apos;instant.</p>
+            <div className="text-center py-8">
+              <p className="text-gray-500 mb-2">Aucune assignation pour l'instant.</p>
+              <p className="text-sm text-gray-400">
+                Créez votre première assignation en sélectionnant une vague et une filière.
+              </p>
+            </div>
           ) : (
             <div className="space-y-4">
               {assignations.map(assignment => {
                 const vague = vagues.find(v => v.id === assignment.vagueId);
-                const filiere = filieres.find(f => f.id === assignment.filiereId);
-                const moduleItem = filiere?.modules?.find(m => m.id === assignment.moduleId);
+                const filiere = filieres.find(f => f.id === parseInt(assignment.filiereId));
+                const moduleItem = filiere?.modules?.find(m => m.id === parseInt(assignment.moduleId));
                 const teacher = formateurs.find(f => f.id === assignment.teacherId);
                 
-                console.log('Affichage assignation:', {
-                  assignment,
-                  vague,
-                  filiere,
-                  moduleItem,
-                  teacher
-                });
-
                 return (
                   <div key={assignment.id} className="border p-4 rounded-lg">
                     <div className="flex justify-between mb-3">
@@ -456,12 +555,22 @@ export default function PlanningAssignationsPage() {
                           {teacher ? getTeacherDisplayName(teacher) : `Formateur ID: ${assignment.teacherId}`}
                         </p>
                       </div>
-                      <button 
-                        onClick={() => supprimerAssignation(assignment.id)} 
-                        className="text-red-500 hover:text-red-700 self-start"
-                      >
-                        <FaTrash />
-                      </button>
+                      <div className="flex gap-2 self-start">
+                        <button 
+                          onClick={() => ouvrirModification(assignment)} 
+                          className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                          title="Modifier cette assignation"
+                        >
+                          <FaEdit size={12} /> Modifier
+                        </button>
+                        <button 
+                          onClick={() => ouvrirSuppression(assignment)} 
+                          className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                          title="Supprimer cette assignation"
+                        >
+                          <FaTrash size={12} /> Supprimer
+                        </button>
+                      </div>
                     </div>
                     
                     <div className="border-t pt-3">
@@ -491,16 +600,18 @@ export default function PlanningAssignationsPage() {
         </div>
       </div>
 
-      {/* MODAL */}
+      {/* MODAL D'ASSIGNATION */}
       {showAssignmentForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl border w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
             {/* En-tête */}
             <div className="bg-white p-6 border-b border-gray-200 sticky top-0 z-10">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Nouvelle assignation</h2>
+                <h2 className="text-xl font-semibold">
+                  {isEditing ? 'Modifier l\'assignation' : 'Nouvelle assignation'}
+                </h2>
                 <button 
-                  onClick={() => setShowAssignmentForm(false)} 
+                  onClick={fermerModal} 
                   className="text-gray-500 hover:text-gray-700 text-xl"
                 >
                   <FaTimes />
@@ -523,13 +634,18 @@ export default function PlanningAssignationsPage() {
                     {modulesDisponibles.map(moduleItem => (
                       <option 
                         key={moduleItem.id} 
-                        value={moduleItem.id}
-                        disabled={moduleDejaAssigne(moduleItem.id)}
+                        value={moduleItem.id.toString()}
+                        disabled={moduleDejaAssigne(moduleItem.id.toString())}
                       >
-                        {moduleItem.name} {moduleDejaAssigne(moduleItem.id) && '(Déjà assigné)'}
+                        {moduleItem.name} {moduleDejaAssigne(moduleItem.id.toString()) && '(Déjà assigné)'}
                       </option>
                     ))}
                   </select>
+                  {modulesDisponibles.length === 0 && selectedFiliere && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Aucun module disponible dans cette filière.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -542,13 +658,13 @@ export default function PlanningAssignationsPage() {
                     <option value="">Choisissez un formateur</option>
                     {formateursDisponibles.map(f => (
                       <option key={f.id} value={f.id}>
-                        {getTeacherDisplayName(f)} {f.teacherNumber ? `(${f.teacherNumber})` : ''}
+                        {getTeacherDisplayName(f)} {f.specialite ? `(${f.specialite})` : ''}
                       </option>
                     ))}
                   </select>
                   {formateursDisponibles.length === 0 && (
                     <p className="text-xs text-red-600 mt-1">
-                      Aucun formateur disponible. Créez d&apos;abord des comptes formateurs.
+                      Aucun formateur disponible. Créez d'abord des comptes formateurs.
                     </p>
                   )}
                 </div>
@@ -595,7 +711,7 @@ export default function PlanningAssignationsPage() {
                   <FaClock /> Créneaux horaires
                 </h3>
 
-                {/* Formulaire d&apos;ajout de créneau */}
+                {/* Formulaire d'ajout de créneau */}
                 <div className="bg-blue-50 p-3 rounded-lg mb-3">
                   <h4 className="font-medium text-gray-900 mb-2 text-sm">Ajouter un créneau</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
@@ -687,17 +803,68 @@ export default function PlanningAssignationsPage() {
             <div className="bg-white p-4 border-t border-gray-200 sticky bottom-0">
               <div className="flex gap-2 justify-end">
                 <button 
-                  onClick={() => setShowAssignmentForm(false)} 
+                  onClick={fermerModal} 
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50"
                 >
                   Annuler
                 </button>
                 <button
-                  onClick={ajouterAssignation}
+                  onClick={sauvegarderAssignation}
                   disabled={newAssignment.slots.length === 0}
                   className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  <FaSave size={14} /> Enregistrer
+                  <FaSave size={14} /> {isEditing ? 'Modifier' : 'Enregistrer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NOUVELLE MODAL DE SUPPRESSION */}
+      {showDeleteModal && assignmentToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl border w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <FaTrash className="text-red-600" />
+                </div>
+                <h2 className="text-xl font-semibold text-gray-900">Confirmer la suppression</h2>
+              </div>
+              
+              <p className="text-gray-600 mb-2">
+                Êtes-vous sûr de vouloir supprimer cette assignation ?
+              </p>
+              
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p className="font-medium text-red-800">
+                  {(() => {
+                    const vague = vagues.find(v => v.id === assignmentToDelete.vagueId);
+                    const filiere = filieres.find(f => f.id === parseInt(assignmentToDelete.filiereId));
+                    const moduleItem = filiere?.modules?.find(m => m.id === parseInt(assignmentToDelete.moduleId));
+                    const teacher = formateurs.find(f => f.id === assignmentToDelete.teacherId);
+                    
+                    return `${moduleItem?.name || 'Module'} - ${filiere?.name || 'Filière'} - ${vague?.name || 'Vague'}`;
+                  })()}
+                </p>
+                <p className="text-sm text-red-600 mt-1">
+                  Cette action est irréversible.
+                </p>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button 
+                  onClick={annulerSuppression}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={confirmerSuppression}
+                  className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700"
+                >
+                  <FaTrash size={12} /> Supprimer
                 </button>
               </div>
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { CalendarDays, AlertCircle, Users, Sun, MapPin, Filter, Search, ChevronDown, ClipboardList, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,21 +12,94 @@ import { Separator } from '@/components/ui/separator';
 const availableSemesters = ["Tous", "Semestre 1", "Semestre 2", "Semestre 3", "Semestre 4"];
 
 // Types d'événements pour filtres
-const eventTypes = ["Tous", "Réunion", "Congé", "Fête", "Examen"];
+const eventTypes = ["Tous", "Réunion", "Congé", "Fête", "Examen", "Voyage", "Sport", "Culturel", "Pédagogique"];
 
-// --- Données simulées (événements scolaires) ---
-const allEvents = [
-    { id: 1, date: "24 Octobre", day: "MER", title: "Réunion Parents-Professeurs", type: "Réunion", location: "Gymnase de l'école", icon: Users, color: "bg-blue-500", badge: "Important", month: "Octobre", time: "18:00 - 20:00", semestre: "Semestre 1" },
-    { id: 2, date: "27 Octobre", day: "SAM", title: "Voyage Scolaire à Rome", type: "Congé", location: "Départ à 8h00", icon: Sun, color: "bg-indigo-500", badge: "Optionnel", month: "Octobre", time: "08:00 - 20:00", semestre: "Semestre 1" },
-    { id: 3, date: "01 Novembre", day: "JEU", title: "Toussaint - Jour Férié", type: "Congé", location: "École Fermée", icon: AlertCircle, color: "bg-green-500", badge: "Congé", month: "Novembre", time: "Toute la journée", semestre: "Semestre 1" },
-    { id: 4, date: "10 Novembre", day: "MAR", title: "Examen de Mathématiques", type: "Examen", location: "Salle 305", icon: ClipboardList, color: "bg-red-600", badge: "Urgent", month: "Novembre", time: "09:00 - 12:00", semestre: "Semestre 2" },
-    { id: 6, date: "15 Décembre", day: "VEN", title: "Fête de Noël de l'École", type: "Fête", location: "Cantine principale", icon: Sun, color: "bg-yellow-500", badge: "Fête", month: "Décembre", time: "18:00 - 22:00", semestre: "Semestre 2" },
-    { id: 7, date: "18 Décembre", day: "LUN", title: "Concert de Noël", type: "Fête", location: "Auditorium", icon: Sun, color: "bg-yellow-500", badge: "Fête", month: "Décembre", time: "19:00 - 21:00", semestre: "Semestre 3" },
-    { id: 8, date: "20 Décembre", day: "MER", title: "Remise des Bulletins", type: "Réunion", location: "Salle des Professeurs", icon: Users, color: "bg-blue-500", badge: "Important", month: "Décembre", time: "16:00 - 18:00", semestre: "Semestre 4" },
-];
+// Interface pour les événements de l'API
+interface SchoolEvent {
+  id: string;
+  date: string;
+  day: string;
+  title: string;
+  type: string;
+  location: string;
+  icon: string;
+  color: string;
+  badge: string;
+  month: string;
+  time: string;
+  description?: string;
+  semestre?: string;
+}
+
+// --- Composant Skeleton pour le chargement ---
+const EventSkeleton = () => {
+  return (
+    <div className="space-y-6 lg:space-y-8">
+      {/* Skeleton pour les mois */}
+      {[1, 2].map(month => (
+        <section key={month} className="space-y-4">
+          {/* En-tête du mois skeleton */}
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-6 sm:h-8 bg-gray-200 rounded-full flex-shrink-0 animate-pulse"></div>
+            <div className="h-7 w-40 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-6 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+          </div>
+
+          {/* Grille des événements skeleton */}
+          <div className="grid gap-3 sm:gap-4">
+            {[1, 2, 3].map(event => (
+              <Card key={event} className="border-l-4 border-gray-200">
+                <div className="flex flex-col sm:flex-row">
+                  {/* Section Date skeleton */}
+                  <div className="bg-gray-200 p-3 sm:p-4 flex items-center justify-between sm:justify-center sm:flex-col w-full sm:w-24 lg:w-28 flex-shrink-0 animate-pulse">
+                    <div className="text-center space-y-2">
+                      <div className="h-7 w-8 bg-gray-300 rounded mx-auto"></div>
+                      <div className="h-4 w-12 bg-gray-300 rounded"></div>
+                      <div className="h-3 w-10 bg-gray-300 rounded"></div>
+                    </div>
+                  </div>
+
+                  {/* Détails de l'événement skeleton */}
+                  <CardContent className="flex-1 p-3 sm:p-4 lg:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
+                      <div className="flex-1 space-y-3 min-w-0">
+                        <div className="flex items-start gap-2 sm:gap-3">
+                          <div className="h-5 w-5 bg-gray-200 rounded flex-shrink-0 animate-pulse"></div>
+                          <div className="flex-1 space-y-2">
+                            <div className="h-6 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="h-4 w-full bg-gray-200 rounded animate-pulse"></div>
+                            <div className="h-4 w-2/3 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="flex flex-col sm:flex-row gap-3 mt-3">
+                              <div className="flex items-center gap-2">
+                                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Badge skeleton */}
+                      <div className="h-6 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+                    </div>
+                  </CardContent>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+};
 
 // --- Composant Principal ---
 const ParentEvents = () => {
+    const [events, setEvents] = useState<SchoolEvent[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedType, setSelectedType] = useState("Tous");
     const [selectedSemester, setSelectedSemester] = useState("Tous");
@@ -34,26 +107,63 @@ const ParentEvents = () => {
     const [showSemesterDropdown, setShowSemesterDropdown] = useState(false);
     const [showMobileFilters, setShowMobileFilters] = useState(false);
 
+    // Charger les événements depuis l'API centralisée
+    useEffect(() => {
+        loadEvents();
+    }, []);
+
+    const loadEvents = async () => {
+        try {
+            setIsLoading(true);
+            // Simuler un délai de chargement pour mieux voir le skeleton
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            const response = await fetch('/api/events');
+            if (response.ok) {
+                const data = await response.json();
+                setEvents(data);
+            } else {
+                console.error('Erreur chargement événements');
+            }
+        } catch (error) {
+            console.error('Erreur chargement événements:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Fonction utilitaire pour obtenir l'icône Lucide
+    const getIconComponent = (iconName: string) => {
+        const icons: Record<string, any> = {
+            'Users': Users,
+            'Sun': Sun,
+            'AlertCircle': AlertCircle,
+            'CalendarDays': CalendarDays,
+            'ClipboardList': ClipboardList
+        };
+        return icons[iconName] || CalendarDays;
+    };
+
     // Filtrage des événements scolaires
     const filteredEvents = useMemo(() => {
-        return allEvents.filter(event => {
+        return events.filter(event => {
             const matchesSearch = searchTerm === "" ||
                                   event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                   event.location.toLowerCase().includes(searchTerm.toLowerCase());
                                   
             const matchesType = selectedType === "Tous" || event.type === selectedType;
-            const matchesSemester = selectedSemester === "Tous" || event.semestre === selectedSemester;
+            const matchesSemester = selectedSemester === "Tous";
             
             return matchesSearch && matchesType && matchesSemester;
         });
-    }, [searchTerm, selectedType, selectedSemester]);
+    }, [events, searchTerm, selectedType, selectedSemester]);
 
     // Grouper par mois
     const eventsByMonth = filteredEvents.reduce((acc, event) => {
         if (!acc[event.month]) acc[event.month] = [];
         acc[event.month].push(event);
         return acc;
-    }, {} as Record<string, typeof allEvents>);
+    }, {} as Record<string, SchoolEvent[]>);
 
     const resetFilters = () => {
         setSearchTerm("");
@@ -78,7 +188,7 @@ const ParentEvents = () => {
                             Événements scolaires
                         </h1>
                         <p className="text-gray-500 text-sm sm:text-base mt-1">
-                            {filteredEvents.length} événement(s) trouvé(s)
+                            {isLoading ? "Chargement..." : `${filteredEvents.length} événement(s) trouvé(s)`}
                             {hasActiveFilters && (
                                 <span className="text-blue-600 ml-2">
                                     • Filtres actifs
@@ -337,125 +447,140 @@ const ParentEvents = () => {
 
             {/* Zone scrollable */}
             <div className="flex-1 overflow-y-auto">
-                <div className="p-3 sm:p-4 lg:p-6 space-y-6 lg:space-y-8 max-w-4xl mx-auto">
+                <div className="p-3 sm:p-4 lg:p-6 max-w-4xl mx-auto">
+
+                    {/* État de chargement avec Skeleton */}
+                    {isLoading && <EventSkeleton />}
 
                     {/* Événements par mois */}
-                    {Object.keys(eventsByMonth).length > 0 ? (
-                        Object.entries(eventsByMonth).map(([month, events]) => (
-                            <section key={month} className="space-y-4">
-                                {/* En-tête du mois */}
-                                <div className="flex items-center gap-3">
-                                    <div className="w-1 h-6 sm:h-8 bg-blue-600 rounded-full flex-shrink-0"></div>
-                                    <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 truncate">{month}</h2>
-                                    <Badge variant="secondary" className="text-xs sm:text-sm">
-                                        {events.length} événement(s)
-                                    </Badge>
-                                </div>
+                    {!isLoading && Object.keys(eventsByMonth).length > 0 ? (
+                        <div className="space-y-6 lg:space-y-8">
+                            {Object.entries(eventsByMonth).map(([month, events]) => (
+                                <section key={month} className="space-y-4">
+                                    {/* En-tête du mois */}
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-1 h-6 sm:h-8 bg-blue-600 rounded-full flex-shrink-0"></div>
+                                        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 truncate">{month}</h2>
+                                        <Badge variant="secondary" className="text-xs sm:text-sm">
+                                            {events.length} événement(s)
+                                        </Badge>
+                                    </div>
 
-                                {/* Grille des événements */}
-                                <div className="grid gap-3 sm:gap-4">
-                                    {events.map(event => {
-                                        const EventIcon = event.icon;
-                                        return (
-                                            <Card key={event.id} className="hover:shadow-lg transition-all duration-300 border-l-4 border-blue-500/50 cursor-pointer group">
-                                                <div className="flex flex-col sm:flex-row">
-                                                    {/* Section Date */}
-                                                    <div className={`${event.color} text-white p-3 sm:p-4 flex items-center justify-between sm:justify-center sm:flex-col w-full sm:w-24 lg:w-28 flex-shrink-0`}>
-                                                        <div className="text-center">
-                                                            <div className="text-xl sm:text-2xl lg:text-3xl font-bold">{event.date.split(' ')[0]}</div>
-                                                            <div className="text-xs sm:text-sm opacity-90">{event.date.split(' ')[1]}</div>
-                                                            <div className="text-xs opacity-75 mt-1">({event.day})</div>
+                                    {/* Grille des événements */}
+                                    <div className="grid gap-3 sm:gap-4">
+                                        {events.map(event => {
+                                            const EventIcon = getIconComponent(event.icon);
+                                            return (
+                                                <Card key={event.id} className="hover:shadow-lg transition-all duration-300 border-l-4 border-blue-500/50 cursor-pointer group">
+                                                    <div className="flex flex-col sm:flex-row">
+                                                        {/* Section Date */}
+                                                        <div className={`${event.color} text-white p-3 sm:p-4 flex items-center justify-between sm:justify-center sm:flex-col w-full sm:w-24 lg:w-28 flex-shrink-0`}>
+                                                            <div className="text-center">
+                                                                <div className="text-xl sm:text-2xl lg:text-3xl font-bold">{event.date.split(' ')[0]}</div>
+                                                                <div className="text-xs sm:text-sm opacity-90">{event.date.split(' ')[1]}</div>
+                                                                <div className="text-xs opacity-75 mt-1">({event.day})</div>
+                                                            </div>
                                                         </div>
-                                                    </div>
 
-                                                    {/* Détails de l'événement */}
-                                                    <CardContent className="flex-1 p-3 sm:p-4 lg:p-6">
-                                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
-                                                            <div className="flex-1 space-y-2 min-w-0">
-                                                                <div className="flex items-start gap-2 sm:gap-3">
-                                                                    <EventIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 mt-0.5 flex-shrink-0" />
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors break-words">
-                                                                            {event.title}
-                                                                        </h3>
-                                                                        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 mt-2 text-xs sm:text-sm text-gray-600">
-                                                                            <div className="flex items-center gap-1 sm:gap-2">
-                                                                                <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" /> 
-                                                                                <span className="break-words">{event.location}</span>
-                                                                            </div>
-                                                                            <div className="flex items-center gap-1 sm:gap-2">
-                                                                                <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" /> 
-                                                                                <span>{event.time}</span>
-                                                                            </div>
-                                                                            {/* Badge Semestre */}
-                                                                            <div className="flex items-center gap-1 sm:gap-2 text-xs font-medium text-blue-600 border border-blue-300 rounded-full px-2 py-0.5 bg-blue-50 flex-shrink-0">
-                                                                                {event.semestre}
+                                                        {/* Détails de l'événement */}
+                                                        <CardContent className="flex-1 p-3 sm:p-4 lg:p-6">
+                                                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
+                                                                <div className="flex-1 space-y-2 min-w-0">
+                                                                    <div className="flex items-start gap-2 sm:gap-3">
+                                                                        <EventIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 mt-0.5 flex-shrink-0" />
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors break-words">
+                                                                                {event.title}
+                                                                            </h3>
+                                                                            {event.description && (
+                                                                                <p className="text-sm text-gray-600 mt-2 break-words">
+                                                                                    {event.description}
+                                                                                </p>
+                                                                            )}
+                                                                            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 mt-2 text-xs sm:text-sm text-gray-600">
+                                                                                <div className="flex items-center gap-1 sm:gap-2">
+                                                                                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" /> 
+                                                                                    <span className="break-words">{event.location}</span>
+                                                                                </div>
+                                                                                <div className="flex items-center gap-1 sm:gap-2">
+                                                                                    <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" /> 
+                                                                                    <span>{event.time}</span>
+                                                                                </div>
                                                                             </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
+                                                                {/* Badge de statut */}
+                                                                <div className="flex items-center gap-2 self-start sm:self-center">
+                                                                    <Badge className={`text-xs ${
+                                                                        event.badge === "Urgent" ? "bg-red-100 text-red-800 border-red-200" : ""
+                                                                    } ${event.badge === "Important" ? "bg-blue-100 text-blue-800 border-blue-200" : ""}
+                                                                        ${event.badge === "Congé" ? "bg-green-100 text-green-800 border-green-200" : ""}
+                                                                        ${event.badge === "Optionnel" ? "bg-gray-100 text-gray-800 border-gray-200" : ""}
+                                                                        ${event.badge === "Compétition" ? "bg-purple-100 text-purple-800 border-purple-200" : ""}
+                                                                        ${event.badge === "Fête" ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}
+                                                                    `}>
+                                                                        {event.badge}
+                                                                    </Badge>
+                                                                </div>
                                                             </div>
-                                                            {/* Badge de statut */}
-                                                            <div className="flex items-center gap-2 self-start sm:self-center">
-                                                                <Badge className={`text-xs ${
-                                                                    event.badge === "Urgent" ? "bg-red-100 text-red-800 border-red-200" : ""
-                                                                } ${event.badge === "Important" ? "bg-blue-100 text-blue-800 border-blue-200" : ""}
-                                                                    ${event.badge === "Congé" ? "bg-green-100 text-green-800 border-green-200" : ""}
-                                                                    ${event.badge === "Optionnel" ? "bg-gray-100 text-gray-800 border-gray-200" : ""}
-                                                                    ${event.badge === "Compétition" ? "bg-purple-100 text-purple-800 border-purple-200" : ""}
-                                                                    ${event.badge === "Fête" ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}
-                                                                `}>
-                                                                    {event.badge}
-                                                                </Badge>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </div>
-                                            </Card>
-                                        );
-                                    })}
-                                </div>
-                            </section>
-                        ))
-                    ) : (
+                                                        </CardContent>
+                                                    </div>
+                                                </Card>
+                                            );
+                                        })}
+                                    </div>
+                                </section>
+                            ))}
+                        </div>
+                    ) : !isLoading && (
                         /* État vide */
                         <Card className="text-center py-8 sm:py-12">
                             <CardContent className="p-6 sm:p-8">
                                 <CalendarDays className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
                                 <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Aucun événement trouvé</h3>
                                 <p className="text-gray-500 text-sm sm:text-base mb-4 sm:mb-6">
-                                    Aucun événement ne correspond à vos critères de recherche ou de filtre.
+                                    {events.length === 0 
+                                        ? "Aucun événement n'a été programmé pour le moment." 
+                                        : "Aucun événement ne correspond à vos critères de recherche ou de filtre."
+                                    }
                                 </p>
-                                <Button 
-                                    variant="outline" 
-                                    onClick={resetFilters}
-                                    className="w-full sm:w-auto"
-                                >
-                                    Réinitialiser les filtres
-                                </Button>
+                                {hasActiveFilters && (
+                                    <Button 
+                                        variant="outline" 
+                                        onClick={resetFilters}
+                                        className="w-full sm:w-auto"
+                                    >
+                                        Réinitialiser les filtres
+                                    </Button>
+                                )}
                             </CardContent>
                         </Card>
                     )}
 
                     {/* Informations importantes */}
-                    <Separator className="my-6 sm:my-8" />
-                    <section className="bg-white rounded-lg p-4 sm:p-6 border">
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Informations importantes</h2>
-                        <div className="space-y-1 sm:space-y-2 text-sm text-gray-600">
-                            <p className="flex items-start gap-2">
-                                <span>•</span>
-                                <span>Tous les événements sont susceptibles d&apos;être modifiés.</span>
-                            </p>
-                            <p className="flex items-start gap-2">
-                                <span>•</span>
-                                <span>Consultez régulièrement cette page pour les mises à jour.</span>
-                            </p>
-                            <p className="flex items-start gap-2">
-                                <span>•</span>
-                                <span>Contactez l&apos;administration pour toute question.</span>
-                            </p>
-                        </div>
-                    </section>
+                    {!isLoading && events.length > 0 && (
+                        <>
+                            <Separator className="my-6 sm:my-8" />
+                            <section className="bg-white rounded-lg p-4 sm:p-6 border">
+                                <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Informations importantes</h2>
+                                <div className="space-y-1 sm:space-y-2 text-sm text-gray-600">
+                                    <p className="flex items-start gap-2">
+                                        <span>•</span>
+                                        <span>Tous les événements sont susceptibles d&apos;être modifiés.</span>
+                                    </p>
+                                    <p className="flex items-start gap-2">
+                                        <span>•</span>
+                                        <span>Consultez régulièrement cette page pour les mises à jour.</span>
+                                    </p>
+                                    <p className="flex items-start gap-2">
+                                        <span>•</span>
+                                        <span>Contactez l&apos;administration pour toute question.</span>
+                                    </p>
+                                </div>
+                            </section>
+                        </>
+                    )}
 
                 </div>
             </div>

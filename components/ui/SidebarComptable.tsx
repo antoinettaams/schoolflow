@@ -21,7 +21,6 @@ import {
   FaChevronDown,
   FaBalanceScale,
   FaExclamationTriangle,
-  FaBell,
 } from "react-icons/fa";
 
 import { Button } from "@/components/ui/button";
@@ -290,15 +289,6 @@ const SidebarComptable = () => {
                   >
                     <FaUser className="text-gray-600 text-sm" />
                     <span>Mon Profil</span>
-                  </Link>
-
-                  <Link
-                    href="/dashboard/comptable/notifications"
-                    className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium"
-                    onClick={handleCloseModal}
-                  >
-                    <FaBell className="text-gray-600 text-sm" />
-                    <span>Notifications</span>
                   </Link>
                   
                   <Link

@@ -1,6 +1,6 @@
 // app/dashboard/admin/teachers/page.tsx
 "use client";
-
+ 
 import React, { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -13,30 +13,62 @@ import {
   FaClock,
   FaCheckCircle,
   FaTrash,
+  FaPlus,
+  FaSync,
 } from "react-icons/fa";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 
-// Types
+// Types basés sur votre schéma Prisma
 interface Teacher {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  vagues: string[];
-  subjects: string[];
-  classes: string[];
-  status: "pending" | "active" | "inactive";
-  createdAt: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    createdAt: string;
+    isActive: boolean;
+  };
+  matiere: string;
+  enseignements: Array<{
+    id: string;
+    module: {
+      nom: string;
+      filiere: {
+        nom: string;
+      };
+    };
+    vague?: {
+      nom: string;
+    };
+  }>;
+  planningAssignations: Array<{
+    id: string;
+    vague: {
+      nom: string;
+    };
+    filiere: {
+      nom: string;
+    };
+    module: {
+      nom: string;
+    };
+  }>;
 }
 
-interface Vague {
-  id: string;
-  name: string;
-  year: string;
+interface ApiResponse {
+  teachers: Teacher[];
+  stats: {
+    totalTeachers: number;
+    activeTeachers: number;
+    pendingTeachers: number;
+    totalVagues: number;
+  };
 }
 
 const TeachersManagement = () => {
@@ -44,11 +76,10 @@ const TeachersManagement = () => {
   const router = useRouter();
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [vagues, setVagues] = useState<Vague[]>([]);
-  const [searchTerm] = useState("");
-  const [selectedVague] = useState<string>("all");
-  const [selectedStatus] = useState<string>("all");
-  const [sortField, setSortField] = useState<keyof Teacher>("lastName");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<keyof any>("lastName");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [teacherToDelete, setTeacherToDelete] = useState<Teacher | null>(null);
@@ -63,75 +94,81 @@ const TeachersManagement = () => {
     }
   }, [isLoaded, isSignedIn, user, router]);
 
-  // Données simulées
+  // Charger les données depuis l'API
+  const loadTeachers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log("🔄 Chargement des professeurs depuis l'API...");
+      
+      const response = await fetch('/api/admin/teachers');
+      
+      if (!response.ok) {
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+      }
+      
+      const data: ApiResponse = await response.json();
+      
+      console.log("✅ Données reçues:", data);
+      setTeachers(data.teachers);
+      
+    } catch (error) {
+      console.error('❌ Erreur chargement professeurs:', error);
+      setError(error instanceof Error ? error.message : 'Erreur lors du chargement des données');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const mockTeachers: Teacher[] = [
-      {
-        id: "1",
-        firstName: "Jean",
-        lastName: "Dupont",
-        email: "jean.dupont@schoolflow.com",
-        phone: "+225 07 12 34 56 78",
-        vagues: ["Vague 2024 A", "Vague 2024 B"],
-        subjects: ["Électricité"],
-        classes: ["Électricité Bâtiment"],
-        status: "active",
-        createdAt: "2024-01-15",
-      },
-      {
-        id: "2",
-        firstName: "Marie",
-        lastName: "Martin",
-        email: "marie.martin@schoolflow.com",
-        phone: "+225 05 98 76 54 32",
-        vagues: ["Vague 2024 A"],
-        subjects: ["Informatique"],
-        classes: ["Sécurité Information"],
-        status: "active",
-        createdAt: "2024-02-20",
-      },
-      {
-        id: "3",
-        firstName: "Pierre",
-        lastName: "Durand",
-        email: "pierre.durand@schoolflow.com",
-        phone: "+225 01 23 45 67 89",
-        vagues: [],
-        subjects: [],
-        classes: [],
-        status: "pending",
-        createdAt: "2024-03-10",
-      },
-    ];
+    if (isLoaded && isSignedIn && user?.publicMetadata?.role === "Administrateur") {
+      loadTeachers();
+    }
+  }, [isLoaded, isSignedIn, user]);
 
-    const mockVagues: Vague[] = [
-      { id: "1", name: "Vague 2024 A", year: "2024" },
-      { id: "2", name: "Vague 2024 B", year: "2024" },
-      { id: "3", name: "Vague 2024 C", year: "2024" },
-    ];
+  // CORRECTION : Fonction pour obtenir les vagues uniques d'un professeur
+  const getTeacherVagues = (teacher: Teacher): string[] => {
+    const vaguesFromAssignations = teacher.planningAssignations.map(pa => pa.vague?.nom).filter(Boolean) as string[];
+    const vaguesFromEnseignements = teacher.enseignements
+      .filter(e => e.vague?.nom) // CORRECTION : Vérifier si vague existe et a un nom
+      .map(e => e.vague!.nom); // CORRECTION : Utiliser l'opérateur ! car on a filtré
+    
+    return [...new Set([...vaguesFromAssignations, ...vaguesFromEnseignements])];
+  };
 
-    setTeachers(mockTeachers);
-    setVagues(mockVagues);
-  }, []);
+  // CORRECTION : Fonction pour obtenir les matières uniques d'un professeur
+  const getTeacherSubjects = (teacher: Teacher): string[] => {
+    const subjectsFromAssignations = teacher.planningAssignations.map(pa => pa.module.nom);
+    const subjectsFromEnseignements = teacher.enseignements.map(e => e.module.nom);
+    
+    return [...new Set([...subjectsFromAssignations, ...subjectsFromEnseignements])];
+  };
+
+  // CORRECTION : Fonction pour obtenir les filières uniques d'un professeur
+  const getTeacherFilieres = (teacher: Teacher): string[] => {
+    const filieresFromAssignations = teacher.planningAssignations.map(pa => pa.filiere.nom);
+    const filieresFromEnseignements = teacher.enseignements.map(e => e.module.filiere.nom);
+    
+    return [...new Set([...filieresFromAssignations, ...filieresFromEnseignements])];
+  };
+
+  // Fonction pour déterminer le statut
+  const getTeacherStatus = (teacher: Teacher): "active" | "pending" => {
+    return teacher.planningAssignations.length > 0 || teacher.enseignements.length > 0 ? "active" : "pending";
+  };
 
   // Filtrage et tri
   const filteredTeachers = teachers
     .filter((teacher) => {
-      const matchesSearch =
-        teacher.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        teacher.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        teacher.email.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesVague =
-        selectedVague === "all" || teacher.vagues.some((vague) => vague.includes(selectedVague));
-
-      const matchesStatus = selectedStatus === "all" || teacher.status === selectedStatus;
-
-      return matchesSearch && matchesVague && matchesStatus;
+      const fullName = `${teacher.user.firstName} ${teacher.user.lastName}`.toLowerCase();
+      const email = teacher.user.email.toLowerCase();
+      
+      return fullName.includes(searchTerm.toLowerCase()) || 
+             email.includes(searchTerm.toLowerCase());
     })
     .sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
+      const aValue = a.user[sortField as keyof typeof a.user];
+      const bValue = b.user[sortField as keyof typeof b.user];
 
       if (aValue === undefined || bValue === undefined) return 0;
 
@@ -141,7 +178,7 @@ const TeachersManagement = () => {
       return 0;
     });
 
-  const handleSort = (field: keyof Teacher) => {
+  const handleSort = (field: keyof any) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -150,25 +187,60 @@ const TeachersManagement = () => {
     }
   };
 
-  const getStatusStats = () => {
-    return {
-      active: teachers.filter((t) => t.status === "active").length,
-      pending: teachers.filter((t) => t.status === "pending").length,
-      inactive: teachers.filter((t) => t.status === "inactive").length,
-    };
+  // Statistiques calculées
+  const stats = {
+    totalTeachers: teachers.length,
+    activeTeachers: teachers.filter(t => getTeacherStatus(t) === "active").length,
+    pendingTeachers: teachers.filter(t => getTeacherStatus(t) === "pending").length,
+    totalVagues: new Set(teachers.flatMap(t => getTeacherVagues(t))).size,
   };
 
-  const stats = getStatusStats();
+  const handleDeleteTeacher = async (teacherId: string) => {
+    try {
+      const response = await fetch(`/api/admin/teachers?id=${teacherId}`, {
+        method: 'DELETE',
+      });
 
-  const handleDeleteTeacher = (id: string) => {
-    setTeachers((prev) => prev.filter((t) => t.id !== id));
-    setTeacherToDelete(null);
+      if (response.ok) {
+        setTeachers(prev => prev.filter(t => t.id !== teacherId));
+        setTeacherToDelete(null);
+      } else {
+        throw new Error('Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error('❌ Erreur suppression:', error);
+      alert('Erreur lors de la suppression du professeur');
+    }
   };
 
-  if (!isLoaded) {
+  if (!isLoaded || isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Chargement de vos informations...</div>
+        <div className="text-lg text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          Chargement des professeurs...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="p-8 max-w-md text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl text-red-600">Erreur</CardTitle>
+            <CardDescription className="text-gray-600">
+              {error}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button onClick={loadTeachers} className="bg-blue-600 text-white hover:bg-blue-700">
+              <FaSync className="mr-2" />
+              Réessayer
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -196,26 +268,46 @@ const TeachersManagement = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
-      <div className="p-6 space-y-6 h-full overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
+      <div className="p-6 space-y-6 h-full overflow-y-auto">
         {/* HEADER */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Gestion des Professeurs</h1>
             <p className="text-gray-600 mt-2">
-              Créez les comptes professeurs - Le censeur assignera les vagues et matières.
+              {stats.totalTeachers} professeur(s) - Gestion des comptes enseignants
             </p>
+          </div>
+          <div className="flex gap-3">
+            <Button onClick={loadTeachers} variant="outline">
+              <FaSync className="mr-2" />
+              Actualiser
+            </Button>
+            <Button className="bg-blue-600 text-white hover:bg-blue-700">
+              <FaPlus className="mr-2" />
+              Ajouter un professeur
+            </Button>
           </div>
         </div>
 
+        {/* BARRE DE RECHERCHE */}
+        <div className="max-w-md">
+          <Input
+            placeholder="Rechercher un professeur..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
+          />
+        </div>
+
         {/* STATISTIQUES */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Professeurs</CardTitle>
               <FaUsers className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{teachers.length}</div>
+              <div className="text-2xl font-bold">{stats.totalTeachers}</div>
               <p className="text-xs text-muted-foreground">Comptes créés</p>
             </CardContent>
           </Card>
@@ -225,8 +317,8 @@ const TeachersManagement = () => {
               <FaCheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-              <p className="text-xs text-muted-foreground">Assignés et actifs</p>
+              <div className="text-2xl font-bold text-green-600">{stats.activeTeachers}</div>
+              <p className="text-xs text-muted-foreground">Avec assignations</p>
             </CardContent>
           </Card>
           <Card>
@@ -235,24 +327,24 @@ const TeachersManagement = () => {
               <FaClock className="h-4 w-4 text-amber-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
-              <p className="text-xs text-muted-foreground">En attente d&apos;assignation</p>
+              <div className="text-2xl font-bold text-amber-600">{stats.pendingTeachers}</div>
+              <p className="text-xs text-muted-foreground">Sans assignation</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Vagues Actives</CardTitle>
+              <CardTitle className="text-sm font-medium">Vagues Utilisées</CardTitle>
               <FaLayerGroup className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{vagues.length}</div>
-              <p className="text-xs text-muted-foreground">Vagues disponibles</p>
+              <div className="text-2xl font-bold">{stats.totalVagues}</div>
+              <p className="text-xs text-muted-foreground">Vagues assignées</p>
             </CardContent>
           </Card>
         </div>
 
         {/* TABLEAU */}
-        <Card className="mt-6">
+        <Card>
           <CardHeader>
             <CardTitle>Liste des Professeurs</CardTitle>
             <CardDescription>
@@ -272,118 +364,110 @@ const TeachersManagement = () => {
                   <TableHead>Contact</TableHead>
                   <TableHead>Vagues Assignées</TableHead>
                   <TableHead>Matières</TableHead>
-                  <TableHead>Classes</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
-                    <div className="flex items-center gap-2">
-                      Statut
-                      <FaSort className="h-3 w-3" />
-                    </div>
-                  </TableHead>
+                  <TableHead>Filières</TableHead>
+                  <TableHead>Statut</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTeachers.map((teacher) => (
-                  <TableRow key={teacher.id}>
-                    <TableCell className="font-medium">
-                      {teacher.firstName} {teacher.lastName}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-sm">{teacher.email}</div>
-                        <div className="text-xs text-muted-foreground">{teacher.phone}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {teacher.vagues.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {teacher.vagues.map((vague, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {vague}
-                            </Badge>
-                          ))}
+                {filteredTeachers.map((teacher) => {
+                  const vagues = getTeacherVagues(teacher);
+                  const subjects = getTeacherSubjects(teacher);
+                  const filieres = getTeacherFilieres(teacher);
+                  const status = getTeacherStatus(teacher);
+                  
+                  return (
+                    <TableRow key={teacher.id}>
+                      <TableCell className="font-medium">
+                        {teacher.user.firstName} {teacher.user.lastName}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="text-sm">{teacher.user.email}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {teacher.user.phone || "Non renseigné"}
+                          </div>
                         </div>
-                      ) : (
-                        <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
-                          En attente
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {teacher.subjects.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {teacher.subjects.map((subject, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {subject}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
-                          À assigner
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {teacher.classes.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {teacher.classes.map((classe, index) => (
-                            <Badge key={index} variant="outline" className="text-xs bg-blue-50">
-                              {classe}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
-                          À assigner
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          teacher.status === "active"
-                            ? "default"
-                            : teacher.status === "pending"
-                            ? "secondary"
-                            : "outline"
-                        }
-                        className={
-                          teacher.status === "active"
-                            ? "bg-green-100 text-green-800"
-                            : teacher.status === "pending"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-gray-100 text-gray-800"
-                        }
-                      >
-                        {teacher.status === "active"
-                          ? "Actif"
-                          : teacher.status === "pending"
-                          ? "En attente"
-                          : "Inactif"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedTeacher(teacher)}
+                      </TableCell>
+                      <TableCell>
+                        {vagues.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {vagues.map((vague, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {vague}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
+                            En attente
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {subjects.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {subjects.map((subject, index) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                {subject}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
+                            À assigner
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {filieres.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {filieres.map((filiere, index) => (
+                              <Badge key={index} variant="outline" className="text-xs bg-blue-50">
+                                {filiere}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">
+                            À assigner
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={status === "active" ? "default" : "secondary"}
+                          className={
+                            status === "active" 
+                              ? "bg-green-100 text-green-800" 
+                              : "bg-amber-100 text-amber-800"
+                          }
                         >
-                          <FaEye className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          className="bg-red-500 text-white"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setTeacherToDelete(teacher)}
-                        >
-                          <FaTrash className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          {status === "active" ? "Actif" : "En attente"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedTeacher(teacher)}
+                          >
+                            <FaEye className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            className="bg-red-500 text-white"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setTeacherToDelete(teacher)}
+                          >
+                            <FaTrash className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
 
@@ -402,16 +486,17 @@ const TeachersManagement = () => {
             <Card className="bg-white w-full max-w-md p-6 relative">
               <CardHeader>
                 <CardTitle>
-                  {selectedTeacher.firstName} {selectedTeacher.lastName}
+                  {selectedTeacher.user.firstName} {selectedTeacher.user.lastName}
                 </CardTitle>
                 <CardDescription>Détails du professeur</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p><strong>Email:</strong> {selectedTeacher.email}</p>
-                <p><strong>Téléphone:</strong> {selectedTeacher.phone}</p>
-                <p><strong>Vague:</strong> {selectedTeacher.vagues.join(", ") || "À assigner"}</p>
-                <p><strong>Filière:</strong> {selectedTeacher.classes.join(", ") || "À assigner"}</p>
-                <p><strong>Matières:</strong> {selectedTeacher.subjects.join(", ") || "À assigner"}</p>
+                <p><strong>Email:</strong> {selectedTeacher.user.email}</p>
+                <p><strong>Téléphone:</strong> {selectedTeacher.user.phone || "Non renseigné"}</p>
+                <p><strong>Vagues:</strong> {getTeacherVagues(selectedTeacher).join(", ") || "Aucune"}</p>
+                <p><strong>Matières:</strong> {getTeacherSubjects(selectedTeacher).join(", ") || "Aucune"}</p>
+                <p><strong>Filières:</strong> {getTeacherFilieres(selectedTeacher).join(", ") || "Aucune"}</p>
+                <p><strong>Date d&apos;inscription:</strong> {new Date(selectedTeacher.user.createdAt).toLocaleDateString('fr-FR')}</p>
               </CardContent>
               <Button
                 className="absolute top-2 right-2"
@@ -430,7 +515,7 @@ const TeachersManagement = () => {
               <CardHeader>
                 <CardTitle>Confirmer la suppression</CardTitle>
                 <CardDescription>
-                  Voulez-vous vraiment supprimer {teacherToDelete.firstName} {teacherToDelete.lastName} ?
+                  Voulez-vous vraiment supprimer {teacherToDelete.user.firstName} {teacherToDelete.user.lastName} ?
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex justify-center gap-2">

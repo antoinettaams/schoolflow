@@ -9,7 +9,6 @@ import {
   FaTachometerAlt,
   FaUserGraduate,
   FaCalendarAlt,
-  FaFileAlt,
   FaClipboardList,
   FaSignOutAlt,
   FaBars,
@@ -21,9 +20,7 @@ import {
   FaIdCard,
   FaCog,
   FaExclamationTriangle,
-  FaBell,
   FaCreditCard,
-  FaMoneyBillWave,
   FaListAlt,
 } from "react-icons/fa";
 
@@ -104,14 +101,10 @@ const SidebarSecretaire = () => {
     { label: "Cartes Étudiantes", href: "/dashboard/secretaire/cartes", icon: <FaIdCard />, category: "ÉLÈVES" },
     
     // === PAIEMENTS ===
-    { label: "Paiements Inscriptions", href: "/dashboard/secretaire/paiements", icon: <FaMoneyBillWave />, category: "FINANCES" },
     { label: "Paiements Scolarité", href: "/dashboard/comptable/paiements", icon: <FaCreditCard />, category: "FINANCES" },
         
     // === ÉVÉNEMENTS ===
     { label: "Événements", href: "/dashboard/secretaire/evenements", icon: <FaCalendarAlt />, category: "ÉVÉNEMENTS" },
-    
-    // === DOCUMENTS ===
-    { label: "Documents", href: "/dashboard/secretaire/documents", icon: <FaFileAlt />, category: "DOCUMENTS" },
     
     // === RAPPORTS ===
     { label: "Statistiques", href: "/dashboard/secretaire/statistiques", icon: <FaChartLine />, category: "RAPPORTS" },
@@ -122,7 +115,6 @@ const SidebarSecretaire = () => {
     "ÉLÈVES": navItems.filter((i) => i.category === "ÉLÈVES"),
     "FINANCES": navItems.filter((i) => i.category === "FINANCES"),
     "ÉVÉNEMENTS": navItems.filter((i) => i.category === "ÉVÉNEMENTS"),
-    "DOCUMENTS": navItems.filter((i) => i.category === "DOCUMENTS"),
     "RAPPORTS": navItems.filter((i) => i.category === "RAPPORTS"),
   };
 
@@ -301,16 +293,6 @@ const SidebarSecretaire = () => {
                   >
                     <FaUser className="text-gray-600 text-sm" />
                     <span>Mon Profil</span>
-                  </Link>
-
-                  {/* MENU NOTIFICATIONS */}
-                  <Link
-                    href="/dashboard/secretaire/notifications"
-                    className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium"
-                    onClick={handleCloseModal}
-                  >
-                    <FaBell className="text-gray-600 text-sm" />
-                    <span>Notifications</span>
                   </Link>
                   
                   <Link

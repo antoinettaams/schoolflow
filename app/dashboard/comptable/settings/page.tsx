@@ -5,7 +5,6 @@ import React, { useState, useEffect } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import {
   Sun,
-  Globe,
   Lock,
   Eye,
   EyeOff,
@@ -27,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Interface pour les erreurs Clerk
 interface ClerkError {
@@ -39,8 +39,132 @@ interface ClerkError {
   message?: string;
 }
 
+// Composants Skeleton personnalisés
+const ProfileCardSkeleton = () => (
+  <Card>
+    <CardHeader className="p-4 sm:p-6">
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent className="p-4 sm:p-6 pt-0">
+      <div className="space-y-3 sm:space-y-4">
+        <div className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-56" />
+            </div>
+            <Skeleton className="w-5 h-5 rounded-full" />
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const AppearanceCardSkeleton = () => (
+  <Card>
+    <CardHeader className="p-4 sm:p-6">
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent className="p-4 sm:p-6 pt-0">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5 min-w-0 flex-1">
+            <Skeleton className="h-5 w-24 mb-1" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <Skeleton className="w-10 h-6 rounded-full" />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const SecurityCardSkeleton = () => (
+  <Card>
+    <CardHeader className="p-4 sm:p-6">
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent className="p-4 sm:p-6 pt-0">
+      <div className="space-y-3 sm:space-y-4">
+        <div className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-56" />
+            </div>
+            <Skeleton className="w-5 h-5 rounded-full" />
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const AccountInfoCardSkeleton = () => (
+  <Card>
+    <CardHeader className="p-4 sm:p-6">
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-56" />
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent className="p-4 sm:p-6 pt-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        {[...Array(3)].map((_, index) => (
+          <div key={index} className="space-y-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-5 w-32" />
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const HeaderSkeleton = () => (
+  <div className="bg-white border-b border-gray-200 p-4 sm:p-6 flex-shrink-0">
+    <div className="max-w-4xl mx-auto">
+      <Skeleton className="h-7 w-48 mb-2" />
+      <Skeleton className="h-4 w-64" />
+    </div>
+  </div>
+);
+
+const ContentSkeleton = () => (
+  <div className="flex-1 overflow-y-auto">
+    <div className="max-w-4xl mx-auto p-3 sm:p-4 md:p-6 flex flex-col gap-4 sm:gap-6">
+      <ProfileCardSkeleton />
+      <AppearanceCardSkeleton />
+      <SecurityCardSkeleton />
+      <AccountInfoCardSkeleton />
+    </div>
+  </div>
+);
+
 const ComptableSettingsPage = () => {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const { signOut, openSignIn, session } = useClerk();
 
   const [darkMode, setDarkMode] = useState(false);
@@ -52,25 +176,31 @@ const ComptableSettingsPage = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [needsReauth, setNeedsReauth] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   const [formData, setFormData] = useState({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
-    email: user?.primaryEmailAddress?.emailAddress || "",
-    username: user?.username || "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    username: "",
     currentPassword: "",
     newPassword: "",
   });
 
   useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      email: user?.primaryEmailAddress?.emailAddress || "",
-      username: user?.username || "",
-    }));
-  }, [user]);
+    if (isLoaded && user) {
+      setFormData({
+        firstName: user?.firstName || "",
+        lastName: user?.lastName || "",
+        email: user?.primaryEmailAddress?.emailAddress || "",
+        username: user?.username || "",
+        currentPassword: "",
+        newPassword: "",
+      });
+      // Simuler un chargement pour voir les skeletons
+      setTimeout(() => setPageLoading(false), 1000);
+    }
+  }, [user, isLoaded]);
 
   // Vérifie si la session est récente (5 min max)
   const isSessionRecent = (): boolean => {
@@ -180,6 +310,15 @@ const ComptableSettingsPage = () => {
       setIsLoading(false);
     }
   };
+
+  if (!isLoaded || pageLoading) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col lg:pl-5 pt-20 lg:pt-6">
+        <HeaderSkeleton />
+        <ContentSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col lg:pl-5 pt-20 lg:pt-6">
@@ -298,13 +437,13 @@ const ComptableSettingsPage = () => {
 
                         <div className="space-y-2">
                           <Label htmlFor="username" className="text-sm sm:text-base">Nom d&apos;utilisateur</Label>
-                          <Input
-                            id="username"
-                            value={formData.username}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, username: e.target.value }))}
-                            placeholder="Votre nom d&apos;utilisateur"
-                            className="text-sm sm:text-base"
-                          />
+                            <Input
+                              id="username"
+                              value={formData.username}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, username: e.target.value }))}
+                              placeholder="Votre nom d&apos;utilisateur"
+                              className="text-sm sm:text-base"
+                            />
                         </div>
 
                         <div className="space-y-2">
@@ -372,59 +511,6 @@ const ComptableSettingsPage = () => {
                     id="dark-mode"
                     checked={darkMode}
                     onCheckedChange={setDarkMode}
-                    className="flex-shrink-0"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Général */}
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gray-100 rounded-lg">
-                  <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="text-base sm:text-lg">Général</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Paramètres généraux de l&apos;application</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="space-y-4 sm:space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="space-y-0.5 min-w-0 flex-1">
-                    <Label htmlFor="language" className="text-sm sm:text-base">Langue</Label>
-                    <p className="text-xs sm:text-sm text-gray-500">Définir la langue d&apos;affichage</p>
-                  </div>
-                  <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger className="w-full sm:w-[180px] text-sm sm:text-base">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fr" className="text-sm sm:text-base">Français</SelectItem>
-                      <SelectItem value="en" className="text-sm sm:text-base">English</SelectItem>
-                      <SelectItem value="es" className="text-sm sm:text-base">Español</SelectItem>
-                      <SelectItem value="de" className="text-sm sm:text-base">Deutsch</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5 min-w-0 flex-1">
-                    <Label htmlFor="notifications" className="text-sm sm:text-base">Notifications</Label>
-                    <p className="text-xs sm:text-sm text-gray-500 truncate">
-                      Recevoir des notifications importantes
-                    </p>
-                  </div>
-                  <Switch
-                    id="notifications"
-                    checked={notificationsEnabled}
-                    onCheckedChange={setNotificationsEnabled}
                     className="flex-shrink-0"
                   />
                 </div>

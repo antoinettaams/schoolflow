@@ -13,7 +13,6 @@ import {
   FaClipboardList,
   FaSignOutAlt,
   FaTasks,
-  FaBell,
   FaBars,
   FaTimes,
   FaUser,
@@ -94,8 +93,8 @@ const SidebarTeacher = () => {
     { label: "Tableau de Bord", href: "/dashboard/teacher", icon: <FaChalkboardTeacher /> },
     { label: "Mes Classes", href: "/dashboard/teacher/classes", icon: <FaUserGraduate />, category: "PÉDAGOGIE" },
     { label: "Emploi du Temps", href: "/dashboard/teacher/schedule", icon: <FaCalendarAlt />, category: "PÉDAGOGIE" },
-    { label: "Gestion des Notes", href: "/dashboard/teacher/grades", icon: <FaFileAlt />, category: "PÉDAGOGIE" },
     { label: "Devoirs & Exercices", href: "/dashboard/teacher/homeworks", icon: <FaTasks />, category: "PÉDAGOGIE" },
+    { label: "Gestion des Notes", href: "/dashboard/teacher/grades", icon: <FaFileAlt />, category: "PÉDAGOGIE" },
     { label: "Évènements Scolaires", href: "/dashboard/teacher/events", icon: <FaGraduationCap />, category: "PÉDAGOGIE" },
     { label: "Assiduité", href: "/dashboard/teacher/attendance", icon: <FaClipboardList />, category: "PÉDAGOGIE" },
   ];
@@ -288,15 +287,6 @@ const SidebarTeacher = () => {
                     <span>Mon Profil</span>
                   </Link>
                   
-                  <Link
-                    href="/dashboard/teacher/notifications"
-                    className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium"
-                    onClick={handleCloseModal}
-                  >
-                    <FaBell className="text-gray-600 text-sm" />
-                    <span>Notifications</span>
-                  </Link>
-
                   <Link
                     href="/dashboard/teacher/settings"
                     className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium"

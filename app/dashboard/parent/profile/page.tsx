@@ -1,7 +1,7 @@
-// app/dashboard/parent/profile/page.tsx
+// app/dashboard/parent/profile/page.tsx - CODE COMPLET
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import Image from "next/image";
 import {
@@ -19,19 +19,15 @@ import {
   Shield,
   LucideIcon,
   X,
+  Phone,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
-interface UserActivity {
-  id: number;
-  type: string;
-  description: string;
-  timestamp: Date;
-  icon: React.ReactNode;
-}
-
+// Types correspondant à l'API
 interface ChildData {
   name: string;
   class: string;
@@ -40,119 +36,250 @@ interface ChildData {
   vague: string;
 }
 
+interface UserActivity {
+  id: number;
+  type: string;
+  description: string;
+  timestamp: Date;
+  icon: string;
+}
+
+interface ParentProfileData {
+  userData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    imageUrl: string | null;
+    createdAt: Date;
+    phone: string | null;
+  };
+  childrenData: ChildData[];
+  userActivity: UserActivity[];
+  success: boolean;
+  source?: "database" | "mock";
+}
+
+// Mapping des icônes pour l'activité
+const activityIconMap: { [key: string]: React.ComponentType<{ className?: string }> } = {
+  CheckCircle,
+  BookOpen,
+  Calendar,
+  User,
+  Camera,
+};
+
+// Composant Skeleton pour le profil - DESIGN COMPLET
+const ProfileSkeleton = () => (
+  <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+    <div className="h-screen overflow-y-auto">
+      <div className="max-w-6xl mx-auto p-6 space-y-6">
+        {/* Carte principale skeleton */}
+        <Card className="relative overflow-hidden border-0 shadow-xl">
+          {/* Bannière skeleton */}
+          <div className="bg-principal rounded-lg h-40 w-full relative">
+            <div className="absolute left-8 bottom-0 translate-y-1/2">
+              <Skeleton className="w-32 h-32 rounded-full border-4 border-white" />
+            </div>
+          </div>
+
+          <CardHeader className="pt-16 pb-6">
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-48" />
+          </CardHeader>
+
+          <CardContent className="p-6 space-y-6">
+            {/* Informations personnelles skeleton */}
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <Skeleton className="w-6 h-6 rounded-full" />
+                <Skeleton className="h-6 w-48" />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center p-4 border-b border-gray-100 last:border-b-0">
+                    <Skeleton className="w-5 h-5 rounded-full mr-4" />
+                    <div className="flex-1">
+                      <Skeleton className="h-3 w-20 mb-2" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Informations enfants skeleton */}
+            <div className="border-t pt-6">
+              <div className="flex items-center gap-3 mb-6">
+                <Skeleton className="w-6 h-6 rounded-full" />
+                <Skeleton className="h-6 w-48" />
+              </div>
+              <div className="space-y-4">
+                {[...Array(1)].map((_, i) => (
+                  <Card key={i} className="bg-gray-50 border border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[...Array(4)].map((_, j) => (
+                          <div key={j} className="flex items-center p-3 bg-white rounded-lg border border-gray-200">
+                            <Skeleton className="w-5 h-5 rounded-full mr-3" />
+                            <div className="flex-1">
+                              <Skeleton className="h-3 w-16 mb-1" />
+                              <Skeleton className="h-4 w-24" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+
+          <CardContent className="px-6 py-4 border-t bg-gray-50/50">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-10 w-64 rounded-xl" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Section sécurité skeleton */}
+        <Card className="border-0 shadow-xl">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-6 h-6 rounded-full" />
+              <Skeleton className="h-6 w-48" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
+              <Skeleton className="w-5 h-5 rounded-full" />
+              <div className="flex-1">
+                <Skeleton className="h-4 w-32 mb-1" />
+                <Skeleton className="h-3 w-40" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Activité récente skeleton */}
+        <Card className="border-0 shadow-xl">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-6 h-6 rounded-full" />
+              <Skeleton className="h-6 w-48" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                  <Skeleton className="w-4 h-4 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-40 mb-1" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  </div>
+);
+
 const ParentProfilePage = () => {
-  const { user, isLoaded } = useUser();
+  const { user: clerkUser, isLoaded } = useUser();
   const { signOut } = useClerk();
   const [showImageOptions, setShowImageOptions] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [userActivity, setUserActivity] = useState<UserActivity[]>([]);
-  const [childrenData, setChildrenData] = useState<ChildData[]>([]);
+  const [profileData, setProfileData] = useState<ParentProfileData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 🔥 Activité simulée pour parent - Déplacé dans useCallback
-  const getUserActivity = useCallback((): UserActivity[] => [
-    {
-      id: 1,
-      type: "login",
-      description: "Connexion réussie",
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      icon: <CheckCircle className="w-4 h-4 text-green-500" />,
-    },
-    {
-      id: 2,
-      type: "grade_view",
-      description: `Consultation des notes de ${childrenData[0]?.name || "votre enfant"}`,
-      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      icon: <BookOpen className="w-4 h-4 text-blue-500" />,
-    },
-    {
-      id: 3,
-      type: "attendance",
-      description: "Consultation de l'assiduité",
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      icon: <CheckCircle className="w-4 h-4 text-green-500" />,
-    },
-    {
-      id: 4,
-      type: "schedule",
-      description: "Consultation de l'emploi du temps",
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      icon: <Calendar className="w-4 h-4 text-purple-500" />,
-    },
-  ], [childrenData]);
-
-  // Charger les données des enfants depuis localStorage
-  useEffect(() => {
-    const loadChildrenData = () => {
-      try {
-        const savedData = localStorage.getItem('parent_student_data');
-        if (savedData) {
-          const data = JSON.parse(savedData);
-          setChildrenData([{
-            name: data.studentName,
-            class: data.studentClass,
-            studentId: data.studentId || "Non assigné",
-            filiere: data.filiere,
-            vague: data.vague
-          }]);
-        } else {
-          // Données par défaut
-          setChildrenData([{
-            name: "Jean Dupont",
-            class: "Terminale S",
-            studentId: "STU2024001",
-            filiere: "Développement Web & Mobile",
-            vague: "Vague Janvier 2024"
-          }]);
-        }
-      } catch (error) {
-        console.error("Erreur lors du chargement des données enfants:", error);
+  // Charger les données du profil depuis l'API
+  const fetchProfileData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Simuler un délai de chargement pour voir le skeleton (à retirer en production)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const response = await fetch('/api/parents/profile');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Erreur lors du chargement');
       }
-    };
 
-    loadChildrenData();
-  }, []);
+      const data: ParentProfileData = await response.json();
+      setProfileData(data);
 
-  // Mettre à jour l'activité lorsque les données enfants changent
+    } catch (error) {
+      console.error("Erreur lors du chargement du profil:", error);
+      toast.error("Erreur lors du chargement du profil", {
+        description: error instanceof Error ? error.message : "Erreur inconnue"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setUserActivity(getUserActivity());
-  }, [getUserActivity]);
+    if (isLoaded && clerkUser) {
+      fetchProfileData();
+    }
+  }, [isLoaded, clerkUser]);
 
-  // ✅ Upload photo
+  // ✅ Upload photo (fonctionne avec Clerk)
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      alert("Veuillez sélectionner une image valide");
+      toast.error("Format invalide", {
+        description: "Veuillez sélectionner une image valide"
+      });
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      alert("L'image ne doit pas dépasser 5MB");
+      toast.error("Fichier trop volumineux", {
+        description: "L'image ne doit pas dépasser 5MB"
+      });
       return;
     }
 
     try {
       setIsUploading(true);
-      await user?.setProfileImage({ file });
-      alert("✅ Photo de profil mise à jour avec succès !");
+      await clerkUser?.setProfileImage({ file });
+      
+      toast.success("Photo mise à jour", {
+        description: "Votre photo de profil a été mise à jour avec succès"
+      });
       setShowImageOptions(false);
 
-      // Ajouter dans le journal d'activité
-      setUserActivity((prev) => [
-        {
-          id: Date.now(),
-          type: "profile_update",
-          description: "Photo de profil mise à jour",
-          timestamp: new Date(),
-          icon: <Camera className="w-4 h-4 text-blue-500" />,
-        },
+      // Mettre à jour l'activité localement
+      setProfileData(prev => prev ? {
         ...prev,
-      ]);
+        userActivity: [
+          {
+            id: Date.now(),
+            type: "profile_update",
+            description: "Photo de profil mise à jour",
+            timestamp: new Date(),
+            icon: "Camera",
+          },
+          ...prev.userActivity.slice(0, 3) // Garder seulement les 4 dernières activités
+        ]
+      } : null);
+
     } catch (error) {
       console.error("Erreur upload:", error);
-      alert("Erreur lors du téléchargement de l'image");
+      toast.error("Erreur de téléchargement", {
+        description: "Une erreur est survenue lors du téléchargement"
+      });
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -163,20 +290,25 @@ const ParentProfilePage = () => {
   const handleDeleteImage = async () => {
     if (!confirm("Supprimer votre photo de profil ?")) return;
     try {
-      await user?.setProfileImage({ file: null });
-      alert("✅ Photo supprimée avec succès !");
+      await clerkUser?.setProfileImage({ file: null });
+      toast.success("Photo supprimée", {
+        description: "Votre photo de profil a été supprimée"
+      });
       setShowImageOptions(false);
     } catch (error) {
       console.error(error);
-      alert("Erreur lors de la suppression");
+      toast.error("Erreur de suppression", {
+        description: "Impossible de supprimer la photo"
+      });
     }
   };
 
   // ✅ Télécharger l'image
   const handleDownloadImage = () => {
+    if (!clerkUser?.imageUrl) return;
     const link = document.createElement("a");
-    link.href = user?.imageUrl || "";
-    link.download = `photo-profil-${user?.firstName}-${user?.lastName}.jpg`;
+    link.href = clerkUser.imageUrl;
+    link.download = `photo-profil-${clerkUser.firstName}-${clerkUser.lastName}.jpg`;
     link.click();
   };
 
@@ -185,19 +317,29 @@ const ParentProfilePage = () => {
   const handleConfirmLogout = async () => await signOut({ redirectUrl: "/auth/signin" });
   const handleCancelLogout = () => setIsLogoutModalOpen(false);
 
-  if (!isLoaded || !user) {
+  // Afficher le skeleton pendant le chargement
+  if (!isLoaded || isLoading) {
+    return <ProfileSkeleton />;
+  }
+
+  if (!profileData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
-          <p className="mt-4 text-gray-600">Chargement du profil...</p>
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Erreur de chargement</h3>
+          <p className="text-gray-600 mb-4">Impossible de charger les données du profil</p>
+          <Button onClick={fetchProfileData} className="bg-blue-600 hover:bg-blue-700">
+            Réessayer
+          </Button>
         </div>
       </div>
     );
   }
 
-  const profileImage = user.imageUrl || "https://placehold.co/150x150/3b82f6/ffffff?text=P";
-  const createdAt = user.createdAt ? new Date(user.createdAt) : new Date();
+  const { userData, childrenData, userActivity } = profileData;
+  const profileImage = clerkUser?.imageUrl || "https://placehold.co/150x150/3b82f6/ffffff?text=P";
+  const createdAt = userData.createdAt ? new Date(userData.createdAt) : new Date();
 
   return (
     <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
@@ -211,10 +353,10 @@ const ParentProfilePage = () => {
 
       <div className="h-screen overflow-y-auto">
         <div className="max-w-6xl mx-auto p-6 space-y-6">
-          {/* ✅ Carte de profil principale - EXACTEMENT COMME VOTRE DESIGN */}
+          {/* ✅ Carte de profil principale */}
           <Card className="relative overflow-hidden border-0 shadow-xl">
             {/* Bannière avec dégradé bleu-violet */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg h-40 w-full relative">
+            <div className="bg-principal rounded-lg h-40 w-full relative">
               <div className="absolute left-8 bottom-0 translate-y-1/2">
                 <div className="relative">
                   <Image
@@ -241,7 +383,7 @@ const ParentProfilePage = () => {
               </div>
             </div>
 
-            {/* Menu des options d'image - EXACTEMENT COMME VOTRE DESIGN */}
+            {/* Menu des options d'image */}
             {showImageOptions && (
               <>
                 <div className="absolute left-8 top-48 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
@@ -273,7 +415,7 @@ const ParentProfilePage = () => {
                     </div>
                   </button>
 
-                  {user.imageUrl && (
+                  {clerkUser?.imageUrl && (
                     <button
                       onClick={handleDeleteImage}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-50"
@@ -294,7 +436,7 @@ const ParentProfilePage = () => {
               </>
             )}
 
-            {/* Image Modal - EXACTEMENT COMME VOTRE DESIGN */}
+            {/* Image Modal */}
             {showImageModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                 <div className="bg-white rounded-xl p-4 max-w-lg w-full relative">
@@ -307,7 +449,7 @@ const ParentProfilePage = () => {
                     <X className="w-5 h-5" />
                   </Button>
                   <Image
-                    src={user.imageUrl || profileImage}
+                    src={clerkUser?.imageUrl || profileImage}
                     alt="Photo de profil"
                     width={500}
                     height={500}
@@ -336,14 +478,19 @@ const ParentProfilePage = () => {
             <CardHeader className="pt-16 pb-6">
               <div className="flex flex-col">
                 <CardTitle className="text-2xl font-extrabold text-gray-900">
-                  {user.firstName} {user.lastName}
+                  {userData.firstName} {userData.lastName}
                 </CardTitle>
                 <CardDescription className="mt-1">
                   <Badge variant="secondary" className="text-blue-600 bg-blue-50 font-medium">
                     Parent
                   </Badge>
+                  {profileData.source === "mock" && (
+                    <Badge variant="outline" className="ml-2 text-orange-600 border-orange-300">
+                      Données de démonstration
+                    </Badge>
+                  )}
                   <span className="text-gray-500 text-sm ml-2">
-                    {user.primaryEmailAddress?.emailAddress}
+                    {userData.email}
                   </span>
                 </CardDescription>
               </div>
@@ -356,13 +503,12 @@ const ParentProfilePage = () => {
                 <h3 className="text-xl font-bold text-gray-700">Informations Personnelles</h3>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <InfoItem label="Prénom" value={user.firstName || ""} icon={User} />
-                <InfoItem label="Nom" value={user.lastName || ""} icon={User} />
-                <InfoItem
-                  label="E-mail"
-                  value={user.emailAddresses[0]?.emailAddress || ""}
-                  icon={Mail}
-                />
+                <InfoItem label="Prénom" value={userData.firstName} icon={User} />
+                <InfoItem label="Nom" value={userData.lastName} icon={User} />
+                <InfoItem label="E-mail" value={userData.email} icon={Mail} />
+                {userData.phone && (
+                  <InfoItem label="Téléphone" value={userData.phone} icon={Phone} />
+                )}
                 <InfoItem
                   label="Compte créé le"
                   value={createdAt.toLocaleDateString("fr-FR", {
@@ -385,14 +531,22 @@ const ParentProfilePage = () => {
                 {childrenData.map((child, index) => (
                   <Card key={index} className="bg-gray-50 border border-gray-200">
                     <CardContent className="p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
                         <ChildInfoItem label="Nom de l'Enfant" value={child.name} icon={User} />
                         <ChildInfoItem label="Filière" value={child.filiere} icon={GraduationCap} />
                         <ChildInfoItem label="Vague" value={child.vague} icon={Calendar} />
+                        <ChildInfoItem label="ID Étudiant" value={child.studentId} icon={User} />
                       </div>
                     </CardContent>
                   </Card>
                 ))}
+                {childrenData.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p>Aucun enfant associé à votre compte</p>
+                    <p className="text-sm">Contactez l'administration pour associer un enfant</p>
+                  </div>
+                )}
               </div>
             </CardContent>
 
@@ -452,33 +606,36 @@ const ParentProfilePage = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {userActivity.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    {activity.icon}
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">
-                        {activity.description}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {activity.timestamp.toLocaleDateString("fr-FR")} à{" "}
-                        {activity.timestamp.toLocaleTimeString("fr-FR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
+                {userActivity.map((activity) => {
+                  const ActivityIcon = activityIconMap[activity.icon] || CheckCircle;
+                  return (
+                    <div
+                      key={activity.id}
+                      className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <ActivityIcon className="w-4 h-4 text-blue-500" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {activity.description}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(activity.timestamp).toLocaleDateString("fr-FR")} à{" "}
+                          {new Date(activity.timestamp).toLocaleTimeString("fr-FR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Modale de déconnexion - EXACTEMENT COMME VOTRE DESIGN */}
+      {/* Modale de déconnexion */}
       {isLogoutModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
@@ -516,7 +673,7 @@ const ParentProfilePage = () => {
   );
 };
 
-// ✅ Composants utilitaires - EXACTEMENT COMME VOTRE DESIGN
+// ✅ Composants utilitaires
 interface InfoProps {
   icon: LucideIcon;
   label: string;

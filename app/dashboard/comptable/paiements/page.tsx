@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, Filter, Download, CheckCircle, XCircle, 
-  Eye, Clock, CreditCard, Save, Upload
+  Eye, Clock, CreditCard, Save, Upload, RefreshCw, AlertCircle, Info
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,50 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
+// Composants Skeleton
+const SkeletonCard = () => (
+  <Card className="w-full">
+    <CardHeader className="pb-3">
+      <div className="h-4 bg-gray-200 rounded w-1/2 mb-2 animate-pulse"></div>
+    </CardHeader>
+    <CardContent>
+      <div className="h-6 bg-gray-200 rounded w-3/4 mb-2 animate-pulse"></div>
+      <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+    </CardContent>
+  </Card>
+);
+
+const SkeletonTableRow = () => (
+  <TableRow>
+    <TableCell><div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div></TableCell>
+    <TableCell><div className="h-4 bg-gray-200 rounded w-2/3 animate-pulse"></div></TableCell>
+    <TableCell><div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div></TableCell>
+    <TableCell><div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div></TableCell>
+    <TableCell><div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div></TableCell>
+    <TableCell><div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div></TableCell>
+    <TableCell><div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div></TableCell>
+    <TableCell><div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div></TableCell>
+    <TableCell><div className="h-8 bg-gray-200 rounded w-16 animate-pulse"></div></TableCell>
+  </TableRow>
+);
+
+const SkeletonFilterBar = () => (
+  <Card>
+    <CardContent className="pt-6">
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="h-10 bg-gray-200 rounded w-[180px] animate-pulse"></div>
+          <div className="h-10 bg-gray-200 rounded w-[180px] animate-pulse"></div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+// Types
 interface Payment {
   id: string;
   studentId: string;
@@ -34,25 +78,7 @@ interface Payment {
   justificatif?: string;
   semester?: string;
   description: string;
-}
-
-interface ManualPaymentForm {
-  studentId: string;
-  type: 'inscription' | 'scolarite' | 'cantine' | 'activites';
-  montant: number;
-  methode: 'especes' | 'cheque' | 'virement' | 'mobile_money';
-  date: string;
-  reference: string;
-  notes: string;
-  semester?: string;
-  description: string;
-  // Champs spécifiques selon la méthode
-  banque?: string;
-  numeroCheque?: string;
-  numeroCompte?: string;
-  operateurMobile?: string;
-  numeroTelephone?: string;
-  justificatifFile?: File;
+  createdBy?: string;
 }
 
 interface Student {
@@ -71,6 +97,43 @@ interface Student {
   currentSemester: string;
 }
 
+interface ManualPaymentForm {
+  studentId: string;
+  type: 'inscription' | 'scolarite' | 'cantine' | 'activites';
+  montant: number;
+  methode: 'especes' | 'cheque' | 'virement' | 'mobile_money';
+  date: string;
+  reference: string;
+  notes: string;
+  semester?: string;
+  description: string;
+  banque?: string;
+  numeroCheque?: string;
+  numeroCompte?: string;
+  operateurMobile?: string;
+  numeroTelephone?: string;
+  justificatifFile?: File;
+}
+
+interface ApiResponse {
+  success: boolean;
+  data: Payment[] | Payment | Student[] | Student;
+  metadata?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    stats: {
+      totalEnAttente: number;
+      totalApprouves: number;
+      totalMontantEnAttente: number;
+      totalMontantApprouve: number;
+    };
+  };
+  message?: string;
+  error?: string;
+}
+
 type ManualPaymentFormField = keyof ManualPaymentForm;
 
 export default function PaiementsComptablePage() {
@@ -83,6 +146,9 @@ export default function PaiementsComptablePage() {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isManualPaymentModalOpen, setIsManualPaymentModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [apiMessage, setApiMessage] = useState<string | null>(null);
   
   const [manualPaymentForm, setManualPaymentForm] = useState<ManualPaymentForm>({
     studentId: '',
@@ -96,96 +162,62 @@ export default function PaiementsComptablePage() {
     description: ''
   });
 
-  // Données simulées avec les bonnes structures
+  // Charger les données
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setApiMessage(null);
+
+      console.log('🔄 Chargement des paiements...');
+
+      // Charger les paiements
+      const paymentsResponse = await fetch('/api/comptable/paiements');
+      
+      if (!paymentsResponse.ok) {
+        throw new Error(`Erreur HTTP: ${paymentsResponse.status}`);
+      }
+
+      const paymentsData: ApiResponse = await paymentsResponse.json();
+      console.log('📊 Réponse paiements:', paymentsData);
+
+      if (paymentsData.success) {
+        setPayments(paymentsData.data as Payment[]);
+        
+        if (paymentsData.message) {
+          setApiMessage(paymentsData.message);
+        }
+      } else {
+        throw new Error(paymentsData.error || 'Erreur inconnue du serveur');
+      }
+
+      // Charger les étudiants
+      const studentsResponse = await fetch('/api/comptable/paiements', { method: 'PATCH' });
+      
+      if (studentsResponse.ok) {
+        const studentsData: ApiResponse = await studentsResponse.json();
+        if (studentsData.success) {
+          setStudents(studentsData.data as Student[]);
+        }
+      }
+
+      console.log('✅ Données chargées avec succès');
+    } catch (err) {
+      console.error('❌ Erreur chargement:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erreur de connexion au serveur';
+      setError(errorMessage);
+      
+      // Données de secours
+      setPayments([]);
+      setStudents([]);
+      setApiMessage('Mode dégradé - Données limitées disponibles');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const mockStudents: Student[] = [
-      {
-        id: 's1',
-        name: 'Marie Dupont',
-        filiere: 'Développement Web',
-        vague: 'Vague Janvier 2024',
-        parentName: 'M. Dupont',
-        registrationFee: 50000,
-        tuitionFee: 885000,
-        paidAmount: 345000,
-        remainingAmount: 590000,
-        totalSchoolFees: 935000,
-        paidSemesters: ['Semestre 1'],
-        pendingSemesters: ['Semestre 2', 'Semestre 3'],
-        currentSemester: 'Semestre 2'
-      },
-      {
-        id: 's2',
-        name: 'Pierre Martin',
-        filiere: 'Data Science',
-        vague: 'Vague Janvier 2024',
-        parentName: 'Mme. Martin',
-        registrationFee: 50000,
-        tuitionFee: 885000,
-        paidAmount: 0,
-        remainingAmount: 935000,
-        totalSchoolFees: 935000,
-        paidSemesters: [],
-        pendingSemesters: ['Semestre 1', 'Semestre 2', 'Semestre 3'],
-        currentSemester: 'Semestre 1'
-      }
-    ];
-
-    const mockPayments: Payment[] = [
-      {
-        id: '1',
-        studentId: 's1',
-        studentName: 'Marie Dupont',
-        parentName: 'M. Dupont',
-        filiere: 'Développement Web',
-        vague: 'Vague Janvier 2024',
-        montant: 50000,
-        type: 'inscription',
-        methode: 'especes',
-        statut: 'approuve',
-        datePaiement: '2024-01-15',
-        dateValidation: '2024-01-15',
-        reference: 'INS-001',
-        description: 'Frais d\'inscription - Année scolaire 2024/2025'
-      },
-      {
-        id: '2',
-        studentId: 's1',
-        studentName: 'Marie Dupont',
-        parentName: 'M. Dupont',
-        filiere: 'Développement Web',
-        vague: 'Vague Janvier 2024',
-        montant: 295000,
-        type: 'scolarite',
-        methode: 'virement',
-        statut: 'approuve',
-        datePaiement: '2024-01-20',
-        dateValidation: '2024-01-20',
-        reference: 'SCO-S1-001',
-        semester: 'Semestre 1',
-        description: 'Frais de scolarité - Semestre 1'
-      },
-      {
-        id: '3',
-        studentId: 's1',
-        studentName: 'Marie Dupont',
-        parentName: 'M. Dupont',
-        filiere: 'Développement Web',
-        vague: 'Vague Janvier 2024',
-        montant: 295000,
-        type: 'scolarite',
-        methode: 'mobile_money',
-        statut: 'en_attente',
-        datePaiement: '2024-02-15',
-        reference: 'SCO-S2-001',
-        semester: 'Semestre 2',
-        description: 'Frais de scolarité - Semestre 2'
-      }
-    ];
-
-    setStudents(mockStudents);
-    setPayments(mockPayments);
-    setFilteredPayments(mockPayments);
+    fetchData();
   }, []);
 
   // Filtrage
@@ -266,63 +298,78 @@ export default function PaiementsComptablePage() {
     }
   };
 
-  // Fonction pour mettre à jour les données de l'élève après approbation
-  const updateStudentPaymentData = (studentId: string, montant: number, semester?: string) => {
-    setStudents(prev => prev.map(student => {
-      if (student.id === studentId) {
-        const newPaidAmount = student.paidAmount + montant;
-        const newRemainingAmount = Math.max(0, student.totalSchoolFees - newPaidAmount);
+  const handleApprovePayment = async (paymentId: string) => {
+    try {
+      const response = await fetch('/api/comptable/paiements', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: paymentId, action: 'approve' })
+      });
+
+      const data: ApiResponse = await response.json();
+
+      if (data.success) {
+        setPayments(prev => prev.map(p => 
+          p.id === paymentId ? data.data as Payment : p
+        ));
+        setApiMessage('Paiement approuvé avec succès');
         
-        const newPaidSemesters = [...student.paidSemesters];
-        let newPendingSemesters = [...student.pendingSemesters];
-        
-        // Si c'est un paiement de scolarité avec semestre, mettre à jour les listes
-        if (semester && student.pendingSemesters.includes(semester)) {
-          newPaidSemesters.push(semester);
-          newPendingSemesters = newPendingSemesters.filter(s => s !== semester);
-        }
-        
-        return {
-          ...student,
-          paidAmount: newPaidAmount,
-          remainingAmount: newRemainingAmount,
-          paidSemesters: newPaidSemesters,
-          pendingSemesters: newPendingSemesters
-        };
+        // Recharger les données pour mettre à jour les statistiques
+        fetchData();
+      } else {
+        setError(data.error || 'Erreur lors de l\'approbation');
       }
-      return student;
-    }));
+    } catch (err) {
+      console.error('Erreur approbation:', err);
+      setError('Erreur lors de l\'approbation');
+    }
   };
 
-  const handleApprovePayment = (paymentId: string) => {
-    setPayments(prev => prev.map(p => {
-      if (p.id === paymentId) {
-        const updatedPayment: Payment = { 
-          ...p, 
-          statut: 'approuve', 
-          dateValidation: new Date().toISOString().split('T')[0] 
-        };
-        
-        // Mettre à jour les données de l'élève
-        updateStudentPaymentData(p.studentId, p.montant, p.semester);
-        
-        return updatedPayment;
+  const handleRejectPayment = async (paymentId: string) => {
+    try {
+      const response = await fetch('/api/comptable/paiements', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: paymentId, action: 'reject' })
+      });
+
+      const data: ApiResponse = await response.json();
+
+      if (data.success) {
+        setPayments(prev => prev.map(p => 
+          p.id === paymentId ? data.data as Payment : p
+        ));
+        setApiMessage('Paiement rejeté avec succès');
+      } else {
+        setError(data.error || 'Erreur lors du rejet');
       }
-      return p;
-    }));
+    } catch (err) {
+      console.error('Erreur rejet:', err);
+      setError('Erreur lors du rejet');
+    }
   };
 
-  const handleRejectPayment = (paymentId: string) => {
-    setPayments(prev => prev.map(p => 
-      p.id === paymentId 
-        ? { ...p, statut: 'rejete', dateValidation: new Date().toISOString().split('T')[0] }
-        : p
-    ));
-  };
+  const handleViewDetails = async (payment: Payment) => {
+    try {
+      // Charger les détails complets du paiement
+      const response = await fetch(`/api/comptable/paiements?id=${payment.id}`);
+      const data: ApiResponse = await response.json();
 
-  const handleViewDetails = (payment: Payment) => {
-    setSelectedPayment(payment);
-    setIsDetailModalOpen(true);
+      if (data.success) {
+        setSelectedPayment(data.data as Payment);
+        setIsDetailModalOpen(true);
+      } else {
+        setError(data.error || 'Erreur lors du chargement des détails');
+      }
+    } catch (err) {
+      console.error('Erreur détails:', err);
+      setSelectedPayment(payment);
+      setIsDetailModalOpen(true);
+    }
   };
 
   const generateDescription = (type: string, semester?: string): string => {
@@ -343,53 +390,61 @@ export default function PaiementsComptablePage() {
     }
   };
 
-  const handleManualPaymentSubmit = () => {
-    const selectedStudent = students.find(s => s.id === manualPaymentForm.studentId);
-    if (!selectedStudent) return;
+  const handleManualPaymentSubmit = async () => {
+    try {
+      if (!manualPaymentForm.studentId || !manualPaymentForm.montant || !manualPaymentForm.methode || !manualPaymentForm.date) {
+        setError('Veuillez remplir tous les champs obligatoires');
+        return;
+      }
 
-    // Générer la description automatiquement
-    const description = manualPaymentForm.description || generateDescription(manualPaymentForm.type, manualPaymentForm.semester);
-    
-    // Générer une référence automatique
-    const reference = manualPaymentForm.reference || `MAN-${Date.now()}`;
-    
-    const newPayment: Payment = {
-      id: `manual-${Date.now()}`,
-      studentId: manualPaymentForm.studentId,
-      studentName: selectedStudent.name,
-      parentName: selectedStudent.parentName,
-      filiere: selectedStudent.filiere,
-      vague: selectedStudent.vague,
-      montant: manualPaymentForm.montant,
-      type: manualPaymentForm.type,
-      methode: manualPaymentForm.methode,
-      statut: 'saisi_manuel',
-      datePaiement: manualPaymentForm.date,
-      reference: reference,
-      notes: manualPaymentForm.notes,
-      semester: manualPaymentForm.type === 'scolarite' ? manualPaymentForm.semester : undefined,
-      description: description
-    };
+      // Générer la description automatiquement
+      const description = manualPaymentForm.description || generateDescription(manualPaymentForm.type, manualPaymentForm.semester);
+      
+      const dataToSend = {
+        ...manualPaymentForm,
+        description,
+        montant: parseInt(manualPaymentForm.montant.toString())
+      };
 
-    setPayments(prev => [newPayment, ...prev]);
-    
-    // Si c'est un paiement manuel, on met à jour directement les données de l'élève
-    updateStudentPaymentData(manualPaymentForm.studentId, manualPaymentForm.montant, manualPaymentForm.semester);
-    
-    setIsManualPaymentModalOpen(false);
-    
-    // Reset du formulaire
-    setManualPaymentForm({
-      studentId: '',
-      type: 'scolarite',
-      montant: 0,
-      methode: 'especes',
-      date: new Date().toISOString().split('T')[0],
-      reference: '',
-      notes: '',
-      semester: '',
-      description: ''
-    });
+      console.log('📤 Envoi paiement manuel:', dataToSend);
+
+      const response = await fetch('/api/comptable/paiements', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dataToSend)
+      });
+
+      const data: ApiResponse = await response.json();
+
+      if (data.success) {
+        setPayments(prev => [data.data as Payment, ...prev]);
+        setIsManualPaymentModalOpen(false);
+        setApiMessage('Paiement enregistré avec succès !');
+        
+        // Reset du formulaire
+        setManualPaymentForm({
+          studentId: '',
+          type: 'scolarite',
+          montant: 0,
+          methode: 'especes',
+          date: new Date().toISOString().split('T')[0],
+          reference: '',
+          notes: '',
+          semester: '',
+          description: ''
+        });
+
+        // Recharger les données pour mettre à jour les statistiques
+        fetchData();
+      } else {
+        setError(data.error || 'Erreur lors de la création');
+      }
+    } catch (err) {
+      console.error('Erreur création:', err);
+      setError('Erreur lors de la création');
+    }
   };
 
   const handleFormChange = (field: ManualPaymentFormField, value: string | number | File) => {
@@ -422,12 +477,11 @@ export default function PaiementsComptablePage() {
       case 'inscription':
         return student.registrationFee;
       case 'scolarite':
-        // Prix par semestre (total scolarité / nombre de semestres)
         return Math.round(student.tuitionFee / 3);
       case 'cantine':
-        return 25000; // Prix fixe pour la cantine
+        return 25000;
       case 'activites':
-        return 50000; // Prix fixe pour les activités
+        return 50000;
       default:
         return 0;
     }
@@ -555,8 +609,84 @@ export default function PaiementsComptablePage() {
     totalEnAttente: payments.filter(p => p.statut === 'en_attente').length,
     totalApprouves: payments.filter(p => p.statut === 'approuve').length,
     totalMontantEnAttente: payments.filter(p => p.statut === 'en_attente').reduce((sum, p) => sum + p.montant, 0),
-    totalMontantApprouve: payments.filter(p => p.statut === 'approuve').reduce((sum, p) => sum + p.montant, 0)
+    totalMontantApprouve: payments.filter(p => p.statut === 'approuve').reduce((sum, p) => sum + p.montant, 0),
+    totalPaiements: payments.length,
+    totalMontant: payments.reduce((sum, p) => sum + p.montant, 0)
   };
+
+  const handleRefresh = () => {
+    fetchData();
+  };
+
+  // Loading Skeleton
+  if (loading) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+        {/* Header Skeleton */}
+        <div className="flex-shrink-0 bg-white border-b border-gray-200 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-3">
+              <div className="h-8 bg-gray-200 rounded w-64 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded w-96 animate-pulse"></div>
+            </div>
+            <div className="flex gap-3 mt-4 sm:mt-0">
+              <div className="h-9 bg-gray-200 rounded w-24 animate-pulse"></div>
+              <div className="h-9 bg-gray-200 rounded w-32 animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Skeleton */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-6 max-w-7xl mx-auto">
+            {/* Stats Cards Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+
+            {/* Filter Bar Skeleton */}
+            <SkeletonFilterBar />
+
+            {/* Table Skeleton */}
+            <Card>
+              <CardHeader>
+                <div className="h-6 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded w-64 animate-pulse"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Élève & Parent</TableHead>
+                        <TableHead>Filière & Vague</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Semestre</TableHead>
+                        <TableHead>Méthode</TableHead>
+                        <TableHead>Montant</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {[...Array(5)].map((_, index) => (
+                        <SkeletonTableRow key={index} />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
@@ -566,18 +696,49 @@ export default function PaiementsComptablePage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestion des Paiements</h1>
             <p className="text-gray-600 mt-1">Saisie et validation des paiements physiques</p>
+            {apiMessage && (
+              <div className="flex items-center gap-2 mt-2">
+                <Info className="h-4 w-4 text-blue-500" />
+                <span className="text-sm text-blue-600">{apiMessage}</span>
+              </div>
+            )}
           </div>
-          <div className="flex gap-3 mt-4 sm:mt-0 flex flex-col">
-            <Button variant="outline">
+          <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-0">
+            <Button variant="outline" onClick={handleRefresh} className="flex items-center justify-center">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Actualiser
+            </Button>
+            <Button variant="outline" className="flex items-center justify-center">
               <Download className="h-4 w-4 mr-2" />
               Exporter
             </Button>
-            <Button onClick={() => setIsManualPaymentModalOpen(true)}>
+            <Button onClick={() => setIsManualPaymentModalOpen(true)} className="flex items-center justify-center">
               <Plus className="h-4 w-4 mr-2" />
               Saisir Paiement
             </Button>
           </div>
         </div>
+
+        {/* Message d'erreur */}
+        {error && (
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              <div>
+                <p className="font-medium text-red-800">Erreur</p>
+                <p className="text-sm text-red-700 mt-1">{error}</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setError(null)}
+                className="ml-auto text-red-600 hover:text-red-700"
+              >
+                ×
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Contenu scrollable */}
@@ -610,7 +771,7 @@ export default function PaiementsComptablePage() {
                 <CardTitle className="text-sm font-medium">Total Paiements</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{payments.length}</div>
+                <div className="text-2xl font-bold text-blue-600">{stats.totalPaiements}</div>
                 <p className="text-xs text-gray-600 mt-1">paiements traités</p>
               </CardContent>
             </Card>
@@ -621,7 +782,7 @@ export default function PaiementsComptablePage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-purple-600">
-                  {formatMoney(payments.reduce((sum, p) => sum + p.montant, 0))}
+                  {formatMoney(stats.totalMontant)}
                 </div>
                 <p className="text-xs text-gray-600 mt-1">tous statuts</p>
               </CardContent>
@@ -644,7 +805,7 @@ export default function PaiementsComptablePage() {
                   </div>
                 </div>
                 
-                <div className="flex gap-3 sm:flex flex-col">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Select value={selectedStatut} onValueChange={setSelectedStatut}>
                     <SelectTrigger className="w-[150px] bg-white border-gray-300">
                       <Filter className="h-4 w-4 mr-2" />
@@ -668,6 +829,8 @@ export default function PaiementsComptablePage() {
                       <SelectItem value="all">Tous types</SelectItem>
                       <SelectItem value="inscription">Inscription</SelectItem>
                       <SelectItem value="scolarite">Scolarité</SelectItem>
+                      <SelectItem value="cantine">Cantine</SelectItem>
+                      <SelectItem value="activites">Activités</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -800,7 +963,7 @@ export default function PaiementsComptablePage() {
         </div>
       </div>
 
-      {/* Modal de détail - Version simplifiée et professionnelle */}
+      {/* Modal de détail */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
         <DialogContent className="max-w-md bg-white">
           <DialogHeader>
@@ -809,7 +972,6 @@ export default function PaiementsComptablePage() {
           
           {selectedPayment && (
             <div className="space-y-4 bg-white">
-              {/* Informations de base */}
               <div className="space-y-3">
                 <div className="flex justify-between items-center border-b pb-2">
                   <span className="font-medium text-gray-700">Élève:</span>
@@ -866,6 +1028,13 @@ export default function PaiementsComptablePage() {
                   <span className="font-medium text-gray-700">Référence:</span>
                   <span className="font-mono text-sm">{selectedPayment.reference}</span>
                 </div>
+
+                {selectedPayment.createdBy && (
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-medium text-gray-700">Créé par:</span>
+                    <span>{selectedPayment.createdBy}</span>
+                  </div>
+                )}
               </div>
 
               {/* Résumé financier de l'élève */}

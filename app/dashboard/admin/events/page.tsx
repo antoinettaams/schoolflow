@@ -7,6 +7,8 @@ import {
   Filter, Search, ChevronDown, Plus, Edit, Trash2, X, Save,
   LucideIcon
 } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
+import toast from 'react-hot-toast';
 
 // Interfaces
 interface SchoolEvent {
@@ -22,10 +24,107 @@ interface SchoolEvent {
   month: string;
   time: string;
   description?: string;
+  createdBy?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
 }
 
+// Composants Skeleton
+const EventCardSkeleton: React.FC = () => {
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-blue-500/50 animate-pulse">
+      <div className="flex flex-col sm:flex-row">
+        {/* Section Date Skeleton */}
+        <div className="bg-gray-200 p-4 flex items-center justify-between sm:justify-center sm:flex-col w-full sm:w-28 flex-shrink-0">
+          <div className="text-center space-y-2">
+            <div className="h-8 w-12 bg-gray-300 rounded mx-auto"></div>
+            <div className="h-4 w-16 bg-gray-300 rounded mx-auto"></div>
+            <div className="h-3 w-12 bg-gray-300 rounded mx-auto"></div>
+          </div>
+        </div>
+
+        {/* Détails Skeleton */}
+        <div className="flex-1 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="flex-1 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="h-5 w-5 bg-gray-300 rounded-full mt-0.5 flex-shrink-0"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-6 w-3/4 bg-gray-300 rounded"></div>
+                  <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                  <div className="h-4 w-full bg-gray-200 rounded"></div>
+                  <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 bg-gray-300 rounded-full"></div>
+                      <div className="h-3 w-24 bg-gray-200 rounded"></div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 bg-gray-300 rounded-full"></div>
+                      <div className="h-3 w-20 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Actions Skeleton */}
+            <div className="flex items-center justify-between sm:justify-end gap-2 sm:flex-col sm:items-end">
+              <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
+              <div className="flex gap-1">
+                <div className="h-8 w-8 bg-gray-200 rounded"></div>
+                <div className="h-8 w-8 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MonthSectionSkeleton: React.FC = () => {
+  return (
+    <section className="space-y-4">
+      {/* En-tête du mois Skeleton */}
+      <div className="flex items-center gap-3">
+        <div className="w-1 h-8 bg-gray-300 rounded-full flex-shrink-0"></div>
+        <div className="h-7 w-32 bg-gray-300 rounded"></div>
+        <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
+      </div>
+
+      {/* Grille des événements Skeleton */}
+      <div className="grid gap-4">
+        {[...Array(3)].map((_, index) => (
+          <EventCardSkeleton key={index} />
+        ))}
+      </div>
+    </section>
+  );
+};
+
+const FilterSkeleton: React.FC = () => {
+  return (
+    <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm animate-pulse">
+      <div className="space-y-4">
+        <div>
+          <div className="h-4 w-24 bg-gray-300 rounded mb-3"></div>
+          <div className="flex flex-wrap gap-2">
+            {[...Array(6)].map((_, index) => (
+              <div key={index} className="h-8 w-20 bg-gray-200 rounded-full"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Composant Principal
-export default function CensorEventsPage() {
+export default function EventsPage() {
+  const { user } = useUser();
   const [events, setEvents] = useState<SchoolEvent[]>([]);
   const [eventTypes, setEventTypes] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -33,6 +132,7 @@ export default function CensorEventsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<SchoolEvent | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
     title: '',
     type: '',
@@ -42,55 +142,120 @@ export default function CensorEventsPage() {
     description: '',
     badge: 'Important'
   });
-  const [customType, setCustomType] = useState('');
 
-  // Charger les données
+  // Vérifier si l'utilisateur peut modifier (admin ou censeur)
+  const userRole = user?.publicMetadata?.role as string || '';
+  const canModify = userRole && (
+    userRole.toLowerCase().includes('admin') || 
+    userRole.toLowerCase().includes('censeur') ||
+    userRole === 'Admin' ||
+    userRole === 'Censeur'
+  );
+
+  // Charger les événements depuis l'API
   useEffect(() => {
-    const savedEvents = localStorage.getItem('schoolflow_events');
-    const savedTypes = localStorage.getItem('schoolflow_event_types');
-    
-    if (savedEvents) {
-      setEvents(JSON.parse(savedEvents));
-    } else {
-      // Données par défaut
-      const defaultEvents: SchoolEvent[] = [
-        { id: '1', date: "24 Octobre", day: "MER", title: "Réunion Parents-Professeurs", type: "Réunion", location: "Gymnase de l'école", icon: "Users", color: "bg-blue-500", badge: "Important", month: "Octobre", time: "18:00 - 20:00" },
-        { id: '2', date: "27 Octobre", day: "SAM", title: "Voyage Scolaire à Rome", type: "Voyage", location: "Départ à 8h00", icon: "Sun", color: "bg-indigo-500", badge: "Optionnel", month: "Octobre", time: "08:00 - 20:00" },
-        { id: '3', date: "01 Novembre", day: "JEU", title: "Toussaint - Jour Férié", type: "Congé", location: "École Fermée", icon: "AlertCircle", color: "bg-green-500", badge: "Congé", month: "Novembre", time: "Toute la journée" },
-      ];
-      setEvents(defaultEvents);
-      localStorage.setItem('schoolflow_events', JSON.stringify(defaultEvents));
-    }
-
-    if (savedTypes) {
-      setEventTypes(['Tous', ...JSON.parse(savedTypes)]);
-    } else {
-      // Types par défaut
-      const defaultTypes = ['Réunion', 'Voyage', 'Congé', 'Compétition', 'Fête'];
-      setEventTypes(['Tous', ...defaultTypes]);
-      localStorage.setItem('schoolflow_event_types', JSON.stringify(defaultTypes));
-    }
+    loadEvents();
+    loadEventTypes();
   }, []);
 
-  // Sauvegarder les événements
-  const saveEvents = (updatedEvents: SchoolEvent[]) => {
-    setEvents(updatedEvents);
-    localStorage.setItem('schoolflow_events', JSON.stringify(updatedEvents));
+  const loadEvents = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/censor/events');
+      if (response.ok) {
+        const data = await response.json();
+        setEvents(data);
+      } else {
+        toast.error('Erreur chargement événements');
+      }
+    } catch (error) {
+      toast.error('Erreur chargement événements:');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Sauvegarder les types
-  const saveEventTypes = (updatedTypes: string[]) => {
-    const typesWithoutTous = updatedTypes.filter(type => type !== 'Tous');
-    setEventTypes(['Tous', ...typesWithoutTous]);
-    localStorage.setItem('schoolflow_event_types', JSON.stringify(typesWithoutTous));
+  const loadEventTypes = async () => {
+    const defaultTypes = ['Tous', 'Réunion', 'Voyage', 'Congé', 'Compétition', 'Fête', 'Sport', 'Culturel', 'Pédagogique'];
+    setEventTypes(defaultTypes);
   };
 
-  // Ajouter un nouveau type
-  const addEventType = (newType: string) => {
-    if (newType && !eventTypes.includes(newType)) {
-      const updatedTypes = [...eventTypes.filter(type => type !== 'Tous'), newType];
-      saveEventTypes(updatedTypes);
-      setCustomType('');
+  // CRUD Operations
+  const createEvent = async (eventData: any) => {
+    try {
+      const response = await fetch('/api/censor/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventData),
+      });
+
+      if (response.ok) {
+        const newEvent = await response.json();
+        setEvents(prev => [newEvent, ...prev]);
+        return true;
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Erreur lors de la création');
+        return false;
+      }
+    } catch (error) {
+      toast.error('Erreur création événement:');
+      toast('Erreur lors de la création');
+      return false;
+    }
+  };
+
+  const updateEvent = async (id: string, eventData: any) => {
+    try {
+      const response = await fetch('/api/censor/events', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: id,
+          ...eventData
+        }),
+      });
+
+      if (response.ok) {
+        const updatedEvent = await response.json();
+        setEvents(prev => prev.map(event => 
+          event.id === id ? updatedEvent : event
+        ));
+        return true;
+      } else {
+        const error = await response.json();
+        toast(error.error || 'Erreur lors de la modification');
+        return false;
+      }
+    } catch (error) {
+      toast.error('Erreur modification événement:');
+      toast('Erreur lors de la modification');
+      return false;
+    }
+  };
+
+  const deleteEvent = async (id: string) => {
+    try {
+      const response = await fetch(`/api/censor/events?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setEvents(prev => prev.filter(event => event.id !== id));
+        return true;
+      } else {
+        const error = await response.json();
+        toast(error.error || 'Erreur lors de la suppression');
+        return false;
+      }
+    } catch (error) {
+      toast.error('Erreur suppression événement:');
+      toast('Erreur lors de la suppression');
+      return false;
     }
   };
 
@@ -114,10 +279,15 @@ export default function CensorEventsPage() {
 
   // Gestion du formulaire
   const handleAddNew = () => {
+    if (!canModify) {
+      toast("Vous n'avez pas les permissions pour créer un événement");
+      return;
+    }
+    
     setEditingEvent(null);
     setFormData({
       title: '',
-      type: eventTypes[1] || '', 
+      type: eventTypes[1] || '',
       location: '',
       date: '',
       time: '',
@@ -128,6 +298,11 @@ export default function CensorEventsPage() {
   };
 
   const handleEdit = (event: SchoolEvent) => {
+    if (!canModify) {
+      toast("Vous n'avez pas les permissions pour modifier un événement");
+      return;
+    }
+    
     setEditingEvent(event);
     setFormData({
       title: event.title,
@@ -141,93 +316,34 @@ export default function CensorEventsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet événement ?')) {
-      const updatedEvents = events.filter(event => event.id !== id);
-      saveEvents(updatedEvents);
-    }
-  };
-
-  const handleSave = () => {
-    if (!formData.title || !formData.type || !formData.location || !formData.date || !formData.time) {
-      alert("Veuillez remplir tous les champs obligatoires.");
+  const handleDelete = async (id: string) => {
+    if (!canModify) {
+      toast("Vous n'avez pas les permissions pour supprimer un événement");
       return;
     }
 
-    // Vérifier si le type existe, sinon l'ajouter
-    if (formData.type && !eventTypes.includes(formData.type)) {
-      addEventType(formData.type);
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet événement ?')) {
+      await deleteEvent(id);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!formData.title || !formData.type || !formData.location || !formData.date || !formData.time) {
+      toast("Veuillez remplir tous les champs obligatoires.");
+      return;
     }
 
-    // Générer les métadonnées automatiques
-    const dateParts = formData.date.split(' ');
-    const month = dateParts[1] || 'Mois';
-    const dayAbbrev = getDayAbbreviation();
+    const success = editingEvent 
+      ? await updateEvent(editingEvent.id, formData)
+      : await createEvent(formData);
 
-    const eventData: SchoolEvent = {
-      id: editingEvent?.id || Date.now().toString(),
-      title: formData.title,
-      type: formData.type,
-      location: formData.location,
-      date: formData.date,
-      day: dayAbbrev,
-      month: month,
-      time: formData.time,
-      description: formData.description,
-      badge: formData.badge,
-      icon: getIconByType(formData.type),
-      color: getColorByType(formData.type)
-    };
-
-    if (editingEvent) {
-      // Modification
-      const updatedEvents = events.map(event => 
-        event.id === editingEvent.id ? eventData : event
-      );
-      saveEvents(updatedEvents);
-    } else {
-      // Création
-      saveEvents([...events, eventData]);
+    if (success) {
+      setIsDialogOpen(false);
+      setEditingEvent(null);
     }
-
-    setIsDialogOpen(false);
-    setEditingEvent(null);
   };
 
-  // Fonctions utilitaires
-  const getDayAbbreviation = () => {
-    const days = ['DIM', 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM'];
-    return days[Math.floor(Math.random() * days.length)]; 
-  };
-
-  const getIconByType = (type: string) => {
-    const icons: Record<string, string> = {
-      'Réunion': 'Users',
-      'Voyage': 'Sun',
-      'Congé': 'AlertCircle',
-      'Compétition': 'Users',
-      'Fête': 'Sun',
-      'Sport': 'Users',
-      'Culturel': 'Sun',
-      'Pédagogique': 'ClipboardList'
-    };
-    return icons[type] || 'CalendarDays';
-  };
-
-  const getColorByType = (type: string) => {
-    const colors: Record<string, string> = {
-      'Réunion': 'bg-blue-500',
-      'Voyage': 'bg-indigo-500',
-      'Congé': 'bg-green-500',
-      'Compétition': 'bg-purple-500',
-      'Fête': 'bg-yellow-500',
-      'Sport': 'bg-red-500',
-      'Culturel': 'bg-pink-500',
-      'Pédagogique': 'bg-teal-500'
-    };
-    return colors[type] || 'bg-gray-500';
-  };
-
+  // Fonctions utilitaires pour les icônes
   const getIconComponent = (iconName: string): LucideIcon => {
     const icons: Record<string, LucideIcon> = {
       'Users': Users,
@@ -239,6 +355,17 @@ export default function CensorEventsPage() {
     return icons[iconName] || CalendarDays;
   };
 
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Accès non autorisé</h1>
+          <p className="text-gray-600">Veuillez vous connecter pour accéder à cette page.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
       
@@ -247,51 +374,76 @@ export default function CensorEventsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 truncate">
-                Gestion des Événements Scolaires
-              </h1>
-              <p className="text-gray-500 text-sm sm:text-base mt-1">
-                {filteredEvents.length} événement(s)
-              </p>
+              {isLoading ? (
+                <div className="space-y-2">
+                  <div className="h-8 w-64 bg-gray-300 rounded animate-pulse"></div>
+                  <div className="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 truncate">
+                    Événements Scolaires
+                  </h1>
+                  <p className="text-gray-500 text-sm sm:text-base mt-1">
+                    {filteredEvents.length} événement(s) - {canModify ? 'Mode édition' : 'Mode consultation'}
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
               {/* Barre de recherche */}
               <div className="relative flex-1 sm:flex-none sm:w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                  type="text"
-                  placeholder="Rechercher un événement..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                />
+                {isLoading ? (
+                  <div className="h-10 bg-gray-200 rounded-lg animate-pulse"></div>
+                ) : (
+                  <>
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <input
+                      type="text"
+                      placeholder="Rechercher un événement..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    />
+                  </>
+                )}
               </div>
               
               {/* Bouton Filtres */}
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white"
-              >
-                <Filter className="h-4 w-4" />
-                <span className="hidden sm:inline">Filtres</span>
-                <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-              </button>
+              {isLoading ? (
+                <div className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse"></div>
+              ) : (
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white"
+                >
+                  <Filter className="h-4 w-4" />
+                  <span className="hidden sm:inline">Filtres</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                </button>
+              )}
               
-              {/* Bouton Nouvel événement */}
-              <button 
-                onClick={handleAddNew}
-                className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Nouvel événement</span>
-                <span className="sm:hidden">Nouveau</span>
-              </button>
+              {/* Bouton Nouvel événement (seulement pour admin/censeur) */}
+              {isLoading ? (
+                <div className="h-10 w-40 bg-gray-200 rounded-lg animate-pulse"></div>
+              ) : (
+                canModify && (
+                  <button 
+                    onClick={handleAddNew}
+                    className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Nouvel événement</span>
+                    <span className="sm:hidden">Nouveau</span>
+                  </button>
+                )
+              )}
             </div>
           </div>
 
           {/* Filtres dépliants */}
-          {showFilters && (
+          {showFilters && !isLoading && (
             <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
               <div className="space-y-4">
                 <div>
@@ -312,44 +464,25 @@ export default function CensorEventsPage() {
                     ))}
                   </div>
                 </div>
-
-                {/* Ajout de type personnalisé */}
-                <div className="border-t pt-4">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Ajouter un type personnalisé :</h4>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="text"
-                      value={customType}
-                      onChange={(e) => setCustomType(e.target.value)}
-                      placeholder="Nouveau type d'événement"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <button
-                      onClick={() => {
-                        if (customType.trim()) {
-                          addEventType(customType.trim());
-                          setCustomType('');
-                        }
-                      }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors whitespace-nowrap"
-                    >
-                      Ajouter le type
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Les nouveaux types seront disponibles dans les filtres et lors de la création d'événements.
-                  </p>
-                </div>
               </div>
             </div>
           )}
+
+          {/* Skeleton pour les filtres */}
+          {isLoading && showFilters && <FilterSkeleton />}
         </div>
       </div>
 
       {/* Contenu principal */}
       <div className="max-w-7xl mx-auto p-4 sm:p-6">
         {/* Événements par mois */}
-        {Object.keys(eventsByMonth).length > 0 ? (
+        {isLoading ? (
+          <div className="space-y-8">
+            {[...Array(2)].map((_, index) => (
+              <MonthSectionSkeleton key={index} />
+            ))}
+          </div>
+        ) : Object.keys(eventsByMonth).length > 0 ? (
           <div className="space-y-8">
             {Object.entries(eventsByMonth).map(([month, monthEvents]) => (
               <section key={month} className="space-y-4">
@@ -369,7 +502,7 @@ export default function CensorEventsPage() {
                     return (
                       <div key={event.id} className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-blue-500/50 hover:shadow-lg transition-all duration-300">
                         <div className="flex flex-col sm:flex-row">
-                          {/* Section Date - Responsive */}
+                          {/* Section Date */}
                           <div className={`${event.color} text-white p-4 flex items-center justify-between sm:justify-center sm:flex-col w-full sm:w-28 flex-shrink-0`}>
                             <div className="text-center">
                               <div className="text-2xl sm:text-3xl font-bold">{event.date.split(' ')[0]}</div>
@@ -410,7 +543,7 @@ export default function CensorEventsPage() {
                                 </div>
                               </div>
                               
-                              {/* Actions et badge */}
+                              {/* Actions et badge (seulement pour admin/censeur) */}
                               <div className="flex items-center justify-between sm:justify-end gap-2 sm:flex-col sm:items-end">
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                   event.badge === "Important" ? "bg-blue-100 text-blue-800 border border-blue-200" : ""
@@ -421,22 +554,24 @@ export default function CensorEventsPage() {
                                 `}>
                                   {event.badge}
                                 </span>
-                                <div className="flex gap-1">
-                                  <button 
-                                    onClick={() => handleEdit(event)}
-                                    className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                                    aria-label="Modifier"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </button>
-                                  <button 
-                                    onClick={() => handleDelete(event.id)}
-                                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                                    aria-label="Supprimer"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
+                                {canModify && (
+                                  <div className="flex gap-1">
+                                    <button 
+                                      onClick={() => handleEdit(event)}
+                                      className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                      aria-label="Modifier"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleDelete(event.id)}
+                                      className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                                      aria-label="Supprimer"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -457,7 +592,7 @@ export default function CensorEventsPage() {
               <p className="text-gray-500 mb-6">
                 {searchTerm || selectedType !== "Tous" 
                   ? "Aucun événement ne correspond à vos critères de recherche." 
-                  : "Commencez par créer votre premier événement."}
+                  : "Aucun événement n'a été créé pour le moment."}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button 
@@ -466,21 +601,23 @@ export default function CensorEventsPage() {
                 >
                   Réinitialiser les filtres
                 </button>
-                <button 
-                  onClick={handleAddNew}
-                  className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  Créer un événement
-                </button>
+                {canModify && (
+                  <button 
+                    onClick={handleAddNew}
+                    className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Créer un événement
+                  </button>
+                )}
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Modal d'ajout/modification */}
-      {isDialogOpen && (
+      {/* Modal d'ajout/modification (seulement pour admin/censeur) */}
+      {isDialogOpen && canModify && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             {/* En-tête */}

@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
 
 interface ActivityItem {
@@ -29,6 +30,82 @@ interface ActivityItem {
   icon: React.ReactNode;
 }
 
+// Composants Skeleton
+const ProfileHeaderSkeleton = () => (
+  <Card className="relative overflow-hidden border-0 shadow-xl animate-pulse">
+    <div className="bg-gray-200 h-40 w-full relative">
+      <div className="absolute left-8 bottom-0 translate-y-1/2">
+        <Skeleton className="w-32 h-32 rounded-full" />
+      </div>
+    </div>
+    <CardHeader className="pt-16 pb-6">
+      <Skeleton className="h-8 w-64 mb-2" />
+      <Skeleton className="h-4 w-48" />
+    </CardHeader>
+    <CardContent className="p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <Skeleton className="w-6 h-6 rounded-full" />
+        <Skeleton className="h-6 w-48" />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="flex items-center p-4">
+            <Skeleton className="w-5 h-5 rounded-full mr-4" />
+            <div className="flex-1">
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-5 w-32" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </CardContent>
+    <CardContent className="px-6 py-4 border-t bg-gray-50/50">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-12 w-64 rounded-xl" />
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const SecurityCardSkeleton = () => (
+  <Card className="border-0 shadow-xl animate-pulse">
+    <CardHeader>
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-6 h-6 rounded-full" />
+        <Skeleton className="h-6 w-48" />
+      </div>
+    </CardHeader>
+    <CardContent>
+      <Skeleton className="w-full h-16 rounded-lg" />
+    </CardContent>
+  </Card>
+);
+
+const ActivityCardSkeleton = () => (
+  <Card className="border-0 shadow-xl animate-pulse">
+    <CardHeader>
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-6 h-6 rounded-full" />
+        <Skeleton className="h-6 w-48" />
+      </div>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-3">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="flex items-center gap-3 p-3">
+            <Skeleton className="w-4 h-4 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+);
+
 const AdminProfilePage = () => {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
@@ -37,7 +114,16 @@ const AdminProfilePage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [userActivity, setUserActivity] = useState<ActivityItem[]>([]);
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Simuler un chargement initial
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsPageLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Activité simulée
   const getUserActivity = (): ActivityItem[] => [
@@ -140,7 +226,22 @@ const AdminProfilePage = () => {
   const handleConfirmLogout = async () => await signOut({ redirectUrl: "/auth/signin" });
   const handleCancelLogout = () => setIsLogoutModalOpen(false);
 
-  if (!isLoaded || !user) {
+  // Afficher le skeleton pendant le chargement
+  if (isPageLoading || !isLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+        <div className="h-screen overflow-y-auto">
+          <div className="max-w-6xl mx-auto p-6 space-y-6">
+            <ProfileHeaderSkeleton />
+            <SecurityCardSkeleton />
+            <ActivityCardSkeleton />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -171,7 +272,7 @@ const AdminProfilePage = () => {
           {/* Carte de profil principale */}
           <Card className="relative overflow-hidden border-0 shadow-xl">
             {/* Bannière */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-40 w-full relative">
+            <div className="bg-principal h-40 w-full relative">
               <div className="absolute left-8 bottom-0 translate-y-1/2">
                 <div className="relative">
                   <Image

@@ -1,4 +1,3 @@
-// app/dashboard/admin/filieres/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -11,7 +10,8 @@ import {
   FaGraduationCap,
   FaBook,
   FaLayerGroup,
-  FaClock
+  FaUsers,
+  FaChalkboardTeacher
 } from "react-icons/fa";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,23 +20,58 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// Types
+// Types CORRIGÉS
 interface Module {
   id: string;
   name: string;
   coefficient: number;
-  vague: string;
+  typeModule: string;
+  description?: string;
+  semestre?: string;
+  enseignants: Array<{ id: string; name: string }>;
+  vagues: string[];
 }
 
 interface Filiere {
   id: string;
   name: string;
   description: string;
-  duration: number;
+  duration: string; // CORRIGÉ: string au lieu de number
   totalModules: number;
   status: "active" | "inactive";
   modules: Module[];
   createdAt: string;
+  statistiques: {
+    totalEtudiants: number;
+    totalFormateurs: number;
+    totalSemestres: number;
+    vaguesAssociees: string[];
+  };
+}
+
+interface ApiResponse {
+  filieres: Filiere[];
+  metadata?: {
+    total: number;
+    filtres: {
+      searchTerm: string;
+      status: string;
+      vagueId: string;
+    };
+    vaguesDisponibles: string[];
+  };
+}
+
+interface StatsResponse {
+  general: {
+    totalFilieres: number;
+    filieresActives: number;
+    filieresInactives: number;
+    totalModules: number;
+    totalEtudiantsActifs: number;
+    totalFormateurs: number;
+    dureeLaPlusCourante: string; // CORRIGÉ: string au lieu de number
+  };
 }
 
 const AdminFilieresPage = () => {
@@ -49,10 +84,128 @@ const AdminFilieresPage = () => {
   const [selectedVague, setSelectedVague] = useState<string>("all");
   const [sortField, setSortField] = useState<keyof Filiere>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [loading, setLoading] = useState(true);
+  const [vaguesDisponibles, setVaguesDisponibles] = useState<string[]>([]);
+  
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    totalModules: 0,
+    totalEtudiants: 0,
+    totalFormateurs: 0,
+    dureeLaPlusCourante: "3 ans", // CORRIGÉ: string au lieu de number
+  });
 
   // Modal "Voir" état
   const [selectedFiliere, setSelectedFiliere] = useState<Filiere | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Charger les filières depuis l'API
+  const chargerFilieres = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      
+      if (searchTerm) params.append('search', searchTerm);
+      if (selectedStatus !== 'all') params.append('status', selectedStatus);
+      if (selectedVague !== 'all') params.append('vagueId', selectedVague);
+
+      const response = await fetch(`/api/admin/filieres?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors du chargement des filières');
+      }
+      
+      const data: ApiResponse = await response.json();
+      
+      if (data.filieres && Array.isArray(data.filieres)) {
+        setFilieres(data.filieres);
+        
+        if (data.metadata && Array.isArray(data.metadata.vaguesDisponibles)) {
+          const vaguesValides = data.metadata.vaguesDisponibles.filter((vague): vague is string => 
+            typeof vague === 'string' && vague.trim() !== ''
+          );
+          setVaguesDisponibles(vaguesValides);
+        }
+      } else {
+        const filieresArray = Array.isArray(data) ? data : [];
+        setFilieres(filieresArray);
+        
+        const toutesVagues = Array.from(new Set(
+          filieresArray.flatMap((filiere: Filiere) => 
+            (filiere.statistiques?.vaguesAssociees || []).concat(
+              filiere.modules.flatMap(module => module.vagues || [])
+            )
+          )
+        )).filter((vague): vague is string => 
+          typeof vague === 'string' && vague.trim() !== ''
+        ).sort();
+        
+        setVaguesDisponibles(toutesVagues);
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      setFilieres([]);
+      setVaguesDisponibles([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Charger les statistiques
+  const chargerStatistiques = async () => {
+    try {
+      const response = await fetch('/api/admin/filieres?action=stats');
+      
+      if (response.ok) {
+        const statsData: StatsResponse = await response.json();
+        
+        if (statsData.general) {
+          setStats({
+            total: statsData.general.totalFilieres || 0,
+            active: statsData.general.filieresActives || 0,
+            inactive: statsData.general.filieresInactives || 0,
+            totalModules: statsData.general.totalModules || 0,
+            totalEtudiants: statsData.general.totalEtudiantsActifs || 0,
+            totalFormateurs: statsData.general.totalFormateurs || 0,
+            dureeLaPlusCourante: statsData.general.dureeLaPlusCourante || "3 ans" // CORRIGÉ
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Erreur chargement statistiques:', error);
+      setStats({
+        total: 0,
+        active: 0,
+        inactive: 0,
+        totalModules: 0,
+        totalEtudiants: 0,
+        totalFormateurs: 0,
+        dureeLaPlusCourante: "3 ans" // CORRIGÉ
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      const userRole = user?.publicMetadata?.role as string;
+      if (userRole !== "Administrateur") {
+        router.push("/unauthorized");
+        return;
+      }
+      
+      chargerFilieres();
+      chargerStatistiques();
+    }
+  }, [isLoaded, isSignedIn, user, router]);
+
+  // Recharger quand les filtres changent
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      chargerFilieres();
+    }
+  }, [searchTerm, selectedStatus, selectedVague]);
 
   const openModal = (filiere: Filiere) => {
     setSelectedFiliere(filiere);
@@ -64,85 +217,26 @@ const AdminFilieresPage = () => {
     setIsModalOpen(false);
   };
 
-  // Vérification du rôle admin
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      const userRole = user?.publicMetadata?.role as string;
-      if (userRole !== "Administrateur") {
-        router.push("/unauthorized");
-      }
-    }
-  }, [isLoaded, isSignedIn, user, router]);
-
-  // Données simulées
-  useEffect(() => {
-    const mockFilieres: Filiere[] = [
-      {
-        id: "1",
-        name: "Informatique",
-        description: "Formation en développement logiciel et technologies de l'information",
-        duration: 3,
-        totalModules: 4,
-        status: "active",
-        createdAt: "2024-01-15",
-        modules: [
-          { id: "m1", name: "Programmation Java", coefficient: 4, vague: "Vague 2024 A" },
-          { id: "m2", name: "Base de données", coefficient: 3, vague: "Vague 2024 A" },
-          { id: "m3", name: "Réseaux informatiques", coefficient: 3, vague: "Vague 2024 B" },
-          { id: "m4", name: "Développement Web", coefficient: 4, vague: "Vague 2024 B" }
-        ]
-      },
-      {
-        id: "2",
-        name: "Mathématiques",
-        description: "Formation approfondie en mathématiques fondamentales et appliquées",
-        duration: 3,
-        totalModules: 3,
-        status: "active",
-        createdAt: "2024-02-10",
-        modules: [
-          { id: "m5", name: "Algèbre avancée", coefficient: 4, vague: "Vague 2024 A" },
-          { id: "m6", name: "Analyse complexe", coefficient: 4, vague: "Vague 2024 A" },
-          { id: "m7", name: "Probabilités et statistiques", coefficient: 3, vague: "Vague 2024 C" }
-        ]
-      },
-      {
-        id: "3",
-        name: "Physique-Chimie",
-        description: "Formation en physique fondamentale et chimie appliquée",
-        duration: 3,
-        totalModules: 2,
-        status: "inactive",
-        createdAt: "2024-03-05",
-        modules: [
-          { id: "m8", name: "Mécanique quantique", coefficient: 5, vague: "Vague 2024 A" },
-          { id: "m9", name: "Chimie organique", coefficient: 4, vague: "Vague 2024 B" }
-        ]
-      }
-    ];
-
-    setFilieres(mockFilieres);
-  }, []);
-
-  // Filtrage et tri
+  // Filtrage et tri CORRIGÉ
   const filteredFilieres = filieres
-    .filter(filiere => {
-      const matchesSearch =
-        filiere.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        filiere.description.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesStatus = selectedStatus === "all" || filiere.status === selectedStatus;
-
-      const matchesVague = selectedVague === "all" || 
-        filiere.modules.some(module => module.vague === selectedVague);
-
-      return matchesSearch && matchesStatus && matchesVague;
-    })
     .sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
 
       if (aValue === undefined || bValue === undefined) return 0;
+
+      // CORRECTION: Gestion spéciale pour le champ duration (string)
+      if (sortField === "duration") {
+        const extractNumber = (str: string): number => {
+          const match = str.match(/(\d+)/);
+          return match ? parseInt(match[1]) : 0;
+        };
+        
+        const aNum = extractNumber(a.duration);
+        const bNum = extractNumber(b.duration);
+        
+        return sortDirection === "asc" ? aNum - bNum : bNum - aNum;
+      }
 
       if (typeof aValue === "string" && typeof bValue === "string") {
         return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
@@ -163,25 +257,10 @@ const AdminFilieresPage = () => {
   };
 
   const getUniqueVagues = () => {
-    const vagues = new Set<string>();
-    filieres.forEach(filiere => {
-      filiere.modules.forEach(module => vagues.add(module.vague));
-    });
-    return Array.from(vagues);
+    return ["Toutes les vagues", ...vaguesDisponibles];
   };
 
-  const getStats = () => {
-    const total = filieres.length;
-    const active = filieres.filter(f => f.status === "active").length;
-    const inactive = filieres.filter(f => f.status === "inactive").length;
-    const totalModules = filieres.reduce((acc, filiere) => acc + filiere.totalModules, 0);
-    
-    return { total, active, inactive, totalModules };
-  };
-
-  const stats = getStats();
-
-  if (!isLoaded) {
+  if (!isLoaded || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-lg">Chargement de vos informations...</div>
@@ -227,7 +306,7 @@ const AdminFilieresPage = () => {
         </div>
 
         {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Filières</CardTitle>
@@ -258,14 +337,28 @@ const AdminFilieresPage = () => {
               <p className="text-xs text-muted-foreground">Modules enseignés</p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Statistiques supplémentaires */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Durée Moyenne</CardTitle>
-              <FaClock className="h-4 w-4 text-orange-500" />
+              <CardTitle className="text-sm font-medium">Étudiants Actifs</CardTitle>
+              <FaUsers className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3 ans</div>
-              <p className="text-xs text-muted-foreground">Cycle de formation</p>
+              <div className="text-2xl font-bold">{stats.totalEtudiants}</div>
+              <p className="text-xs text-muted-foreground">Étudiants en formation</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Formateurs</CardTitle>
+              <FaChalkboardTeacher className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalFormateurs}</div>
+              <p className="text-xs text-muted-foreground">Enseignants actifs</p>
             </CardContent>
           </Card>
         </div>
@@ -391,7 +484,6 @@ const AdminFilieresPage = () => {
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
                         <span className="font-medium">{filiere.duration}</span>
-                        <span className="text-sm text-gray-500">ans</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
@@ -456,7 +548,7 @@ const AdminFilieresPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="text-center">
                         <p className="text-sm font-medium text-gray-600">Durée de formation</p>
-                        <p className="text-2xl font-bold text-blue-600 mt-2">{selectedFiliere.duration} ans</p>
+                        <p className="text-2xl font-bold text-blue-600 mt-2">{selectedFiliere.duration}</p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm font-medium text-gray-600">Nombre de modules</p>
@@ -477,25 +569,70 @@ const AdminFilieresPage = () => {
                         </div>
                       </div>
                     </div>
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-gray-600">Étudiants actifs</p>
+                        <p className="text-lg font-semibold mt-1">{selectedFiliere.statistiques.totalEtudiants}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-gray-600">Formateurs</p>
+                        <p className="text-lg font-semibold mt-1">{selectedFiliere.statistiques.totalFormateurs}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-gray-600">Semestres</p>
+                        <p className="text-lg font-semibold mt-1">{selectedFiliere.statistiques.totalSemestres}</p>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
 
                 {/* Modules */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Modules</CardTitle>
+                    <CardTitle>Modules ({selectedFiliere.modules.length})</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       {selectedFiliere.modules.map((module) => (
-                        <div key={module.id} className="flex flex-col gap-2 items-center justify-between sm:flex-row p-3 border rounded-lg">
-                          <div>
-                            <span className="font-medium">{module.name}</span>
-                            <div className="text-sm text-gray-500 mt-1">{module.vague}</div>
+                        <div key={module.id} className="p-4 border rounded-lg bg-gray-50">
+                          <div className="flex flex-col gap-3">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-semibold text-lg">{module.name}</h4>
+                                {module.description && (
+                                  <p className="text-sm text-gray-600 mt-1">{module.description}</p>
+                                )}
+                              </div>
+                              <Badge variant="outline" className="font-mono">
+                                coefficient {module.coefficient}
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2 text-sm">
+                              <Badge variant="secondary">{module.typeModule}</Badge>
+                              {module.semestre && (
+                                <Badge variant="outline">Semestre {module.semestre}</Badge>
+                              )}
+                              {module.vagues.map((vague, index) => (
+                                <Badge key={index} variant="outline" className="bg-blue-50">
+                                  {vague}
+                                </Badge>
+                              ))}
+                            </div>
+
+                            {module.enseignants.length > 0 && (
+                              <div>
+                                <p className="text-sm font-medium text-gray-700">Enseignants:</p>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {module.enseignants.map((enseignant) => (
+                                    <Badge key={enseignant.id} variant="secondary" className="text-xs">
+                                      {enseignant.name}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <Badge variant="outline" className="font-mono">
-                            coefficient {module.coefficient}
-                          </Badge>
                         </div>
                       ))}
                     </div>

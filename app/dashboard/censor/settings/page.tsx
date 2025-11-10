@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import {
   Sun,
-  Globe,
   Lock,
   Eye,
   EyeOff,
@@ -15,7 +14,7 @@ import {
   Save,
   Key,
   Shield,
-  AlertTriangle, 
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Interface pour les erreurs Clerk
 interface ClerkError {
@@ -38,8 +38,126 @@ interface ClerkError {
   message?: string;
 }
 
+// Composant Skeleton pour la page de paramètres
+const SettingsSkeleton = () => (
+  <div className="min-h-screen bg-white flex flex-col lg:pl-5 pt-20 lg:pt-6">
+    {/* Skeleton En-tête */}
+    <div className="bg-white border-b border-gray-200 p-4 sm:p-6 flex-shrink-0">
+      <div className="max-w-4xl mx-auto">
+        <Skeleton className="h-8 w-64 mb-2" />
+        <Skeleton className="h-4 w-48" />
+      </div>
+    </div>
+
+    {/* Skeleton Contenu principal */}
+    <div className="flex-1 overflow-y-auto">
+      <div className="max-w-4xl mx-auto p-3 sm:p-4 md:p-6 flex flex-col gap-4 sm:gap-6">
+        
+        {/* Skeleton Profil */}
+        <Card>
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-8 h-8 rounded-lg" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-3 w-64" />
+                  </div>
+                  <Skeleton className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Skeleton Apparence */}
+        <Card>
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-8 h-8 rounded-lg" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-3 w-40" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1 flex-1">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+                <Skeleton className="w-10 h-6 rounded-full" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Skeleton Sécurité */}
+        <Card>
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-8 h-8 rounded-lg" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-3 w-36" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-56" />
+                  </div>
+                  <Skeleton className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Skeleton Informations du compte */}
+        <Card>
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-8 h-8 rounded-lg" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-3 w-40" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="space-y-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  </div>
+);
+
 const CenseurSettingsPage = () => {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const { signOut, openSignIn, session } = useClerk();
 
   const [darkMode, setDarkMode] = useState(false);
@@ -53,23 +171,26 @@ const CenseurSettingsPage = () => {
   const [needsReauth, setNeedsReauth] = useState(false);
 
   const [formData, setFormData] = useState({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
-    email: user?.primaryEmailAddress?.emailAddress || "",
-    username: user?.username || "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    username: "",
     currentPassword: "",
     newPassword: "",
   });
 
   useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      email: user?.primaryEmailAddress?.emailAddress || "",
-      username: user?.username || "",
-    }));
-  }, [user]);
+    if (user && isLoaded) {
+      setFormData({
+        firstName: user?.firstName || "",
+        lastName: user?.lastName || "",
+        email: user?.primaryEmailAddress?.emailAddress || "",
+        username: user?.username || "",
+        currentPassword: "",
+        newPassword: "",
+      });
+    }
+  }, [user, isLoaded]);
 
   // Vérifie si la session est récente (5 min max)
   const isSessionRecent = (): boolean => {
@@ -179,6 +300,11 @@ const CenseurSettingsPage = () => {
       setIsLoading(false);
     }
   };
+
+  // Afficher le skeleton pendant le chargement
+  if (!isLoaded) {
+    return <SettingsSkeleton />;
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col lg:pl-5 pt-20 lg:pt-6">
@@ -377,60 +503,7 @@ const CenseurSettingsPage = () => {
               </div>
             </CardContent>
           </Card>
-
-          {/* Général */}
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gray-100 rounded-lg">
-                  <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="text-base sm:text-lg">Général</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Paramètres généraux de l&apos;application</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="space-y-4 sm:space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="space-y-0.5 min-w-0 flex-1">
-                    <Label htmlFor="language" className="text-sm sm:text-base">Langue</Label>
-                    <p className="text-xs sm:text-sm text-gray-500">Définir la langue d&apos;affichage</p>
-                  </div>
-                  <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger className="w-full sm:w-[180px] text-sm sm:text-base">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fr" className="text-sm sm:text-base">Français</SelectItem>
-                      <SelectItem value="en" className="text-sm sm:text-base">English</SelectItem>
-                      <SelectItem value="es" className="text-sm sm:text-base">Español</SelectItem>
-                      <SelectItem value="de" className="text-sm sm:text-base">Deutsch</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5 min-w-0 flex-1">
-                    <Label htmlFor="notifications" className="text-sm sm:text-base">Notifications</Label>
-                    <p className="text-xs sm:text-sm text-gray-500 truncate">
-                      Recevoir des notifications importantes
-                    </p>
-                  </div>
-                  <Switch
-                    id="notifications"
-                    checked={notificationsEnabled}
-                    onCheckedChange={setNotificationsEnabled}
-                    className="flex-shrink-0"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+          
           {/* Sécurité */}
           <Card>
             <CardHeader className="p-4 sm:p-6">

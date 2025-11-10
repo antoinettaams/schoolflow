@@ -7,8 +7,8 @@ import { useUser, useClerk } from "@clerk/nextjs";
 import Image from "next/image";
 import { 
   FaUsers, FaCalendarAlt, FaFileInvoiceDollar, FaRegChartBar, FaClipboardList, 
-  FaCog, FaSignOutAlt, FaGraduationCap, FaBars, FaUser, FaFileAlt, FaChevronDown,
-  FaTimes, FaExclamationTriangle, FaBell
+  FaCog, FaSignOutAlt, FaGraduationCap, FaBars, FaUser, FaChevronDown,
+  FaTimes, FaExclamationTriangle
 } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 
@@ -82,7 +82,6 @@ const SidebarParent = () => {
     { label: "Examens & Notes", href: "/dashboard/parent/exams", icon: <FaRegChartBar />, category: "SUPERVISION" },
     { label: "Assiduité", href: "/dashboard/parent/attendance", icon: <FaClipboardList />, category: "SUPERVISION" },
     { label: "Évènements Scolaires", href: "/dashboard/parent/events", icon: <FaGraduationCap />, category: "SUPERVISION" },
-    { label: "Bulletins", href: "/dashboard/parent/grades", icon: <FaFileAlt />, category: "SUPERVISION" },
     { label: "Frais Scolaires", href: "/dashboard/parent/finance", icon: <FaFileInvoiceDollar />, category: "ADMINISTRATION" },
   ];
 
@@ -268,16 +267,6 @@ const SidebarParent = () => {
                     <FaUser className="text-gray-600 text-sm" />
                     <span>Mon Profil</span>
                   </Link>
-
-                  <Link
-                    href="/dashboard/parent/notifications"
-                    className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium"
-                    onClick={handleCloseModal}
-                  >
-                    <FaBell className="text-gray-600 text-sm" />
-                    <span>Notifications</span>
-                  </Link>
-                  
                   <Link
                     href="/dashboard/parent/settings"
                     className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium"

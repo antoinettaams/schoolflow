@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -13,7 +13,7 @@ import {
   FaChartBar,
   FaMoneyBillWave,
   FaBell,
-  FaCalendarAlt,
+  FaCalendarAlt,  
   FaFileAlt,
   FaClipboardList,
 } from "react-icons/fa";
@@ -21,25 +21,203 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Types pour les données API
+interface DashboardData {
+  stats: {
+    totalStudents: number;
+    totalTeachers: number;
+    totalParents: number;
+    totalClasses: number;
+    activePayments: number;
+    pendingTasks: number;
+  };
+  recentActivity: Array<{
+    id: string;
+    type: string;
+    description: string;
+    boldText: string;
+    color: string;
+    timestamp: string;
+  }>;
+}
+
+// Composants Skeleton
+const HeaderSkeleton = () => (
+  <Card className="p-4 sm:p-6 sticky top-0 z-10 bg-white/95 backdrop-blur-sm animate-pulse">
+    <CardContent className="p-0">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-48" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-6 w-20" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <Skeleton className="h-8 w-40" />
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const QuickAddSkeleton = () => (
+  <div className="space-y-4">
+    <Skeleton className="h-7 w-64" />
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      {[...Array(6)].map((_, i) => (
+        <Card key={i} className="border-2 animate-pulse">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Skeleton className="w-12 h-12 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  </div>
+);
+
+const StatsSkeleton = () => (
+  <Card className="bg-white animate-pulse">
+    <CardHeader>
+      <Skeleton className="h-7 w-40" />
+    </CardHeader>
+    <CardContent>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="border">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-2">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-3 w-8" />
+              </div>
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-8 w-12" />
+                <Skeleton className="w-10 h-10 rounded-lg" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const QuickActionsSkeleton = () => (
+  <Card className="bg-white animate-pulse">
+    <CardHeader>
+      <Skeleton className="h-6 w-32" />
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-4">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg">
+            <Skeleton className="w-10 h-10 rounded-lg" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <Skeleton className="h-6 w-12" />
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const SidebarSkeleton = () => (
+  <div className="space-y-6">
+    <Card className="bg-blue-50 border-blue-200 animate-pulse">
+      <CardContent className="p-4 sm:p-6">
+        <Skeleton className="h-5 w-32 mb-2" />
+        <Skeleton className="h-4 w-48 mb-4" />
+        <Skeleton className="h-10 w-full rounded-lg" />
+      </CardContent>
+    </Card>
+    <Card className="bg-white animate-pulse">
+      <CardHeader>
+        <Skeleton className="h-5 w-28" />
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="w-3 h-3 rounded-full" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
 
 const AdminDashboard = () => {
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Vérification du rôle administrateur
+  // Récupérer les données depuis l'API
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/admin/dashboard');
+      if (!response.ok) throw new Error('Erreur lors de la récupération des données');
+      
+      const data = await response.json();
+      setDashboardData(data);
+    } catch (err) {
+      console.error('Erreur:', err);
+      setError('Impossible de charger les données du tableau de bord');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Vérification du rôle administrateur et chargement des données
   useEffect(() => {
     if (isLoaded && isSignedIn) {
       const userRole = user?.publicMetadata?.role;
       if (userRole !== "Administrateur") {
         router.push("/unauthorized");
+      } else {
+        fetchDashboardData();
       }
     }
   }, [isLoaded, isSignedIn, user, router]);
 
-  if (!isLoaded) {
+  // Afficher le skeleton pendant le chargement
+  if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Chargement de vos informations...</div>
+      <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+        <div className="bg-white min-h-screen">
+          <ScrollArea className="h-screen">
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="max-w-7xl mx-auto space-y-8">
+                <HeaderSkeleton />
+                <QuickAddSkeleton />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+                  <div className="lg:col-span-2 space-y-6">
+                    <StatsSkeleton />
+                    <QuickActionsSkeleton />
+                  </div>
+                  <SidebarSkeleton />
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+        </div>
       </div>
     );
   }
@@ -76,14 +254,40 @@ const AdminDashboard = () => {
     );
   }
 
-  const stats = {
-    totalStudents: 450,
-    totalTeachers: 28,
-    totalParents: 420,
-    totalClasses: 15,
-    activePayments: 12,
-    pendingTasks: 3
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="p-8 max-w-md text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl text-red-600">Erreur</CardTitle>
+            <CardDescription className="text-gray-600">
+              {error}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={fetchDashboardData}
+              className="bg-blue-600 text-white hover:bg-blue-700 w-full"
+            >
+              Réessayer
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Données par défaut si l'API ne répond pas
+  const stats = dashboardData?.stats || {
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalParents: 0,
+    totalClasses: 0,
+    activePayments: 0,
+    pendingTasks: 0
   };
+
+  const recentActivity = dashboardData?.recentActivity || [];
 
   const quickAddCards = [
     { title: "Ajouter un Professeur", description: "Créer un nouveau compte professeur", icon: <FaChalkboardTeacher className="text-2xl text-blue-600" />, href: "/auth/signup", color: "bg-blue-50 border-blue-200", buttonColor: "bg-blue-600 hover:bg-blue-700" },
@@ -256,19 +460,20 @@ const AdminDashboard = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2 sm:space-y-4">
-                        {[
-                          { color: "bg-green-500", text: "5 nouveaux élèves inscrits aujourd'hui", bold: "5 nouveaux élèves" },
-                          { color: "bg-blue-500", text: "3 professeurs ont mis à jour leur profil", bold: "3 professeurs" },
-                          { color: "bg-purple-500", text: "12 paiements traités cette semaine", bold: "12 paiements" },
-                          { color: "bg-amber-500", text: "8 bulletins générés aujourd'hui", bold: "8 bulletins" },
-                        ].map((item, idx) => (
-                          <div key={idx} className="flex items-center gap-2 sm:gap-3">
-                            <div className={`w-2 h-2 sm:w-3 sm:h-3 ${item.color} rounded-full shrink-0`}></div>
-                            <div className="text-xs sm:text-sm text-gray-600">
-                              <span className="font-medium">{item.bold}</span> {item.text.replace(item.bold, "")}
+                        {recentActivity.length > 0 ? (
+                          recentActivity.map((item) => (
+                            <div key={item.id} className="flex items-center gap-2 sm:gap-3">
+                              <div className={`w-2 h-2 sm:w-3 sm:h-3 ${item.color} rounded-full shrink-0`}></div>
+                              <div className="text-xs sm:text-sm text-gray-600">
+                                <span className="font-medium">{item.boldText}</span> {item.description}
+                              </div>
                             </div>
+                          ))
+                        ) : (
+                          <div className="text-center text-gray-500 text-sm py-4">
+                            Aucune activité récente
                           </div>
-                        ))}
+                        )}
                       </div>
                     </CardContent>
                   </Card>

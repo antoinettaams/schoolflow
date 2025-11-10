@@ -31,8 +31,105 @@ interface AttendanceRecord {
   vague: string;
 }
 
+// --- Composant Skeleton pour le chargement ---
+const AttendanceSkeleton = () => {
+  return (
+    <div className="space-y-6">
+      {/* Skeleton pour les cartes de statistiques */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {[1, 2, 3, 4].map((card) => (
+          <Card key={card}>
+            <CardContent className="p-6 text-center">
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <div className="p-3 bg-gray-200 rounded-lg animate-pulse">
+                  <div className="w-6 h-6 bg-gray-300 rounded"></div>
+                </div>
+              </div>
+              <div className="h-6 w-32 bg-gray-200 rounded animate-pulse mx-auto mb-3"></div>
+              <div className="h-10 w-16 bg-gray-200 rounded animate-pulse mx-auto mb-2"></div>
+              <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mx-auto"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Skeleton pour les filtres */}
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="h-6 w-24 bg-gray-200 rounded animate-pulse mb-2"></div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map((filter) => (
+              <div key={filter}>
+                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
+                <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Skeleton pour le tableau */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* En-tête du tableau skeleton */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  {[1, 2, 3, 4, 5, 6].map((header) => (
+                    <th key={header} className="text-left py-3 px-4">
+                      <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[1, 2, 3, 4, 5].map((row) => (
+                  <tr key={row} className="border-b border-gray-100">
+                    {[1, 2, 3, 4, 5, 6].map((cell) => (
+                      <td key={cell} className="py-4 px-4">
+                        <div className="space-y-2">
+                          <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                          {cell === 1 && <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>}
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Skeleton pour la légende */}
+      <Card className="mt-6 bg-gray-100 border-gray-200">
+        <CardContent className="p-4">
+          <div className="h-5 w-24 bg-gray-200 rounded animate-pulse mb-3"></div>
+          <div className="flex flex-wrap gap-6">
+            {[1, 2, 3].map((legend) => (
+              <div key={legend} className="flex items-center gap-2">
+                <div className="h-4 w-4 bg-gray-300 rounded animate-pulse"></div>
+                <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 export default function ParentAttendancePage() {
-  const { isLoaded, isSignedIn } = useUser(); // user retiré car non utilisé
+  const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const [sortField, setSortField] = useState("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -81,7 +178,7 @@ export default function ParentAttendancePage() {
     const timer = setTimeout(() => {
       loadStudentData();
       setIsLoading(false);
-    }, 1000);
+    }, 1500); // Augmenté à 1.5s pour mieux voir le skeleton
 
     return () => clearTimeout(timer);
   }, []);
@@ -153,8 +250,21 @@ export default function ParentAttendancePage() {
 
   if (!isLoaded || isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Chargement de vos informations...</div>
+      <div className="flex-1 flex flex-col min-h-0 bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 max-w-6xl mx-auto">
+            {/* Skeleton pour le titre */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
+              <div className="space-y-2">
+                <div className="h-8 w-48 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-64 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="h-6 w-32 bg-gray-200 rounded-full animate-pulse"></div>
+            </div>
+            
+            <AttendanceSkeleton />
+          </div>
+        </div>
       </div>
     );
   }

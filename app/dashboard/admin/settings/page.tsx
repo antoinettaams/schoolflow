@@ -37,8 +37,68 @@ interface ClerkError {
   message?: string;
 }
 
+// Composant Skeleton pour les cartes
+const CardSkeleton = () => (
+  <Card className="dark:bg-gray-800 dark:border-gray-700 animate-pulse">
+    <CardHeader className="p-4 sm:p-6">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg">
+          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gray-300 dark:bg-gray-600 rounded" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent className="p-4 sm:p-6 pt-0">
+      <div className="space-y-3">
+        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded" />
+      </div>
+    </CardContent>
+  </Card>
+);
+
+// Skeleton pour les informations du compte
+const AccountInfoSkeleton = () => (
+  <Card className="dark:bg-gray-800 dark:border-gray-700 animate-pulse">
+    <CardHeader className="p-4 sm:p-6">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg">
+          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gray-300 dark:bg-gray-600 rounded" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent className="p-4 sm:p-6 pt-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="space-y-2">
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+);
+
+// Skeleton pour le header
+const HeaderSkeleton = () => (
+  <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6 flex-shrink-0">
+    <div className="max-w-4xl mx-auto">
+      <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-2" />
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+    </div>
+  </div>
+);
+
 const AdminSettingsPage = () => {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const { signOut, openSignIn, session } = useClerk();
   const router = useRouter();
 
@@ -49,47 +109,54 @@ const AdminSettingsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [needsReauth, setNeedsReauth] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   const [formData, setFormData] = useState({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
-    username: user?.username || "",
-    email: user?.primaryEmailAddress?.emailAddress || "",
+    firstName: "",
+    lastName: "",
+    username: "",
+    email: "",
     currentPassword: "",
     newPassword: "",
   });
 
+  // Simuler un chargement initial
   useEffect(() => {
-    setFormData(prev => ({
-      ...prev,
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      username: user?.username || "",
-      email: user?.primaryEmailAddress?.emailAddress || ""
-    }));
-  }, [user?.firstName, user?.lastName, user?.username, user?.primaryEmailAddress?.emailAddress]);
+    const timer = setTimeout(() => {
+      setIsPageLoading(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      setFormData(prev => ({
+        ...prev,
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        username: user.username || "",
+        email: user.primaryEmailAddress?.emailAddress || ""
+      }));
+    }
+  }, [isLoaded, user]);
 
   // Gestion du mode sombre
   useEffect(() => {
-    // Vérifier la préférence stockée
     const savedDarkMode = localStorage.getItem('darkMode');
     if (savedDarkMode) {
       setDarkMode(JSON.parse(savedDarkMode));
     } else {
-      // Vérifier la préférence système
       const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       setDarkMode(systemPrefersDark);
     }
   }, []);
 
   useEffect(() => {
-    // Appliquer le mode sombre au document
     if (darkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-    // Sauvegarder la préférence
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
 
@@ -136,14 +203,12 @@ const AdminSettingsPage = () => {
 
     setIsLoading(true);
     try {
-      // Met à jour prénom, nom et username
       await user.update({
         firstName: formData.firstName,
         lastName: formData.lastName,
         username: formData.username,
       });
 
-      // Mise à jour de l'email via createEmailAddress() et vérification
       if (formData.email !== user?.primaryEmailAddress?.emailAddress) {
         await user.createEmailAddress({ email: formData.email });
         toast.success("Un email de vérification a été envoyé à la nouvelle adresse.");
@@ -195,7 +260,6 @@ const AdminSettingsPage = () => {
       setFormData((prev) => ({ ...prev, currentPassword: "", newPassword: "" }));
       setPasswordOpen(false);
       
-      // Déconnexion après changement de mot de passe
       toast.success("Veuillez vous reconnecter avec votre nouveau mot de passe.");
       
       await signOut();
@@ -225,6 +289,23 @@ const AdminSettingsPage = () => {
       setIsLoading(false);
     }
   };
+
+  // Afficher le skeleton pendant le chargement
+  if (isPageLoading || !isLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col lg:pl-5 pt-20 lg:pt-6">
+        <HeaderSkeleton />
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-4xl mx-auto p-3 sm:p-4 md:p-6 flex flex-col gap-4 sm:gap-6">
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <AccountInfoSkeleton />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col lg:pl-5 pt-20 lg:pt-6">
@@ -344,15 +425,15 @@ const AdminSettingsPage = () => {
 
                         <div className="space-y-2">
                           <Label htmlFor="username" className="dark:text-white text-sm sm:text-base">Nom d&apos;utilisateur</Label>
-                          <Input
-                            id="username"
-                            type="text"
-                            value={formData.username}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, username: e.target.value }))}
-                            placeholder="Votre nom d&apos;utilisateur"
-                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm sm:text-base"
-                          />
-                        </div>
+                            <Input
+                              id="username"
+                              type="text"
+                              value={formData.username}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, username: e.target.value }))}
+                              placeholder="Votre nom d&apos;utilisateur"
+                              className="dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm sm:text-base"
+                            />
+                          </div>
 
                         <div className="space-y-2">
                           <Label htmlFor="email" className="flex items-center gap-2 dark:text-white text-sm sm:text-base">

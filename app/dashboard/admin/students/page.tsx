@@ -1,4 +1,4 @@
-// app/dashboard/admin/students/page.tsx
+// app/dashboard/admin/students/page.tsx - VERSION CORRIGÉE
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -17,11 +17,12 @@ import {
   FaTrash,
   FaPhone,
   FaEnvelope,
-  FaIdCard,
   FaSchool,
   FaBook,
   FaTrophy,
-  FaCalendarAlt
+  FaCalendarAlt,
+  FaSync,
+  FaExclamationTriangle
 } from "react-icons/fa";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 
-// Types pour les données
+// Types pour les données - CORRIGÉS
 interface Module {
   id: string;
   name: string;
@@ -48,7 +49,8 @@ interface Student {
   phone: string;
   studentNumber: string;
   filiere: string;
-  vagues: string[];
+  vagueNumber: string; // CORRECTION: string au lieu de number
+  vagueId: string; // AJOUT: ID de la vague pour le filtrage
   averageGrade: number;
   attendanceRate: number;
   status: "actif" | "inactif" | "suspendu";
@@ -58,6 +60,25 @@ interface Student {
   rank: number;
   totalStudents: number;
   anneeScolaire: string;
+  clerkUserId: string;
+  filiereId: string; // AJOUT: ID de la filière
+}
+
+interface ApiResponse {
+  students: Student[];
+  total: number;
+  stats: {
+    total: number;
+    active: number;
+    inactive: number;
+    suspended: number;
+    averageGrade: number;
+    averageAttendance: number;
+  };
+  filters: {
+    filieres: Array<{ id: string; name: string }>;
+    vagues: Array<{ id: string; name: string }>;
+  };
 }
 
 const AdminStudentsPage = () => {
@@ -65,12 +86,17 @@ const AdminStudentsPage = () => {
   const router = useRouter();
 
   const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFiliere, setSelectedFiliere] = useState<string>("all");
   const [selectedVague, setSelectedVague] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [sortField, setSortField] = useState<keyof Student>("lastName");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [stats, setStats] = useState<any>({});
+  const [filters, setFilters] = useState<any>({});
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   // Modal "Voir" état
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -79,6 +105,105 @@ const AdminStudentsPage = () => {
   // Modal suppression état
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  // Charger les données depuis l'API
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams();
+      if (searchTerm) params.append("search", searchTerm);
+      if (selectedFiliere !== "all") params.append("filiere", selectedFiliere);
+      if (selectedVague !== "all") params.append("vague", selectedVague);
+      if (selectedStatus !== "all") params.append("status", selectedStatus);
+
+      console.log("🔍 Fetching students with params:", Object.fromEntries(params));
+
+      const response = await fetch(`/api/admin/students?${params}`);
+
+      if (!response.ok) {
+        throw new Error("Erreur lors du chargement des étudiants");
+      }
+
+      const data: ApiResponse = await response.json();
+      
+      // DEBUG: Afficher les données reçues
+      console.log("📊 Données reçues:", {
+        totalStudents: data.students.length,
+        firstStudent: data.students[0] ? {
+          name: `${data.students[0].firstName} ${data.students[0].lastName}`,
+          vagueNumber: data.students[0].vagueNumber,
+          vagueId: data.students[0].vagueId,
+          filiere: data.students[0].filiere
+        } : 'Aucun étudiant',
+        filters: data.filters
+      });
+
+      setStudents(data.students);
+      setStats(data.stats);
+      setFilters(data.filters);
+    } catch (err) {
+      console.error("Erreur:", err);
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Supprimer un étudiant
+  const deleteStudent = async (studentId: string) => {
+    try {
+      setDeleting(studentId);
+      
+      const response = await fetch("/api/admin/students", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ studentId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de la suppression");
+      }
+
+      // Mettre à jour la liste localement
+      setStudents(prev => prev.filter(student => student.id !== studentId));
+      closeDeleteModal();
+      
+      // Recharger les données pour mettre à jour les stats
+      await fetchStudents();
+      
+    } catch (err) {
+      console.error("Erreur suppression:", err);
+      setError(err instanceof Error ? err.message : "Erreur lors de la suppression");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  // Vérification du rôle admin
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      const userRole = user?.publicMetadata?.role as string;
+      if (userRole !== "Administrateur") {
+        router.push("/unauthorized");
+      } else {
+        fetchStudents();
+      }
+    }
+  }, [isLoaded, isSignedIn, user, router]);
+
+  // Recharger quand les filtres changent
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchStudents();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, selectedFiliere, selectedVague, selectedStatus]);
 
   const openModal = (student: Student) => {
     setSelectedStudent(student);
@@ -100,119 +225,20 @@ const AdminStudentsPage = () => {
     setIsDeleteModalOpen(false);
   };
 
-  const handleDeleteStudent = () => {
-    if (studentToDelete) {
-      setStudents(prev => prev.filter(s => s.id !== studentToDelete.id));
-      closeDeleteModal();
+  const handleSort = (field: keyof Student) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
     }
   };
 
-  // Vérification du rôle admin
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      const userRole = user?.publicMetadata?.role as string;
-      if (userRole !== "Administrateur") {
-        router.push("/unauthorized");
-      }
-    }
-  }, [isLoaded, isSignedIn, user, router]);
-
-  // Simulation des données des élèves avec modules détaillés
-  useEffect(() => {
-    const mockStudents: Student[] = [
-      {
-        id: "1",
-        firstName: "Marie",
-        lastName: "Dubois",
-        email: "marie.dubois@student.com",
-        phone: "+225 07 12 34 56 78",
-        studentNumber: "ETU-2024-001",
-        filiere: "Informatique",
-        vagues: ["Vague 2024 A"],
-        averageGrade: 15.2,
-        attendanceRate: 95,
-        status: "actif",
-        createdAt: "2024-09-01",
-        lastActivity: "2024-10-20",
-        modules: [
-          { id: "m1", name: "Programmation Java", coefficient: 4, grade: 16.5, teacher: "Dr. Koné" },
-          { id: "m2", name: "Base de données", coefficient: 3, grade: 14.0, teacher: "Prof. Traoré" },
-          { id: "m3", name: "Réseaux", coefficient: 3, grade: 15.8, teacher: "Dr. Diarra" },
-          { id: "m4", name: "Mathématiques", coefficient: 2, grade: 13.2, teacher: "Prof. Sylla" },
-          { id: "m5", name: "Anglais technique", coefficient: 1, grade: 17.5, teacher: "Mme. Bamba" }
-        ],
-        rank: 2,
-        totalStudents: 45,
-        anneeScolaire: "2024-2025"
-      },
-      {
-        id: "2",
-        firstName: "Pierre",
-        lastName: "Martin",
-        email: "pierre.martin@student.com",
-        phone: "+225 05 98 76 54 32",
-        studentNumber: "ETU-2024-002",
-        filiere: "Mathématiques",
-        vagues: ["Vague 2024 A"],
-        averageGrade: 12.8,
-        attendanceRate: 88,
-        status: "actif",
-        createdAt: "2024-09-01",
-        lastActivity: "2024-10-19",
-        modules: [
-          { id: "m1", name: "Algèbre avancée", coefficient: 4, grade: 13.5, teacher: "Dr. Konaté" },
-          { id: "m2", name: "Analyse", coefficient: 4, grade: 11.0, teacher: "Prof. Keita" },
-          { id: "m3", name: "Probabilités", coefficient: 3, grade: 14.2, teacher: "Dr. Coulibaly" },
-          { id: "m4", name: "Statistiques", coefficient: 3, grade: 12.5, teacher: "Prof. Diallo" }
-        ],
-        rank: 15,
-        totalStudents: 30,
-        anneeScolaire: "2024-2025"
-      },
-      {
-        id: "3",
-        firstName: "Sophie",
-        lastName: "Bernard",
-        email: "sophie.bernard@student.com",
-        phone: "+225 01 23 45 67 89",
-        studentNumber: "ETU-2024-003",
-        filiere: "Informatique",
-        vagues: ["Vague 2024 B"],
-        averageGrade: 16.5,
-        attendanceRate: 92,
-        status: "actif",
-        createdAt: "2024-09-15",
-        lastActivity: "2024-10-21",
-        modules: [
-          { id: "m1", name: "Intelligence Artificielle", coefficient: 5, grade: 17.2, teacher: "Dr. Traoré" },
-          { id: "m2", name: "Machine Learning", coefficient: 4, grade: 16.8, teacher: "Prof. Koné" },
-          { id: "m3", name: "Big Data", coefficient: 3, grade: 15.0, teacher: "Dr. Sy" },
-          { id: "m4", name: "Cloud Computing", coefficient: 3, grade: 17.5, teacher: "Prof. Bamba" },
-          { id: "m5", name: "Sécurité", coefficient: 2, grade: 16.0, teacher: "Dr. Diakité" }
-        ],
-        rank: 1,
-        totalStudents: 25,
-        anneeScolaire: "2024-2025"
-      }
-    ];
-
-    setStudents(mockStudents);
-  }, []);
-
-  // Filtrage et tri
+  // Filtrage et tri côté client pour réactivité
   const filteredStudents = students
     .filter(student => {
-      const matchesSearch =
-        student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.studentNumber.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesFiliere = selectedFiliere === "all" || student.filiere === selectedFiliere;
-      const matchesVague = selectedVague === "all" || student.vagues.includes(selectedVague);
-      const matchesStatus = selectedStatus === "all" || student.status === selectedStatus;
-
-      return matchesSearch && matchesFiliere && matchesVague && matchesStatus;
+      // Les filtres sont déjà appliqués côté API, mais on peut ajouter du filtrage client supplémentaire si besoin
+      return true;
     })
     .sort((a, b) => {
       const aValue = a[sortField];
@@ -231,40 +257,6 @@ const AdminStudentsPage = () => {
       return 0;
     });
 
-  const handleSort = (field: keyof Student) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  };
-
-  const getUniqueValues = (field: keyof Student) => {
-    const values = students.map(student => student[field]);
-    return Array.from(new Set(values.filter(value => value !== undefined && value !== null))) as string[];
-  };
-
-  const getUniqueVagues = () => {
-    const vagues = new Set<string>();
-    students.forEach(student => {
-      student.vagues.forEach(vague => vagues.add(vague));
-    });
-    return Array.from(vagues);
-  };
-
-  const getStats = () => {
-    const total = students.length;
-    const active = students.filter(s => s.status === "actif").length;
-    const inactive = students.filter(s => s.status === "inactif").length;
-    const suspended = students.filter(s => s.status === "suspendu").length;
-    const averageGrade = students.reduce((acc, student) => acc + student.averageGrade, 0) / total;
-
-    return { total, active, inactive, suspended, averageGrade: averageGrade || 0 };
-  };
-
-  const stats = getStats();
-
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -274,11 +266,8 @@ const AdminStudentsPage = () => {
   }
 
   if (!isSignedIn) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Redirection vers la connexion...</div>
-      </div>
-    );
+    router.push("/sign-in");
+    return null;
   }
 
   const userRole = user?.publicMetadata?.role as string;
@@ -308,31 +297,54 @@ const AdminStudentsPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
       <div className="p-6 space-y-6">
-        {/* En-tête */}
+        
+        {/* En-tête avec bouton recharger */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Gestion des Élèves</h1>
             <p className="text-gray-600 mt-2">
-              Vue d&apos;ensemble complète de tous les élèves de l&apos;établissement.
+              {loading ? "Chargement..." : `${stats.total || 0} élève(s) trouvé(s)`}
             </p>
           </div>
-          <Link href="/auth/signup">
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-              <FaPlus className="mr-2 h-4 w-4" />
-              Ajouter un Élève
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={fetchStudents}
+              disabled={loading}
+            >
+              <FaSync className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              Actualiser
             </Button>
-          </Link>
+            <Link href="/auth/signup">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                <FaPlus className="mr-2 h-4 w-4" />
+                Ajouter un Élève
+              </Button>
+            </Link>
+          </div>
         </div>
 
+        {/* Affichage erreur */}
+        {error && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-red-700">
+                <FaExclamationTriangle className="h-4 w-4" />
+                <span>{error}</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Cartes de statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Élèves</CardTitle>
               <FaUsers className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
+              <div className="text-2xl font-bold">{stats.total || 0}</div>
               <p className="text-xs text-muted-foreground">
                 Tous les élèves inscrits
               </p>
@@ -344,35 +356,9 @@ const AdminStudentsPage = () => {
               <FaUserGraduate className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+              <div className="text-2xl font-bold text-green-600">{stats.active || 0}</div>
               <p className="text-xs text-muted-foreground">
                 En cours de formation
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Moyenne Générale</CardTitle>
-              <FaChartLine className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {stats.averageGrade.toFixed(1)}/20
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Moyenne de tous les élèves
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Taux de Présence</CardTitle>
-              <FaChartBar className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">92%</div>
-              <p className="text-xs text-muted-foreground">
-                Moyenne de présence
               </p>
             </CardContent>
           </Card>
@@ -401,9 +387,9 @@ const AdminStudentsPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Toutes les filières</SelectItem>
-                  {getUniqueValues("filiere").map((filiere, index) => (
-                    <SelectItem key={`filiere-${index}`} value={filiere}>
-                      {filiere}
+                  {filters.filieres?.map((filiere: any) => (
+                    <SelectItem key={filiere.id} value={filiere.id}>
+                      {filiere.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -415,9 +401,9 @@ const AdminStudentsPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Toutes les vagues</SelectItem>
-                  {getUniqueVagues().map((vague, index) => (
-                    <SelectItem key={`vague-${index}`} value={vague}>
-                      {vague}
+                  {filters.vagues?.map((vague: any) => (
+                    <SelectItem key={vague.id} value={vague.id}>
+                      {vague.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -447,106 +433,128 @@ const AdminStudentsPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort("lastName")}>
-                    <div className="flex items-center gap-2">
-                      Élève
-                      <FaSort className="h-3 w-3" />
-                    </div>
-                  </TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Informations Académiques</TableHead>
-                  <TableHead className="cursor-pointer text-center" onClick={() => handleSort("averageGrade")}>
-                    <div className="flex items-center gap-2 justify-center">
-                      Performance
-                      <FaSort className="h-3 w-3" />
-                    </div>
-                  </TableHead>
-                  <TableHead>Vagues</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
-                    <div className="flex items-center gap-2">
-                      Statut
-                      <FaSort className="h-3 w-3" />
-                    </div>
-                  </TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStudents.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <div>{student.firstName} {student.lastName}</div>
-                        <Badge variant="outline" className="font-mono text-xs mt-1">
-                          {student.studentNumber}
-                        </Badge>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-gray-600">Chargement des étudiants...</p>
+              </div>
+            ) : filteredStudents.length === 0 ? (
+              <div className="text-center py-8">
+                <FaUserGraduate className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-4 text-lg font-medium text-gray-900">Aucun étudiant trouvé</h3>
+                <p className="mt-2 text-gray-600">
+                  {searchTerm || selectedFiliere !== "all" || selectedVague !== "all" || selectedStatus !== "all" 
+                    ? "Aucun étudiant ne correspond à vos critères de recherche." 
+                    : "Aucun étudiant n'est inscrit pour le moment."}
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="cursor-pointer" onClick={() => handleSort("lastName")}>
+                      <div className="flex items-center gap-2">
+                        Élève
+                        <FaSort className="h-3 w-3" />
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-sm">{student.email}</div>
-                        <div className="text-xs text-muted-foreground">{student.phone}</div>
+                    </TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Informations Académiques</TableHead>
+                    <TableHead className="cursor-pointer text-center" onClick={() => handleSort("averageGrade")}>
+                      <div className="flex items-center gap-2 justify-center">
+                        Performance
+                        <FaSort className="h-3 w-3" />
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium">{student.filiere}</div>
-                        <div className="text-xs text-gray-500">{student.anneeScolaire}</div>
+                    </TableHead>
+                    <TableHead>Vague</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
+                      <div className="flex items-center gap-2">
+                        Statut
+                        <FaSort className="h-3 w-3" />
                       </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="space-y-2">
+                    </TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredStudents.map((student) => (
+                    <TableRow key={student.id}>
+                      <TableCell className="font-medium">
+                        <div>
+                          <div>{student.firstName} {student.lastName}</div>
+                          <Badge variant="outline" className="font-mono text-xs mt-1">
+                            {student.studentNumber}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="text-sm">{student.email}</div>
+                          <div className="text-xs text-muted-foreground">{student.phone}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="text-sm font-medium">{student.filiere}</div>
+                          <div className="text-xs text-gray-500">{student.anneeScolaire}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="space-y-2">
+                          <Badge
+                            variant="outline"
+                            className={
+                              student.averageGrade >= 15 ? "bg-green-50 text-green-700 border-green-200" :
+                                student.averageGrade >= 10 ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                  "bg-red-50 text-red-700 border-red-200"
+                            }
+                          >
+                            {student.averageGrade.toFixed(1)}/20
+                          </Badge>
+                          <div className="text-xs text-muted-foreground">{student.attendanceRate}% présence</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {/* CORRECTION: Utiliser vagueNumber qui contient le nom de la vague */}
+                          <Badge variant="secondary" className="text-xs">
+                            {student.vagueNumber || "Non assigné"}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <Badge
-                          variant="outline"
                           className={
-                            student.averageGrade >= 15 ? "bg-green-50 text-green-700 border-green-200" :
-                              student.averageGrade >= 10 ? "bg-blue-50 text-blue-700 border-blue-200" :
-                                "bg-red-50 text-red-700 border-red-200"
+                            student.status === "actif" ? "bg-green-100 text-green-800" :
+                              student.status === "inactif" ? "bg-gray-100 text-gray-800" :
+                                "bg-red-100 text-red-800"
                           }
                         >
-                          {student.averageGrade.toFixed(1)}/20
+                          {student.status === "actif" ? "Actif" :
+                            student.status === "inactif" ? "Inactif" : "Suspendu"}
                         </Badge>
-                        <div className="text-xs text-muted-foreground">{student.attendanceRate}% présence</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {student.vagues.map((vague, index) => (
-                          <Badge key={`vague-${student.id}-${index}`} variant="secondary" className="text-xs">
-                            {vague}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={
-                          student.status === "actif" ? "bg-green-100 text-green-800" :
-                            student.status === "inactif" ? "bg-gray-100 text-gray-800" :
-                              "bg-red-100 text-red-800"
-                        }
-                      >
-                        {student.status === "actif" ? "Actif" :
-                          student.status === "inactif" ? "Inactif" : "Suspendu"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => openModal(student)}>
-                          <FaEye className="h-3 w-3" />
-                        </Button>
-                        <Button className="text-white bg-red-500" variant="destructive" size="sm" onClick={() => openDeleteModal(student)}>
-                          <FaTrash className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => openModal(student)}>
+                            <FaEye className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            className="text-white bg-red-500" 
+                            variant="destructive" 
+                            size="sm" 
+                            onClick={() => openDeleteModal(student)}
+                            disabled={deleting === student.id}
+                          >
+                            <FaTrash className={`h-3 w-3 ${deleting === student.id ? "animate-spin" : ""}`} />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -580,6 +588,7 @@ const AdminStudentsPage = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-center gap-3">
+                        <FaEnvelope className="h-4 w-4 text-gray-400" />
                         <div>
                           <p className="text-sm font-medium">Email</p>
                           <p className="text-sm text-gray-600">{selectedStudent.email}</p>
@@ -626,13 +635,12 @@ const AdminStudentsPage = () => {
                         <p className="text-sm font-medium text-green-600">{selectedStudent.anneeScolaire}</p>
                       </div>
                       <div>
-                        <p className="text-sm font-medium mb-2">Vagues</p>
+                        <p className="text-sm font-medium mb-2">Vague</p>
                         <div className="flex flex-wrap gap-1">
-                          {selectedStudent.vagues.map((vague, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {vague}
-                            </Badge>
-                          ))}
+                          {/* CORRECTION: Utiliser vagueNumber qui contient le nom */}
+                          <Badge variant="secondary" className="text-xs">
+                            {selectedStudent.vagueNumber || "Non assigné"}
+                          </Badge>
                         </div>
                       </div>
                     </CardContent>
@@ -685,55 +693,61 @@ const AdminStudentsPage = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-1/3">Module</TableHead>
-                          <TableHead>Enseignant</TableHead>
-                          <TableHead>Coefficient</TableHead>
-                          <TableHead>Note</TableHead>
-                          <TableHead>Appréciation</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedStudent.modules.map((module) => (
-                          <TableRow key={module.id}>
-                            <TableCell className="font-medium">{module.name}</TableCell>
-                            <TableCell className="text-sm">{module.teacher}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="font-mono">
-                                {module.coefficient}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge 
-                                variant="outline"
-                                className={
-                                  module.grade >= 15 ? "bg-green-50 text-green-700 border-green-200" :
-                                  module.grade >= 10 ? "bg-blue-50 text-blue-700 border-blue-200" :
-                                  "bg-red-50 text-red-700 border-red-200"
-                                }
-                              >
-                                {module.grade.toFixed(1)}/20
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <span className={
-                                module.grade >= 15 ? "text-green-600 font-medium" :
-                                module.grade >= 12 ? "text-blue-600" :
-                                module.grade >= 10 ? "text-gray-600" :
-                                "text-red-600"
-                              }>
-                                {module.grade >= 15 ? "Excellent" :
-                                 module.grade >= 12 ? "Très bien" :
-                                 module.grade >= 10 ? "Satisfaisant" :
-                                 "Insuffisant"}
-                              </span>
-                            </TableCell>
+                    {selectedStudent.modules.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        Aucune note disponible pour le moment
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-1/3">Module</TableHead>
+                            <TableHead>Enseignant</TableHead>
+                            <TableHead>Coefficient</TableHead>
+                            <TableHead>Note</TableHead>
+                            <TableHead>Appréciation</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedStudent.modules.map((module) => (
+                            <TableRow key={module.id}>
+                              <TableCell className="font-medium">{module.name}</TableCell>
+                              <TableCell className="text-sm">{module.teacher}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="font-mono">
+                                  {module.coefficient}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge 
+                                  variant="outline"
+                                  className={
+                                    module.grade >= 15 ? "bg-green-50 text-green-700 border-green-200" :
+                                    module.grade >= 10 ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                    "bg-red-50 text-red-700 border-red-200"
+                                  }
+                                >
+                                  {module.grade.toFixed(1)}/20
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <span className={
+                                  module.grade >= 15 ? "text-green-600 font-medium" :
+                                  module.grade >= 12 ? "text-blue-600" :
+                                  module.grade >= 10 ? "text-gray-600" :
+                                  "text-red-600"
+                                }>
+                                  {module.grade >= 15 ? "Excellent" :
+                                   module.grade >= 12 ? "Très bien" :
+                                   module.grade >= 10 ? "Satisfaisant" :
+                                   "Insuffisant"}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -763,7 +777,14 @@ const AdminStudentsPage = () => {
               <p className="mb-6">Êtes-vous sûr de vouloir supprimer {studentToDelete.firstName} {studentToDelete.lastName} ? Cette action est irréversible.</p>
               <div className="flex justify-center gap-2">
                 <Button variant="outline" onClick={closeDeleteModal}>Annuler</Button>
-                <Button className="text-white bg-red-500" variant="destructive" onClick={handleDeleteStudent}>Supprimer</Button>
+                <Button 
+                  className="text-white bg-red-500" 
+                  variant="destructive" 
+                  onClick={() => deleteStudent(studentToDelete.id)}
+                  disabled={deleting === studentToDelete.id}
+                >
+                  {deleting === studentToDelete.id ? "Suppression..." : "Supprimer"}
+                </Button>
               </div>
             </div>
           </div>

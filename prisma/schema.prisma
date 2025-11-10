@@ -2,34 +2,460 @@ generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
+datasource db { 
   provider = "postgresql"
   url      = env("DATABASE_URL")
+} 
+
+model User {
+  id           String   @id @default(cuid())
+  clerkUserId  String   @unique
+  email        String   @unique
+  role         UserRole
+  firstName    String
+  lastName     String
+  phone        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String?
+  events       Event[]
+  parent       Parent?
+  student      Student?
+  teacher      Teacher?
+  createdBy    User?    @relation("UserCreatedUsers", fields: [createdById], references: [id])
+  createdUsers User[]   @relation("UserCreatedUsers")
+  report               Report[]
+  inscriptionsCreees   Inscription[] @relation("UserInscriptions")
+  fraisConfigurations  FraisConfiguration[]
+  paiementsCrees       Paiement[]
+  dossier              Dossier[]
+
+  @@map("users")
 }
 
-// ------------------- USERS -------------------
-model User {
-  id          String   @id @default(cuid())
-  clerkUserId String   @unique
-  email       String   @unique
-  role        UserRole
-  firstName   String
-  lastName    String
-  phone       String?
-  isActive    Boolean  @default(true)
+model Student {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  studentNumber String   @unique
+  filiereId     Int?
+  vagueId       String?
+  createdAt     DateTime @default(now())
+  vagueNumber   Int?
+  filiere       Filiere? @relation(fields: [filiereId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vague         Vague?   @relation("VagueStudents", fields: [vagueId], references: [id])
+  grades        Grade[]
+  attendance    Attendance[]
 
+  @@map("students")
+}
+
+model Teacher {
+  id                   String                @id @default(cuid())
+  userId               String                @unique
+  matiere              String
+  createdAt            DateTime              @default(now())
+  enseignements        Enseignement[]
+  planningAssignations PlanningAssignation[]
+  homeworks            Homework[]
+  gradeFormulas        GradeFormula[]
+  grades               Grade[]
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attendance           Attendance[]
+  report               Report[]
+
+  @@map("teachers")
+}
+
+model Parent {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  enfantName String
+  filiere    String
+  relation   String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("parents")
+}
+
+model Filiere {
+  id                   Int                   @id @default(autoincrement())
+  nom                  String
+  description          String?
+  dureeFormation       String
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  modules              Module[]
+  planningAssignations PlanningAssignation[]
+  semestres            Semestre[]
+  students             Student[]
+  vaguesPivot          VagueFiliere[]
+  homeworks            Homework[]
+  grades               Grade[]
+  inscriptions         Inscription[]
+  fraisFormations      FraisFormation[]
+
+  @@map("filieres")
+}
+
+model Semestre {
+  id          Int      @id @default(autoincrement())
+  nom         String
+  description String?
+  dateDebut   DateTime
+  dateFin     DateTime
+  filiereId   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  modules     Module[]
+  filiere     Filiere  @relation(fields: [filiereId], references: [id], onDelete: Cascade)
+
+  @@map("semestres")
+}
+
+model Module {
+  id                   Int                   @id @default(autoincrement())
+  nom                  String
+  coefficient          Int
+  typeModule           TypeModule
+  description          String?
+  filiereId            Int
+  semestreId           Int?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  enseignements        Enseignement[]
+  filiere              Filiere               @relation(fields: [filiereId], references: [id], onDelete: Cascade)
+  semestre             Semestre?             @relation(fields: [semestreId], references: [id])
+  planningAssignations PlanningAssignation[]
+  homeworks            Homework[]
+  grades               Grade[]
+  report               Report[]
+
+  @@map("modules")
+}
+
+model Enseignement {
+  id           Int      @id @default(autoincrement())
+  professeurId String
+  moduleId     Int
+  jour         String
+  heureDebut   String
+  heureFin     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  salleId      String?
+  module       Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  teacher      Teacher  @relation(fields: [professeurId], references: [id], onDelete: Cascade)
+  salle        Salle?   @relation(fields: [salleId], references: [id])
+
+  @@map("enseignements")
+}
+
+model Vague {
+  id                   String                @id @default(cuid())
+  nom                  String                @unique
+  description          String?
+  semestres            String
+  dateDebut            DateTime
+  dateFin              DateTime
+  isActive             Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  planningAssignations PlanningAssignation[]
+  students             Student[]             @relation("VagueStudents")
+  filieresPivot        VagueFiliere[]
+  homeworks            Homework[]
+  grades               Grade[]
+  report               Report[]
+  inscriptions         Inscription[]
+  fraisFormations      FraisFormation[]
+
+  @@map("vagues")
+}
+
+model VagueFiliere {
+  vagueId   String
+  filiereId Int
+  filiere   Filiere @relation(fields: [filiereId], references: [id], onDelete: Cascade)
+  vague     Vague   @relation(fields: [vagueId], references: [id], onDelete: Cascade)
+
+  @@id([vagueId, filiereId])
+  @@map("vague_filiere")
+}
+
+model PlanningAssignation {
+  id             String   @id @default(cuid())
+  vagueId        String
+  filiereId      Int
+  moduleId       Int
+  teacherId      String
+  scheduleSlots  Json
+  schedulePeriod Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  filiere        Filiere  @relation(fields: [filiereId], references: [id])
+  module         Module   @relation(fields: [moduleId], references: [id])
+  teacher        Teacher  @relation(fields: [teacherId], references: [id])
+  vague          Vague    @relation(fields: [vagueId], references: [id])
+
+  @@map("planning_assignations")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  type        String
+  location    String
+  date        String
+  day         String
+  month       String
+  time        String
+  description String?
+  badge       String   @default("Important")
+  icon        String
+  color       String
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@map("events")
+}
+
+model Salle {
+  id            String         @id @default(cuid())
+  nom           String         @unique
+  capacite      Int
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  enseignements Enseignement[]
+
+  @@map("salles")
+}
+
+model Homework {
+  id           String   @id @default(cuid())
+  title        String
+  exerciseType String
+  pages        String?
+  content      String?
+  date         DateTime
+  deadline     DateTime
+  status       String   @default("actif")
+  fileUrl      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  teacherId    String
+  teacher      Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  filiereId    Int?
+  filiere      Filiere? @relation(fields: [filiereId], references: [id])
+  vagueId      String?
+  vague        Vague?   @relation(fields: [vagueId], references: [id])
+  moduleId     Int?
+  module       Module?  @relation(fields: [moduleId], references: [id])
+
+  @@map("homeworks")
+}
+
+model Grade {
+  id            String   @id @default(cuid())
+  
+  // Relations
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  moduleId      Int
+  module        Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  
+  filiereId     Int
+  filiere       Filiere  @relation(fields: [filiereId], references: [id], onDelete: Cascade)
+  
+  vagueId       String
+  vague         Vague    @relation(fields: [vagueId], references: [id], onDelete: Cascade)
+  
+  teacherId     String
+  teacher       Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Notes
+  interrogation1 Float?
+  interrogation2 Float?
+  interrogation3 Float?
+  devoir        Float?
+  composition   Float?
+  rang          Int?
+
+  // Formule utilisée
+  formulaUsed   String?
+
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Contrainte d'unicité
+  @@unique([studentId, moduleId, filiereId, vagueId])
+  @@map("grades")
+}
+
+model GradeFormula {
+  id          String   @id @default(cuid())
+  name        String   // Ex: "Formule Standard", "Formule Technique"
+  formula     String   // Ex: "(interro*0.3 + devoir*0.3 + compo*0.4)"
+  description String?
+  
+  // Relations
+  teacherId   String
+  teacher     Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  createdById String?
-  createdBy   User?    @relation("UserCreatedUsers", fields: [createdById], references: [id])
-  createdUsers User[]  @relation("UserCreatedUsers")
+  @@map("grade_formulas")
+}
 
-  student     Student?
-  teacher     Teacher?
-  parent      Parent?
+model Attendance {
+  id          String   @id @default(cuid())
+  
+  // Relations
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  teacherId   String
+  teacher     Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
-  @@map("users")
+  // Données de présence
+  date        DateTime
+  courseTime  String   // Ex: "08:00-10:00"
+  subject     String
+  status      String   // "present" ou "absent"
+  justified   Boolean  @default(false)
+  reason      String?
+  semester    String   // Ex: "t1", "t2", "t3"
+
+  // Relations supplémentaires pour faciliter les requêtes
+  filiereId   Int?
+  vagueId     String?
+  moduleId    Int?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Contraintes d'unicité
+  @@unique([studentId, date, courseTime, semester])
+  @@index([teacherId])
+  @@map("attendances")
+}
+
+model Report {
+  id                String   @id @default(cuid())
+  moduleId          Int
+  teacherId         String
+  vagueId           String
+  date              DateTime
+  chapitre          String
+  objectif          String
+  dureePlanifiee    String   // Format: "2h" ou "2h30"
+  dureeReelle       String   // Format: "2h" ou "2h30"
+  progression       String   // "Terminé" | "Partiel" | "Non terminé"
+  difficulte        String?
+  evaluation        Float    // 1-5
+  commentaireProf   String?
+  commentaireCenseur String?
+  createdBy         String   // ID de l'utilisateur qui a créé le rapport
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  module            Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  teacher           Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  vague             Vague    @relation(fields: [vagueId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@map("reports")
+}
+
+model Inscription {
+  id              String             @id @default(cuid())
+  nom             String
+  prenom          String
+  email           String             @unique
+  telephone       String
+  dateNaissance   DateTime?
+  dateInscription DateTime           @default(now())
+  statut          StatutInscription  @default(EN_ATTENTE)
+  fraisInscription Int
+  fraisPayes      Int               @default(0)
+  datePaiement    DateTime?
+  
+  // Relations
+  filiereId       Int?
+  vagueId         String?
+  createdById     String?
+  
+  filiere         Filiere?          @relation(fields: [filiereId], references: [id])
+  vague           Vague?            @relation(fields: [vagueId], references: [id])
+  createdBy       User?             @relation("UserInscriptions", fields: [createdById], references: [id])
+  paiements       Paiement[]
+  dossier         Dossier[]
+  
+  // Timestamps
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@map("inscriptions")
+}
+
+model Paiement {
+  id              String   @id @default(cuid())
+  inscriptionId   String
+  montant         Int
+  datePaiement    DateTime @default(now())
+  modePaiement    String
+  reference       String?
+  createdById     String
+  createdBy       User     @relation(fields: [createdById], references: [id])
+  inscription     Inscription @relation(fields: [inscriptionId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("paiements")
+}
+
+// CORRECTION DES MODÈLES FRAIS
+model FraisFormation {
+  id              String         @id @default(cuid())
+  vagueId         String
+  filiereId       Int
+  fraisScolarite  Int
+  servicesInclus  Json           // CORRIGÉ: Changé de String à Json
+  statut          FraisStatut    @default(ACTIF)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  // Relations
+  vague           Vague          @relation(fields: [vagueId], references: [id], onDelete: Cascade)
+  filiere         Filiere        @relation(fields: [filiereId], references: [id], onDelete: Cascade)
+  
+  @@unique([vagueId, filiereId])
+  @@map("frais_formations")
+}
+
+model FraisConfiguration {
+  id          String     @id @default(cuid())
+  type        TypeFrais  @unique
+  montant     Int
+  description String?
+  createdById String
+  createdBy   User       @relation(fields: [createdById], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("frais_configurations")
 }
 
 enum UserRole {
@@ -42,130 +468,57 @@ enum UserRole {
   PARENT
 }
 
-// ------------------- STUDENT -------------------
-model Student {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  studentNumber String   @unique
-  vagueNumber   String
-  filiereId     Int?
-  filiere       Filiere? @relation(fields: [filiereId], references: [id])
-
-  vagueId       String?
-  vague         Vague?   @relation("VagueStudents", fields: [vagueId], references: [id])
-
-  createdAt     DateTime @default(now())
-
-  @@map("students")
+enum TypeModule {
+  theorique
+  pratique
+  mixte
+  projet
 }
 
-// ------------------- TEACHER -------------------
-model Teacher {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  matiere     String
-  enseignements Enseignement[]
-
-  createdAt   DateTime @default(now())
-
-  @@map("teachers")
+enum StatutInscription {
+  EN_ATTENTE
+  APPROUVE
+  REJETE
+  PAYE_PARTIEL
+  PAYE_COMPLET
 }
 
-// ------------------- PARENT -------------------
-model Parent {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  enfantName  String
-  filiere     String
-  relation    String
-
-  createdAt   DateTime @default(now())
-
-  @@map("parents")
+enum FraisStatut {
+  ACTIF
+  ARCHIVE
 }
 
-// ------------------- FILIERE -------------------
-model Filiere {
-  id            Int        @id @default(autoincrement())
-  nom           String
-  description   String?
-  dureeFormation String
-  semestres     Semestre[]
-  modules       Module[]
-  students      Student[]
-
-  vaguesPivot   VagueFiliere[]  // relation pivot avec Vague
-
-  createdAt     DateTime @default(now())
+enum TypeFrais {
+  INSCRIPTION_UNIVERSEL
+  AUTRES_FRAIS
 }
 
-// ------------------- SEMESTRE -------------------
-model Semestre {
-  id        Int       @id @default(autoincrement())
-  nom       String
-  description String?
-  dateDebut DateTime
-  dateFin   DateTime
-  filiereId Int
-  filiere   Filiere   @relation(fields: [filiereId], references: [id])
-  modules   Module[]
+// Ajoutez ce modèle à votre schema.prisma
+model Dossier {
+  id              String         @id @default(cuid())
+  inscriptionId   String         @unique
+  statut          StatutDossier  @default(EN_ATTENTE)
+  dateCreation    DateTime       @default(now())
+  dateMaj         DateTime       @updatedAt
+  
+  // Documents
+  photoIdentite   String?        // URL du fichier
+  acteNaissance   String?        // URL du fichier  
+  relevesNotes    String?        // URL du fichier
+  autresDocuments Json?          // Pour les documents supplémentaires
+  
+  // Relations
+  inscription     Inscription    @relation(fields: [inscriptionId], references: [id], onDelete: Cascade)
+  createdBy       String
+  user            User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  
+  @@map("dossiers")
 }
 
-// ------------------- MODULE -------------------
-model Module {
-  id          Int       @id @default(autoincrement())
-  nom         String
-  coefficient Int
-  typeModule  String
-  description String?
-  filiereId   Int
-  filiere     Filiere   @relation(fields: [filiereId], references: [id])
-  semestreId  Int?
-  semestre    Semestre? @relation(fields: [semestreId], references: [id])
-  enseignements Enseignement[]
-}
-
-// ------------------- ENSEIGNEMENT -------------------
-model Enseignement {
-  id          Int      @id @default(autoincrement())
-  professeurId String
-  teacher     Teacher  @relation(fields: [professeurId], references: [id])
-  moduleId    Int
-  module      Module   @relation(fields: [moduleId], references: [id])
-  jour        String
-  heureDebut  String
-  heureFin    String
-}
-
-// ------------------- VAGUE -------------------
-model Vague {
-  id          String     @id @default(cuid())
-  nom         String     @unique
-  description String?
-  semestres   String     // liste de semestres séparés par des virgules
-  dateDebut   DateTime
-  dateFin     DateTime
-  isActive    Boolean    @default(true)
-
-  filieresPivot VagueFiliere[]  // relation pivot
-  students      Student[]        @relation("VagueStudents")
-
-  createdAt   DateTime   @default(now())
-}
-
-// ------------------- VAGUE - FILIERE PIVOT -------------------
-model VagueFiliere {
-  vagueId   String
-  filiereId Int
-
-  vague     Vague   @relation(fields: [vagueId], references: [id])
-  filiere   Filiere @relation(fields: [filiereId], references: [id])
-
-  @@id([vagueId, filiereId])
+enum StatutDossier {
+  EN_ATTENTE
+  COMPLET
+  INCOMPLET
+  VALIDE
+  REJETE
 }

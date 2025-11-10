@@ -11,19 +11,16 @@ import {
   EyeOff,
   ChevronDown,
   ChevronUp,
-  Globe,
   Sun,
   Save,
   Key,
   Users,
   AlertTriangle,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,7 +76,7 @@ const ParentSettingsPage = () => {
       router.push("/sign-in");
     } else if (isLoaded && user) {
       const role = user.publicMetadata?.role || "inconnu";
-      if (role !== "parent") {
+      if (role !== "Parent") {
         toast.error("Accès réservé aux parents uniquement !");
         router.push("/dashboard");
       } else {
@@ -429,59 +426,6 @@ const ParentSettingsPage = () => {
                     id="dark-mode"
                     checked={darkMode}
                     onCheckedChange={setDarkMode}
-                    className="flex-shrink-0"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Section Général */}
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gray-100 rounded-lg">
-                  <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="text-base sm:text-lg">Général</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Paramètres généraux de l&apos;application</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="space-y-4 sm:space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="space-y-0.5 min-w-0 flex-1">
-                    <Label htmlFor="language" className="text-sm sm:text-base">Langue</Label>
-                    <p className="text-xs sm:text-sm text-gray-500">Définir la langue d&apos;affichage</p>
-                  </div>
-                  <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger className="w-full sm:w-[180px] text-sm sm:text-base">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fr" className="text-sm sm:text-base">Français</SelectItem>
-                      <SelectItem value="en" className="text-sm sm:text-base">English</SelectItem>
-                      <SelectItem value="es" className="text-sm sm:text-base">Español</SelectItem>
-                      <SelectItem value="de" className="text-sm sm:text-base">Deutsch</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5 min-w-0 flex-1">
-                    <Label htmlFor="notifications" className="text-sm sm:text-base">Notifications</Label>
-                    <p className="text-xs sm:text-sm text-gray-500 truncate">
-                      Recevoir des notifications importantes
-                    </p>
-                  </div>
-                  <Switch
-                    id="notifications"
-                    checked={notificationsEnabled}
-                    onCheckedChange={setNotificationsEnabled}
                     className="flex-shrink-0"
                   />
                 </div>

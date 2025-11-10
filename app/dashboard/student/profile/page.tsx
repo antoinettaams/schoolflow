@@ -14,7 +14,7 @@ import {
   Calendar,
   BookOpen,
   GraduationCap,
-  Hash,
+  Hash, 
   CheckCircle,
   Clock,
   Shield,
@@ -30,94 +30,262 @@ interface UserActivity {
   type: string;
   description: string;
   timestamp: Date;
-  icon: React.ReactNode;
+  icon: string;
 }
 
-interface StudentMetadata {
-  filiere?: string;
-  studentId?: string;
-  enrollmentYear?: string;
+interface Subject {
+  id: number;
+  nom: string;
+  description: string;
+  coefficient: number;
+  typeModule: string;
+  couleur: string;
+  enseignements: any[];
 }
 
-// 🔥 Matières par filière
-const matieresParFiliere: Record<string, { nom: string; description: string; couleur: string }[]> = {
-  "Scientifique": [
-    { nom: "Mathématiques", description: "Algèbre, Analyse, Géométrie", couleur: "text-green-600" },
-    { nom: "Physique", description: "Mécanique, Électricité, Ondes", couleur: "text-purple-600" },
-    { nom: "Chimie", description: "Organique, Minérale, Analytique", couleur: "text-blue-600" },
-    { nom: "SVT", description: "Biologie, Géologie, Écologie", couleur: "text-emerald-600" },
-  ],
-  "Littéraire": [
-    { nom: "Français", description: "Littérature, Grammaire, Dissertation", couleur: "text-red-600" },
-    { nom: "Philosophie", description: "Logique, Éthique, Métaphysique", couleur: "text-orange-600" },
-    { nom: "Histoire-Géo", description: "Histoire moderne, Géopolitique", couleur: "text-amber-600" },
-    { nom: "Langues", description: "Anglais, Espagnol, Allemand", couleur: "text-cyan-600" },
-  ],
-  "Économique": [
-    { nom: "Économie", description: "Micro, Macroéconomie", couleur: "text-green-600" },
-    { nom: "Sociologie", description: "Theories sociales, Méthodologie", couleur: "text-blue-600" },
-    { nom: "Mathématiques", description: "Statistiques, Probabilités", couleur: "text-purple-600" },
-    { nom: "Droit", description: "Droit civil, Droit des affaires", couleur: "text-red-600" },
-  ],
-  "Informatique": [
-    { nom: "Programmation", description: "Algorithmique, Développement", couleur: "text-blue-600" },
-    { nom: "Réseaux", description: "Architecture, Protocoles", couleur: "text-green-600" },
-    { nom: "Bases de données", description: "SQL, Modélisation", couleur: "text-purple-600" },
-    { nom: "Systèmes", description: "OS, Administration", couleur: "text-orange-600" },
-  ],
-  "Commerciale": [
-    { nom: "Marketing", description: "Stratégie, Communication", couleur: "text-blue-600" },
-    { nom: "Management", description: "Gestion d'équipe, Leadership", couleur: "text-green-600" },
-    { nom: "Comptabilité", description: "Finance, Analyse comptable", couleur: "text-red-600" },
-    { nom: "Négociation", description: "Techniques de vente", couleur: "text-purple-600" },
-  ]
+interface Grade {
+  id: string;
+  module: {
+    id: number;
+    nom: string;
+    coefficient: number;
+    typeModule: string;
+  };
+  interrogation1: number | null;
+  interrogation2: number | null;
+  interrogation3: number | null;
+  devoir: number | null;
+  composition: number | null;
+  rang: number | null;
+  formulaUsed: string | null;
+  teacher: {
+    firstName: string;
+    lastName: string;
+    matiere: string;
+  } | null;
+  createdAt: string;
+}
+
+interface StudentData {
+  user: {
+    id: string;
+    clerkUserId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string | null;
+    role: string;
+    createdAt: string;
+  };
+  student: {
+    id: string;
+    studentNumber: string;
+    vagueNumber: number | null;
+    filiere: {
+      id: number;
+      nom: string;
+      description: string | null;
+      dureeFormation: string;
+    } | null;
+    vague: {
+      id: string;
+      nom: string;
+      description: string | null;
+      dateDebut: string;
+      dateFin: string;
+    } | null;
+  };
+  grades: Grade[];
+  activities: UserActivity[];
+  subjects: Subject[];
+}
+
+// Composant Skeleton pour le chargement
+const ProfileSkeleton = () => {
+  return (
+    <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+      <div className="h-screen overflow-y-auto">
+        <div className="max-w-6xl mx-auto p-6 space-y-6">
+          {/* Carte de profil principale - Skeleton */}
+          <Card className="relative overflow-hidden border-0 shadow-xl">
+            {/* Bannière Skeleton */}
+            <div className="bg-gray-300 h-40 w-full relative animate-pulse">
+              <div className="absolute left-8 bottom-0 translate-y-1/2">
+                <div className="relative">
+                  <div className="w-32 h-32 rounded-full bg-gray-400 border-4 border-white shadow-2xl" />
+                  <div className="absolute bottom-0 right-0 w-10 h-10 bg-gray-500 rounded-full border-2 border-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Header Skeleton */}
+            <CardHeader className="pt-16 pb-6">
+              <div className="flex flex-col space-y-2">
+                <div className="h-8 bg-gray-300 rounded w-1/3 animate-pulse"></div>
+                <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+              </div>
+            </CardHeader>
+
+            {/* Informations personnelles Skeleton */}
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-6 h-6 bg-gray-300 rounded animate-pulse"></div>
+                <div className="h-6 bg-gray-300 rounded w-48 animate-pulse"></div>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center p-4">
+                    <div className="w-5 h-5 bg-gray-300 rounded mr-4 animate-pulse"></div>
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-200 rounded w-20 mb-2 animate-pulse"></div>
+                      <div className="h-5 bg-gray-300 rounded w-32 animate-pulse"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+
+            {/* Informations scolaires Skeleton */}
+            <CardContent className="p-6 border-t">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-6 h-6 bg-gray-300 rounded animate-pulse"></div>
+                <div className="h-6 bg-gray-300 rounded w-48 animate-pulse"></div>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center p-4">
+                    <div className="w-5 h-5 bg-gray-300 rounded mr-4 animate-pulse"></div>
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-200 rounded w-20 mb-2 animate-pulse"></div>
+                      <div className="h-5 bg-gray-300 rounded w-32 animate-pulse"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+
+            {/* Footer Skeleton */}
+            <CardContent className="px-6 py-4 border-t bg-gray-50/50">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="h-4 bg-gray-300 rounded w-40 animate-pulse"></div>
+                <div className="h-12 bg-gray-300 rounded w-64 animate-pulse"></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section sécurité Skeleton */}
+          <Card className="border-0 shadow-xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 bg-gray-300 rounded animate-pulse"></div>
+                <div className="h-6 bg-gray-300 rounded w-48 animate-pulse"></div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
+                <div className="w-5 h-5 bg-gray-300 rounded animate-pulse"></div>
+                <div className="flex-1">
+                  <div className="h-5 bg-gray-300 rounded w-32 mb-1 animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded w-48 animate-pulse"></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Activité récente Skeleton */}
+          <Card className="border-0 shadow-xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 bg-gray-300 rounded animate-pulse"></div>
+                <div className="h-6 bg-gray-300 rounded w-48 animate-pulse"></div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+                    <div className="w-4 h-4 bg-gray-300 rounded animate-pulse"></div>
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-300 rounded w-3/4 mb-1 animate-pulse"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section matières Skeleton */}
+          <Card className="border-0 shadow-xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 bg-gray-300 rounded animate-pulse"></div>
+                <div className="h-6 bg-gray-300 rounded w-64 animate-pulse"></div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
+                    <div className="w-5 h-5 bg-gray-300 rounded animate-pulse"></div>
+                    <div className="flex-1">
+                      <div className="h-5 bg-gray-300 rounded w-32 mb-1 animate-pulse"></div>
+                      <div className="h-4 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
+                      <div className="flex gap-2">
+                        <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
+                        <div className="h-6 bg-gray-200 rounded w-20 animate-pulse"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const StudentProfilePage = () => {
-  const { user, isLoaded } = useUser();
+  const { user: clerkUser, isLoaded } = useUser();
   const { signOut } = useClerk();
   const [showImageOptions, setShowImageOptions] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [userActivity, setUserActivity] = useState<UserActivity[]>([]);
+  const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Activités fictives
-  const getUserActivity = (): UserActivity[] => [
-    {
-      id: 1,
-      type: "login",
-      description: "Connexion réussie",
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      icon: <CheckCircle className="w-4 h-4 text-green-500" />,
-    },
-    {
-      id: 2,
-      type: "exam",
-      description: "Examen de Mathématiques terminé",
-      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      icon: <BookOpen className="w-4 h-4 text-blue-500" />,
-    },
-    {
-      id: 3,
-      type: "homework",
-      description: "Devoir de Physique rendu",
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      icon: <CheckCircle className="w-4 h-4 text-green-500" />,
-    },
-    {
-      id: 4,
-      type: "attendance",
-      description: "Présence enregistrée",
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      icon: <Clock className="w-4 h-4 text-orange-500" />,
-    },
-  ];
-
+  // Charger les données de l'étudiant
   useEffect(() => {
-    setUserActivity(getUserActivity());
-  }, []);
+    const fetchStudentData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/student/profile');
+        
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement des données');
+        }
+        
+        const data = await response.json();
+        setStudentData(data);
+      } catch (err) {
+        console.error('Erreur:', err);
+        setError('Impossible de charger les données du profil');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isLoaded && clerkUser) {
+      fetchStudentData();
+    }
+  }, [isLoaded, clerkUser]);
 
   // Upload photo
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,21 +302,9 @@ const StudentProfilePage = () => {
 
     try {
       setIsUploading(true);
-      await user?.setProfileImage({ file });
+      await clerkUser?.setProfileImage({ file });
       alert("✅ Photo de profil mise à jour avec succès !");
       setShowImageOptions(false);
-
-      // Ajouter dans le journal d'activité
-      setUserActivity((prev) => [
-        {
-          id: Date.now(),
-          type: "profile_update",
-          description: "Photo de profil mise à jour",
-          timestamp: new Date(),
-          icon: <Camera className="w-4 h-4 text-blue-500" />,
-        },
-        ...prev,
-      ]);
     } catch (error) {
       console.error("Erreur upload:", error);
       alert("Erreur lors du téléchargement de l'image");
@@ -162,7 +318,7 @@ const StudentProfilePage = () => {
   const handleDeleteImage = async () => {
     if (!confirm("Supprimer votre photo de profil ?")) return;
     try {
-      await user?.setProfileImage({ file: null });
+      await clerkUser?.setProfileImage({ file: null });
       alert("Photo supprimée avec succès !");
       setShowImageOptions(false);
     } catch (error) {
@@ -174,8 +330,8 @@ const StudentProfilePage = () => {
   // Télécharger l'image
   const handleDownloadImage = () => {
     const link = document.createElement("a");
-    link.href = user?.imageUrl || "";
-    link.download = `photo-profil-${user?.firstName}-${user?.lastName}.jpg`;
+    link.href = clerkUser?.imageUrl || "";
+    link.download = `photo-profil-${clerkUser?.firstName}-${clerkUser?.lastName}.jpg`;
     link.click();
   };
 
@@ -184,29 +340,63 @@ const StudentProfilePage = () => {
   const handleConfirmLogout = async () => await signOut({ redirectUrl: "/auth/signin" });
   const handleCancelLogout = () => setIsLogoutModalOpen(false);
 
-  if (!isLoaded || !user) {
+  // Fonction pour rendre les icônes d'activité
+  const renderActivityIcon = (iconName: string) => {
+    const iconProps = { className: "w-4 h-4" };
+    
+    switch (iconName) {
+      case 'check-circle':
+        return <CheckCircle {...iconProps} className={`${iconProps.className} text-green-500`} />;
+      case 'book-open':
+        return <BookOpen {...iconProps} className={`${iconProps.className} text-blue-500`} />;
+      case 'clock':
+        return <Clock {...iconProps} className={`${iconProps.className} text-orange-500`} />;
+      default:
+        return <CheckCircle {...iconProps} className={`${iconProps.className} text-gray-500`} />;
+    }
+  };
+
+  // Afficher le skeleton pendant le chargement
+  if (!isLoaded || loading) {
+    return <ProfileSkeleton />;
+  }
+
+  if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
-          <p className="mt-4 text-gray-600">Chargement du profil...</p>
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-600">{error}</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="mt-4"
+          >
+            Réessayer
+          </Button>
         </div>
       </div>
     );
   }
 
-  const profileImage = user.imageUrl || "https://placehold.co/150x150/3b82f6/ffffff?text=É";
-  const createdAt = user.createdAt ? new Date(user.createdAt) : new Date();
-  
-  const studentMetadata = user.publicMetadata as StudentMetadata;
-  const studentId = studentMetadata?.studentId || "Non assigné";
-  const enrollmentYear = studentMetadata?.enrollmentYear || "2024";
-  const filiere = studentMetadata?.filiere || "Non assigné";
+  if (!clerkUser || !studentData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+          <p className="text-gray-600">Aucune donnée trouvée</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Récupérer les matières selon la filière
-  const matieres = matieresParFiliere[filiere] || [
-    { nom: "Matières générales", description: "Programme standard", couleur: "text-gray-600" }
-  ];
+  const profileImage = clerkUser.imageUrl || "https://placehold.co/150x150/3b82f6/ffffff?text=É";
+  const createdAt = clerkUser.createdAt ? new Date(clerkUser.createdAt) : new Date();
+  
+  const studentId = studentData.student.studentNumber || "Non assigné";
+  const enrollmentYear = studentData.student.vague?.dateDebut 
+    ? new Date(studentData.student.vague.dateDebut).getFullYear().toString()
+    : "2024";
+  const filiere = studentData.student.filiere?.nom || "Non assigné";
 
   return (
     <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
@@ -223,7 +413,7 @@ const StudentProfilePage = () => {
           {/* Carte de profil principale */}
           <Card className="relative overflow-hidden border-0 shadow-xl">
             {/* Bannière */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-40 w-full relative">
+            <div className="bg-principal h-40 w-full relative">
               <div className="absolute left-8 bottom-0 translate-y-1/2">
                 <div className="relative">
                   <Image
@@ -282,7 +472,7 @@ const StudentProfilePage = () => {
                     </div>
                   </button>
 
-                  {user.imageUrl && (
+                  {clerkUser.imageUrl && (
                     <button
                       onClick={handleDeleteImage}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-50"
@@ -316,7 +506,7 @@ const StudentProfilePage = () => {
                     <X className="w-5 h-5" />
                   </Button>
                   <Image
-                    src={user.imageUrl || profileImage}
+                    src={clerkUser.imageUrl || profileImage}
                     alt="Photo de profil"
                     width={500}
                     height={500}
@@ -345,7 +535,7 @@ const StudentProfilePage = () => {
             <CardHeader className="pt-16 pb-6">
               <div className="flex flex-col">
                 <CardTitle className="text-2xl font-extrabold text-gray-900">
-                  {user.firstName} {user.lastName}
+                  {studentData.user.firstName} {studentData.user.lastName}
                 </CardTitle>
                 <CardDescription className="mt-1">
                   <Badge variant="secondary" className="text-blue-600 bg-blue-50 font-medium">
@@ -364,16 +554,16 @@ const StudentProfilePage = () => {
               </div>
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <InfoItem label="Prénom" value={user.firstName || ""} icon={User} />
-                <InfoItem label="Nom" value={user.lastName || ""} icon={User} />
+                <InfoItem label="Prénom" value={studentData.user.firstName} icon={User} />
+                <InfoItem label="Nom" value={studentData.user.lastName} icon={User} />
                 <InfoItem
                   label="E-mail"
-                  value={user.emailAddresses[0]?.emailAddress || ""}
+                  value={studentData.user.email}
                   icon={Mail}
                 />
                 <InfoItem
                   label="Compte créé le"
-                  value={createdAt.toLocaleDateString("fr-FR", {
+                  value={new Date(studentData.user.createdAt).toLocaleDateString("fr-FR", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
@@ -394,6 +584,13 @@ const StudentProfilePage = () => {
                 <SchoolInfoItem label="Filière" value={filiere} icon={GraduationCap} />
                 <SchoolInfoItem label="Matricule" value={studentId} icon={Hash} />
                 <SchoolInfoItem label="Année Scolaire" value={enrollmentYear} icon={Calendar} />
+                {studentData.student.vague && (
+                  <SchoolInfoItem 
+                    label="Vague" 
+                    value={studentData.student.vague.nom} 
+                    icon={User} 
+                  />
+                )}
               </div>
             </CardContent>
 
@@ -453,19 +650,19 @@ const StudentProfilePage = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {userActivity.map((activity) => (
+                {studentData.activities.map((activity) => (
                   <div
                     key={activity.id}
                     className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    {activity.icon}
+                    {renderActivityIcon(activity.icon)}
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900">
                         {activity.description}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {activity.timestamp.toLocaleDateString("fr-FR")} à{" "}
-                        {activity.timestamp.toLocaleTimeString("fr-FR", {
+                        {new Date(activity.timestamp).toLocaleDateString("fr-FR")} à{" "}
+                        {new Date(activity.timestamp).toLocaleTimeString("fr-FR", {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
@@ -473,6 +670,9 @@ const StudentProfilePage = () => {
                     </div>
                   </div>
                 ))}
+                {studentData.activities.length === 0 && (
+                  <p className="text-center text-gray-500 py-4">Aucune activité récente</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -487,21 +687,73 @@ const StudentProfilePage = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {matieres.map((matiere, index) => (
+                {studentData.subjects.map((matiere) => (
                   <div 
-                    key={index}
+                    key={matiere.id}
                     className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <BookOpen className={`w-5 h-5 ${matiere.couleur}`} />
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium text-gray-900">{matiere.nom}</p>
                       <p className="text-sm text-gray-600">{matiere.description}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          Coef: {matiere.coefficient}
+                        </Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          {matiere.typeModule}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 ))}
+                {studentData.subjects.length === 0 && (
+                  <p className="text-center text-gray-500 py-4 col-span-2">
+                    Aucune matière trouvée pour cette filière
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
+
+          {/* Section notes récentes */}
+          {studentData.grades.length > 0 && (
+            <Card className="border-0 shadow-xl">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <BookOpen className="w-6 h-6 text-blue-600" />
+                  <CardTitle className="text-xl font-bold text-gray-700">Notes Récentes</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {studentData.grades.slice(0, 5).map((grade) => (
+                    <div
+                      key={grade.id}
+                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <div>
+                        <p className="font-medium text-gray-900">{grade.module.nom}</p>
+                        <p className="text-sm text-gray-600">
+                          {grade.teacher && `Prof: ${grade.teacher.firstName} ${grade.teacher.lastName}`}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        {grade.composition && (
+                          <p className="font-semibold text-blue-600">
+                            Composition: {grade.composition}/20
+                          </p>
+                        )}
+                        {grade.rang && (
+                          <p className="text-sm text-gray-500">Rang: {grade.rang}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

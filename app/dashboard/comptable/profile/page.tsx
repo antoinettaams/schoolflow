@@ -23,6 +23,7 @@ import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Interface pour les activités utilisateur
 interface UserActivity {
@@ -33,6 +34,136 @@ interface UserActivity {
   icon: React.ReactNode;
 }
 
+// Composants Skeleton personnalisés
+const ProfileCardSkeleton = () => (
+  <Card className="relative overflow-hidden border-0 shadow-xl">
+    {/* Bannière skeleton */}
+    <div className="bg-principal h-40 w-full relative">
+      <div className="absolute left-8 bottom-0 translate-y-1/2">
+        <Skeleton className="w-32 h-32 rounded-full border-4 border-white" />
+      </div>
+    </div>
+
+    {/* Header skeleton */}
+    <CardHeader className="pt-16 pb-6">
+      <div className="flex flex-col space-y-3">
+        <Skeleton className="h-8 w-64" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-6 w-20" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+      </div>
+    </CardHeader>
+
+    {/* Informations personnelles skeleton */}
+    <CardContent className="p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <Skeleton className="w-6 h-6 rounded-full" />
+        <Skeleton className="h-6 w-48" />
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {[...Array(4)].map((_, index) => (
+          <div key={index} className="flex items-center p-4 border-b border-gray-100">
+            <Skeleton className="w-5 h-5 rounded-full mr-4" />
+            <div className="flex-1">
+              <Skeleton className="h-4 w-20 mb-2" />
+              <Skeleton className="h-5 w-32" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </CardContent>
+
+    {/* Footer skeleton */}
+    <CardContent className="px-6 py-4 border-t bg-gray-50/50">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-12 w-64 rounded-xl" />
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const SecurityCardSkeleton = () => (
+  <Card className="border-0 shadow-xl">
+    <CardHeader>
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-6 h-6 rounded-full" />
+        <Skeleton className="h-6 w-48" />
+      </div>
+    </CardHeader>
+    <CardContent>
+      <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
+        <Skeleton className="w-5 h-5 rounded-full" />
+        <div className="flex-1">
+          <Skeleton className="h-5 w-32 mb-1" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const ActivityCardSkeleton = () => (
+  <Card className="border-0 shadow-xl">
+    <CardHeader>
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-6 h-6 rounded-full" />
+        <Skeleton className="h-6 w-48" />
+      </div>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-3">
+        {[...Array(4)].map((_, index) => (
+          <div key={index} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+            <Skeleton className="w-4 h-4 rounded-full" />
+            <div className="flex-1">
+              <Skeleton className="h-4 w-40 mb-1" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const SkillsCardSkeleton = () => (
+  <Card className="border-0 shadow-xl">
+    <CardHeader>
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-6 h-6 rounded-full" />
+        <Skeleton className="h-6 w-48" />
+      </div>
+    </CardHeader>
+    <CardContent>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {[...Array(4)].map((_, index) => (
+          <div key={index} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+            <Skeleton className="w-5 h-5 rounded-full" />
+            <div>
+              <Skeleton className="h-5 w-32 mb-1" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const HeaderSkeleton = () => (
+  <div className="max-w-6xl mx-auto p-6">
+    <div className="space-y-6">
+      <ProfileCardSkeleton />
+      <SecurityCardSkeleton />
+      <ActivityCardSkeleton />
+      <SkillsCardSkeleton />
+    </div>
+  </div>
+);
+
 const ComptableProfilePage = () => {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
@@ -41,6 +172,7 @@ const ComptableProfilePage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [userActivity, setUserActivity] = useState<UserActivity[]>([]);
+  const [pageLoading, setPageLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 🔥 Activité simulée pour comptable
@@ -76,8 +208,12 @@ const ComptableProfilePage = () => {
   ];
 
   useEffect(() => {
-    setUserActivity(getUserActivity());
-  }, []);
+    if (isLoaded && user) {
+      setUserActivity(getUserActivity());
+      // Simuler un chargement pour voir les skeletons
+      setTimeout(() => setPageLoading(false), 1000);
+    }
+  }, [isLoaded, user]);
 
   // ✅ Upload photo
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -144,7 +280,17 @@ const ComptableProfilePage = () => {
   const handleConfirmLogout = async (): Promise<void> => await signOut({ redirectUrl: "/auth/signin" });
   const handleCancelLogout = (): void => setIsLogoutModalOpen(false);
 
-  if (!isLoaded || !user) {
+  if (!isLoaded || pageLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+        <div className="h-screen overflow-y-auto">
+          <HeaderSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

@@ -54,7 +54,7 @@ const rolePermissions = {
   ],
   
   // ÉLÈVE - Son dashboard uniquement
-  'Élève': [
+  'Etudiant': [
     '/dashboard/student'
   ]
 };
@@ -78,7 +78,7 @@ const hasPermission = (userRole: string, pathname: string): boolean => {
 const getRoleDashboard = (userRole: string): string => {
   const dashboardMap: Record<string, string> = {
     'Administrateur': '/dashboard/admin',
-    'Élève': '/dashboard/student',
+    'Etudiant': '/dashboard/student',
     'Enseignant': '/dashboard/teacher', 
     'Parent': '/dashboard/parent',
     'Censeur': '/dashboard/censor',

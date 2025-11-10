@@ -21,7 +21,6 @@ import {
   FaCalendarAlt,
   FaProjectDiagram,
   FaExclamationTriangle,
-  FaBell,
   FaCalendarCheck,
   FaFileSignature,
 } from "react-icons/fa";
@@ -204,12 +203,6 @@ const SidebarCenseur = () => {
                     <FaUser className="text-gray-600 text-sm" />
                     <span>Mon Profil</span>
                   </Link>
-
-                  <Link href="/dashboard/censor/notifications" className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium" onClick={handleCloseModal}>
-                    <FaBell className="text-gray-600 text-sm" />
-                    <span>Notifications</span>
-                  </Link>
-
                   <Link href="/dashboard/censor/settings" className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors font-medium" onClick={handleCloseModal}>
                     <FaCog className="text-gray-600 text-sm" />
                     <span>Paramètres</span>

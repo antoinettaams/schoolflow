@@ -1,7 +1,7 @@
 // app/parent/finance/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   FaFileInvoice, 
   FaSort, 
@@ -10,7 +10,7 @@ import {
   FaDownload, 
   FaCreditCard, 
   FaHistory,
-  FaChartBar,
+  FaChartBar, 
   FaReceipt,
   FaCheckCircle,
   FaClock,
@@ -55,11 +55,116 @@ interface Student {
 // Type pour les champs de tri valides
 type SortableField = "reference" | "description" | "amount" | "dueDate";
 
+// --- Composant Skeleton pour le chargement ---
+const FinanceSkeleton = () => {
+  return (
+    <div className="space-y-6">
+      {/* Skeleton pour l'en-tête */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+        <div className="space-y-3">
+          <div className="h-8 w-64 bg-gray-200 rounded animate-pulse"></div>
+          <div className="space-y-2">
+            <div className="h-5 w-48 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-6 w-32 bg-gray-200 rounded-full animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Skeleton pour les cartes récapitulatives */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {[1, 2].map((card) => (
+          <Card key={card}>
+            <CardHeader>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[1, 2, 3].map((line) => (
+                  <div key={line} className="flex justify-between items-center">
+                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-5 w-20 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Skeleton pour les cartes de résumé global */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {[1, 2, 3, 4].map((card) => (
+          <Card key={card}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Skeleton pour les filtres */}
+      <div className="mb-6">
+        <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+      </div>
+
+      {/* Skeleton pour le tableau */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            {/* En-tête du tableau skeleton */}
+            <div className="w-full border-b border-gray-200">
+              <div className="grid grid-cols-7 gap-4 py-3 px-4">
+                {[1, 2, 3, 4, 5, 6, 7].map((header) => (
+                  <div key={header} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Lignes du tableau skeleton */}
+            <div className="space-y-4 mt-4">
+              {[1, 2, 3].map((row) => (
+                <div key={row} className="grid grid-cols-7 gap-4 py-4 px-4 border-b border-gray-100">
+                  {[1, 2, 3, 4, 5, 6, 7].map((cell) => (
+                    <div key={cell} className="space-y-2">
+                      <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                      {cell === 7 && <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 export default function ParentFinancePage() {
   const { user } = useUser();
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [sortField, setSortField] = useState<SortableField>("dueDate");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [isLoading, setIsLoading] = useState(true);
 
   // Données simulées de l'élève
   const studentData: Student = {
@@ -109,6 +214,15 @@ export default function ParentFinancePage() {
       reference: "SCO-2024-T2" 
     },
   ];
+
+  // Simuler le chargement des données
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const statusFilters = [
     { id: "all", name: "Tous les frais" },
@@ -247,6 +361,19 @@ export default function ParentFinancePage() {
 
   const paidInscription = inscriptionFees.filter(f => f.status === "paid").reduce((sum, fee) => sum + fee.amount, 0);
   const paidTuition = tuitionFees.filter(f => f.status === "paid").reduce((sum, fee) => sum + fee.amount, 0);
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex flex-col min-h-0 bg-background lg:pl-5 pt-20 lg:pt-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 lg:p-6 max-w-7xl mx-auto w-full">
+            <FinanceSkeleton />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-background lg:pl-5 pt-20 lg:pt-6">
       <div className="flex-1 overflow-y-auto">

@@ -1,9 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { 
-  Plus, 
-  Edit, 
-  Trash2, 
   Calendar, 
   Play, 
   Pause, 
@@ -29,6 +26,8 @@ interface Filiere {
   id: string;
   name: string;
   description?: string;
+  totalEtudiants: number;
+  totalFormateurs: number;
 }
 
 interface Vague {
@@ -42,7 +41,9 @@ interface Vague {
   totalEtudiants: number;
   totalFormateurs: number;
   semestres: string[];
-  createdBy?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface VagueFormData {
@@ -97,74 +98,60 @@ const SemestreBadge: React.FC<{ semestres: string[] }> = ({ semestres }) => {
 // Composant Carte de Vague
 const VagueCard: React.FC<{
   vague: Vague;
-  onEdit: (vague: Vague) => void;
-  onDelete: (id: string) => void;
   onViewDetails: (vague: Vague) => void;
-  isAdmin?: boolean;
-}> = ({ vague, onEdit, onDelete, onViewDetails, isAdmin = false }) => {
+}> = ({ vague, onViewDetails }) => {
   return (
     <Card className="hover:shadow-md transition-shadow h-full flex flex-col">
-  {/* CardHeader OUVERTE ici */}
-  <CardHeader className="pb-3">
-    <div className="flex justify-between items-start">
-      <CardTitle className="text-lg">{vague.name}</CardTitle>
-      <div className="flex flex-col items-end gap-2">
-        <StatusBadge status={vague.status} />
-        <SemestreBadge semestres={vague.semestres} />
-      </div>
-    </div>
-    </CardHeader>
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-lg">{vague.name}</CardTitle>
+          <div className="flex flex-col items-end gap-2">
+            <StatusBadge status={vague.status} />
+            <SemestreBadge semestres={vague.semestres} />
+          </div>
+        </div>
+      </CardHeader>
  
-  <CardContent className="pb-3 flex-grow">
-    <div className="space-y-3 text-sm">
-      <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        <span>Du {new Date(vague.startDate).toLocaleDateString("fr-FR")}</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        <span>Au {new Date(vague.endDate).toLocaleDateString("fr-FR")}</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <List className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        <span>{vague.filieres.length} filière(s)</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-        <span>{vague.totalEtudiants} étudiant(s)</span>
-      </div>
-    </div>
-  </CardContent>
-  
-  <CardFooter className="flex gap-2 pt-3">
-    <Button variant="outline" size="sm" className="flex-1" onClick={() => onViewDetails(vague)}>
-      <Eye className="h-4 w-4 mr-1" />
-      Détails
-    </Button>
-    {!isAdmin && (
-      <>
-        <Button variant="outline" size="sm" onClick={() => onEdit(vague)}>
-          <Edit className="h-4 w-4" />
+      <CardContent className="pb-3 flex-grow">
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span>Du {new Date(vague.startDate).toLocaleDateString("fr-FR")}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span>Au {new Date(vague.endDate).toLocaleDateString("fr-FR")}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <List className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span>{vague.filieres.length} filière(s)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span>{vague.totalEtudiants} étudiant(s)</span>
+          </div>
+          {vague.description && (
+            <p className="text-muted-foreground text-xs line-clamp-2">{vague.description}</p>
+          )}
+        </div>
+      </CardContent>
+      
+      <CardFooter className="flex gap-2 pt-3">
+        <Button variant="outline" size="sm" className="flex-1" onClick={() => onViewDetails(vague)}>
+          <Eye className="h-4 w-4 mr-1" />
+          Détails
         </Button>
-        <Button variant="destructive" size="sm" onClick={() => onDelete(vague.id)}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </>
-    )}
-  </CardFooter>
-</Card>
+      </CardFooter>
+    </Card>
   );
 };
 
-// Composant Formulaire de Vague
-const VagueForm: React.FC<{
+// Composant Formulaire de Visualisation de Vague
+const VagueViewForm: React.FC<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: VagueFormData) => void;
-  initialData?: VagueFormData;
-  title: string;
-  isAdmin?: boolean;
-}> = ({ open, onOpenChange, onSubmit, initialData, title, isAdmin = false }) => {
+  vague: Vague | null;
+}> = ({ open, onOpenChange, vague }) => {
   const [formData, setFormData] = useState<VagueFormData>({
     name: "",
     startDate: "",
@@ -174,29 +161,16 @@ const VagueForm: React.FC<{
   });
 
   useEffect(() => {
-    if (initialData) {
-      setFormData(initialData);
-    } else {
+    if (vague) {
       setFormData({
-        name: "",
-        startDate: "",
-        endDate: "",
-        description: "",
-        semestres: [],
+        name: vague.name,
+        startDate: vague.startDate,
+        endDate: vague.endDate,
+        description: vague.description || "",
+        semestres: vague.semestres,
       });
     }
-  }, [initialData, open]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (formData.semestres.length === 0 && !isAdmin) {
-      toast.error("Veuillez sélectionner au moins un semestre");
-      return;
-    }
-    
-    onSubmit(formData);
-  };
+  }, [vague, open]);
 
   const handleCancel = () => {
     setFormData({
@@ -209,15 +183,6 @@ const VagueForm: React.FC<{
     onOpenChange(false);
   };
 
-  const handleSemestreChange = (semestre: string, checked: boolean) => {
-    if (isAdmin) return;
-    
-    const newSemestres = checked
-      ? [...formData.semestres, semestre]
-      : formData.semestres.filter(s => s !== semestre);
-    setFormData(prev => ({ ...prev, semestres: newSemestres }));
-  };
-
   const getStatus = (startDate: string, endDate: string): Vague["status"] => {
     const today = new Date();
     const start = new Date(startDate);
@@ -227,34 +192,31 @@ const VagueForm: React.FC<{
     return "active";
   };
 
-  if (!open) return null;
+  if (!open || !vague) return null;
 
   return (
     <Card className="mb-6 border-l-4 border-l-primary">
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>{title}</CardTitle>
+          <CardTitle>Détails de la vague</CardTitle>
           <Button variant="ghost" size="sm" onClick={handleCancel}>
             <X className="h-4 w-4" />
           </Button>
         </div>
         <CardDescription>
-          {isAdmin ? "Visualisation des détails de la vague" : "Créez une nouvelle vague de formation avec ses dates, semestres et description."}
+          Visualisation des détails de la vague de formation
         </CardDescription>
       </CardHeader>
       
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nom de la vague</Label>
               <Input
                 id="name"
-                placeholder="Ex: Vague Janvier-Juin 2024"
                 value={formData.name}
-                onChange={(e) => !isAdmin && setFormData(prev => ({ ...prev, name: e.target.value }))}
-                required
-                disabled={isAdmin}
+                disabled
               />
             </div>
             
@@ -266,9 +228,8 @@ const VagueForm: React.FC<{
                     type="checkbox"
                     id="semestre1"
                     checked={formData.semestres.includes("Semestre 1")}
-                    onChange={(e) => handleSemestreChange("Semestre 1", e.target.checked)}
+                    disabled
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    disabled={isAdmin}
                   />
                   <Label htmlFor="semestre1" className="text-sm font-normal cursor-pointer flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-blue-500"></div>
@@ -281,9 +242,8 @@ const VagueForm: React.FC<{
                     type="checkbox"
                     id="semestre2"
                     checked={formData.semestres.includes("Semestre 2")}
-                    onChange={(e) => handleSemestreChange("Semestre 2", e.target.checked)}
+                    disabled
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    disabled={isAdmin}
                   />
                   <Label htmlFor="semestre2" className="text-sm font-normal cursor-pointer flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-orange-500"></div>
@@ -294,7 +254,7 @@ const VagueForm: React.FC<{
               
               <p className="text-xs text-muted-foreground">
                 {formData.semestres.length === 0 
-                  ? isAdmin ? "Aucun semestre sélectionné" : "Sélectionnez au moins un semestre"
+                  ? "Aucun semestre sélectionné"
                   : formData.semestres.length === 2
                     ? "✓ Cette vague couvre les deux semestres"
                     : `✓ Cette vague couvre le ${formData.semestres[0]}`
@@ -308,9 +268,7 @@ const VagueForm: React.FC<{
                 id="startDate"
                 type="date"
                 value={formData.startDate}
-                onChange={(e) => !isAdmin && setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                required
-                disabled={isAdmin}
+                disabled
               />
             </div>
             
@@ -320,9 +278,7 @@ const VagueForm: React.FC<{
                 id="endDate"
                 type="date"
                 value={formData.endDate}
-                onChange={(e) => !isAdmin && setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                required
-                disabled={isAdmin}
+                disabled
               />
             </div>
           </div>
@@ -331,108 +287,69 @@ const VagueForm: React.FC<{
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
-              placeholder="Description optionnelle de la vague..."
               value={formData.description}
-              onChange={(e) => !isAdmin && setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={3}
-              disabled={isAdmin}
+              disabled
             />
           </div>
 
-          {/* Aperçu */}
-          {(formData.name || formData.startDate || formData.endDate || formData.semestres.length > 0) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Aperçu de la vague</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm space-y-2">
-                {formData.name && (
-                  <div className="flex items-center gap-2">
-                    <strong>Nom:</strong> 
-                    <span>{formData.name}</span>
+          {/* Détails supplémentaires */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Informations complémentaires</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-3">
+              <div className="flex items-center gap-2">
+                <strong>Statut:</strong> 
+                <StatusBadge status={getStatus(formData.startDate, formData.endDate)} />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <strong>Total étudiants:</strong> 
+                <span>{vague.totalEtudiants}</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <strong>Total formateurs:</strong> 
+                <span>{vague.totalFormateurs}</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <strong>Filieres associées:</strong> 
+                <span>{vague.filieres.length}</span>
+              </div>
+
+              {vague.filieres.length > 0 && (
+                <div className="mt-2">
+                  <strong>Détails des filières:</strong>
+                  <div className="mt-2 space-y-2">
+                    {vague.filieres.map((filiere) => (
+                      <div key={filiere.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                        <span>{filiere.name}</span>
+                        <div className="text-xs text-muted-foreground">
+                          {filiere.totalEtudiants} étudiants • {filiere.totalFormateurs} formateurs
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
-                {formData.semestres.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <strong>Semestre(s):</strong> 
-                    <SemestreBadge semestres={formData.semestres} />
-                  </div>
-                )}
-                {formData.startDate && (
-                  <div className="flex items-center gap-2">
-                    <strong>Début:</strong> 
-                    <span>{new Date(formData.startDate).toLocaleDateString("fr-FR")}</span>
-                  </div>
-                )}
-                {formData.endDate && (
-                  <div className="flex items-center gap-2">
-                    <strong>Fin:</strong> 
-                    <span>{new Date(formData.endDate).toLocaleDateString("fr-FR")}</span>
-                  </div>
-                )}
-                {formData.startDate && formData.endDate && (
-                  <div className="flex items-center gap-2">
-                    <strong>Statut:</strong> 
-                    <StatusBadge status={getStatus(formData.startDate, formData.endDate)} />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <strong>Créée le:</strong> 
+                <span>{new Date(vague.createdAt).toLocaleDateString("fr-FR")}</span>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={handleCancel}>
-              {isAdmin ? "Fermer" : "Annuler"}
-            </Button>
-            {!isAdmin && (
-              <Button type="submit">
-                {initialData ? "Modifier" : "Créer"} la vague
-              </Button>
-            )}
-          </div>
-        </form>
-      </CardContent>
-    </Card>
-  );
-};
-
-// Composant de confirmation de suppression
-const DeleteConfirmation: React.FC<{
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
-}> = ({ open, onOpenChange, onConfirm }) => {
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-background p-6 rounded-lg border shadow-lg max-w-md w-full mx-auto">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <h2 className="text-lg font-semibold">Êtes-vous sûr ?</h2>
-            <p className="text-sm text-muted-foreground">
-              Cette action supprimera définitivement la vague et toutes ses données associées.
-              Cette action ne peut pas être annulée.
-            </p>
-          </div>
-          
-          <div className="flex justify-end gap-2 pt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-            >
-              Annuler
-            </Button>
-            <Button 
-              variant="destructive"
-              onClick={onConfirm}
-            >
-              Supprimer
+              Fermer
             </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -448,75 +365,43 @@ export default function VaguesPageAdmin() {
   // Charger depuis l'API
   const chargerVagues = async () => {
     try {
+      setIsLoaded(false);
       const response = await fetch('/api/admin/vagues');
       
       if (!response.ok) {
-        throw new Error('Erreur de chargement');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur de chargement');
       }
       
       const vaguesData = await response.json();
       setVagues(vaguesData);
     } catch (error) {
       console.error("Erreur chargement vagues:", error);
-      toast.error("Erreur lors du chargement des vagues");
-      setVagues([
-        {
-          id: "1",
-          name: "Vague Janvier 2024",
-          startDate: "2024-01-01",
-          endDate: "2024-06-30",
-          status: "active",
-          description: "Session de formation principale créée par le censeur",
-          filieres: [
-            { id: "1", name: "Informatique", description: "Filière informatique" },
-            { id: "2", name: "Commerce", description: "Filière commerce" }
-          ],
-          totalEtudiants: 150,
-          totalFormateurs: 12,
-          semestres: ["Semestre 1", "Semestre 2"],
-          createdBy: "Censeur Dupont"
-        },
-        {
-          id: "2",
-          name: "Vague Juillet 2024",
-          startDate: "2024-07-01",
-          endDate: "2024-12-31",
-          status: "upcoming",
-          description: "Session de formation estivale",
-          filieres: [
-            { id: "3", name: "Design", description: "Filière design" },
-            { id: "4", name: "Marketing", description: "Filière marketing" }
-          ],
-          totalEtudiants: 80,
-          totalFormateurs: 8,
-          semestres: ["Semestre 1"],
-          createdBy: "Censeur Martin"
-        },
-        {
-          id: "3",
-          name: "Vague 2023",
-          startDate: "2023-01-01",
-          endDate: "2023-12-31",
-          status: "completed",
-          description: "Session de formation de l'année dernière",
-          filieres: [
-            { id: "1", name: "Informatique", description: "Filière informatique" },
-            { id: "2", name: "Commerce", description: "Filière commerce" },
-            { id: "3", name: "Design", description: "Filière design" }
-          ],
-          totalEtudiants: 200,
-          totalFormateurs: 15,
-          semestres: ["Semestre 2"],
-          createdBy: "Censeur Dubois"
-        },
-      ]);
+      toast.error(error.message || "Erreur lors du chargement des vagues");
+      setVagues([]);
     } finally {
       setIsLoaded(true);
     }
   };
 
+  // Charger les statistiques
+  const chargerStatistiques = async () => {
+    try {
+      const response = await fetch('/api/admin/vagues?stats=true');
+      
+      if (response.ok) {
+        const statsData = await response.json();
+        console.log('Statistiques:', statsData);
+        // Vous pouvez utiliser ces statistiques pour enrichir l'interface
+      }
+    } catch (error) {
+      console.error("Erreur chargement statistiques:", error);
+    }
+  };
+
   useEffect(() => {
     chargerVagues();
+    chargerStatistiques();
   }, []);
 
   const availableSemestres = useMemo(() => {
@@ -532,15 +417,11 @@ export default function VaguesPageAdmin() {
     return statusMatch && semestreMatch;
   });
 
-  // Statistiques par créateur
-  const statsParCreateur = useMemo(() => {
-    const createurs: { [key: string]: number } = {};
-    vagues.forEach(vague => {
-      const createur = vague.createdBy || "Non spécifié";
-      createurs[createur] = (createurs[createur] || 0) + 1;
-    });
-    return createurs;
-  }, [vagues]);
+  // Gestionnaire pour visualiser les détails
+  const handleViewDetails = (vague: Vague) => {
+    setSelectedVague(vague);
+    setShowViewForm(true);
+  };
 
   if (!isLoaded) {
     return (
@@ -566,20 +447,11 @@ export default function VaguesPageAdmin() {
           </div>
 
           {/* Formulaire de visualisation */}
-          {showViewForm && selectedVague && (
-            <VagueForm
+          {showViewForm && (
+            <VagueViewForm
               open={showViewForm}
               onOpenChange={setShowViewForm}
-              onSubmit={() => {}}
-              initialData={{
-                name: selectedVague.name,
-                startDate: selectedVague.startDate,
-                endDate: selectedVague.endDate,
-                description: selectedVague.description || "",
-                semestres: selectedVague.semestres,
-              }}
-              title="Détails de la vague"
-              isAdmin={true}
+              vague={selectedVague}
             />
           )}
 
@@ -672,7 +544,7 @@ export default function VaguesPageAdmin() {
                   <h3 className="text-lg font-semibold mb-2">Aucune vague trouvée</h3>
                   <p className="text-muted-foreground mb-4">
                     {filterStatus === "all" && filterSemestre === "Tous"
-                      ? "Aucune vague n'a été créée par les censeurs" 
+                      ? "Aucune vague n'a été créée" 
                       : "Aucune vague ne correspond aux filtres sélectionnés"}
                   </p>
                 </div>
@@ -682,13 +554,7 @@ export default function VaguesPageAdmin() {
                     <VagueCard
                       key={vague.id}
                       vague={vague}
-                      onEdit={() => {}} 
-                      onDelete={() => {}}
-                      onViewDetails={(v) => {
-                        setSelectedVague(v);
-                        setShowViewForm(true);
-                      }}
-                      isAdmin={true}
+                      onViewDetails={handleViewDetails}
                     />
                   ))}
                 </div>

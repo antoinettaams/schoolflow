@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -14,60 +14,119 @@ import {
   FaChartLine,
   FaExclamationTriangle,
   FaUserCheck,
-  FaClock
+  FaClock,
+  FaSync
 } from "react-icons/fa";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// --- Données fictives ---
-const studentInfo = {
-  name: "Antoinetta",
-  filiere: "Développement Web & Mobile",
-  statut: "inscrit", 
-};
+// Interfaces pour les données
+interface StudentInfo {
+  name: string;
+  filiere: string;
+  statut: string;
+  vague: string;
+}
 
-const nextCourses = [
-  { course: "Programmation Web", time: "09:00 - 10:30", location: "Lab Info A" },
-  { course: "Base de Données", time: "10:45 - 12:15", location: "Salle B201" },
-];
+interface Course {
+  course: string;
+  time: string;
+  location: string;
+  enseignant?: string;
+}
 
-const currentHomeworks = [
-  { subject: "JavaScript", task: "Projet site e-commerce", due: "25 Oct" },
-  { subject: "React", task: "Composants avancés", due: "28 Oct" },
-];
+interface Homework {
+  subject: string;
+  task: string;
+  due: string;
+}
 
-const nextExams = [
-  { subject: "Algorithmie", date: "10 Nov", topic: "Structures de données" },
-  { subject: "UI/UX Design", date: "15 Nov", topic: "Design responsive" },
-];
+interface Exam {
+  subject: string;
+  date: string;
+  topic: string;
+}
 
-const latestGrade = {
-  subject: "HTML/CSS",
-  grade: "16/20",
-  date: "Hier",
-};
+interface Grade {
+  subject: string;
+  grade: string;
+  date: string;
+}
 
-const latestBulletin = {
-  name: "Bulletin Trimestre 1",
-  average: "14.2 / 20",
-};
+interface Bulletin {
+  name: string;
+  average: string;
+}
+
+interface Event {
+  title: string;
+  date: string;
+  type: string;
+  location: string;
+}
+
+interface DashboardData {
+  studentInfo: StudentInfo;
+  nextCourses: Course[];
+  currentHomeworks: Homework[];
+  nextExams: Exam[];
+  latestGrade: Grade;
+  latestBulletin: Bulletin;
+  events: Event[];
+}
 
 const StudentDashboard = () => {
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Vérification du rôle student
-  
+  // Vérification du rôle étudiant
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      const userRole = user?.publicMetadata?.role;
+      if (userRole !== "Etudiant") {
+        router.push("/unauthorized");
+      }
+    }
+  }, [isLoaded, isSignedIn, user, router]);
+
+  // Charger les données du dashboard
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/student/dashboard');
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors du chargement des données');
+      }
+
+      const data = await response.json();
+      setDashboardData(data);
+    } catch (err) {
+      console.error("Erreur:", err);
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isSignedIn) {
+      fetchDashboardData();
+    }
+  }, [isSignedIn]);
 
   // Loading state
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-lg text-center">Chargement de vos informations...</div>
-      </div>
-    );
+  if (!isLoaded || isLoading) {
+    return <DashboardSkeleton />;
   }
 
   // Non connecté
@@ -79,10 +138,45 @@ const StudentDashboard = () => {
     );
   }
 
-  
+  // Vérification du rôle
+  const userRole = user?.publicMetadata?.role;
+  if (userRole !== "Etudiant") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="p-8 max-w-md text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl text-red-600">Accès Refusé</CardTitle>
+            <CardDescription className="text-gray-600">
+              Vous n&apos;avez pas les permissions d&apos;étudiant.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => router.push("/")}
+              className="bg-blue-600 text-white hover:bg-blue-700 w-full"
+            >
+              Retour à l&apos;accueil
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  // Données dynamiques basées sur l'utilisateur
-  const studentName = user ? `${user.firstName} ${user.lastName}` : studentInfo.name;
+  // Données dynamiques
+  const studentInfo = dashboardData?.studentInfo || {
+    name: `${user?.firstName} ${user?.lastName}`,
+    filiere: "Non assigné",
+    statut: "inscrit",
+    vague: "Non assigné"
+  };
+
+  const nextCourses = dashboardData?.nextCourses || [];
+  const currentHomeworks = dashboardData?.currentHomeworks || [];
+  const nextExams = dashboardData?.nextExams || [];
+  const latestGrade = dashboardData?.latestGrade;
+  const latestBulletin = dashboardData?.latestBulletin;
+  const events = dashboardData?.events || [];
 
   // Fonction pour obtenir le badge de statut
   const getStatusBadge = (statut: string) => {
@@ -114,43 +208,66 @@ const StudentDashboard = () => {
     <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       <div className="p-4 sm:p-6 space-y-6 h-full overflow-y-auto">
         
-        {/* 1. HEADER */}
+        {/* HEADER avec bouton actualiser */}
         <header className="pb-4 border-b border-gray-200">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <h1 className="font-title text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 truncate">
-                Bonjour, {studentName}! 
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="font-title text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 truncate">
+                  Bonjour, {studentInfo.name}! 
+                </h1>
+              </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1 sm:mt-2">
                 <p className="text-gray-500 text-sm sm:text-base">
                   Filière <strong className="text-blue-600">{studentInfo.filiere}</strong>
                 </p>
                 <div className="hidden sm:block text-gray-400 mx-2">•</div>
                 <p className="text-gray-500 text-sm sm:text-base">
-                  Aperçu de votre parcours de formation
+                  <strong className="text-purple-600">{studentInfo.vague}</strong>
                 </p>
               </div>
+              <div className="flex items-center gap-2 mt-3">
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  Étudiant
+                </Badge>
+                <span className="text-sm text-gray-500">
+                  {user.primaryEmailAddress?.emailAddress}
+                </span>
+              </div>
             </div>
-            <div className="text-sm sm:text-base text-gray-500 bg-gray-100 px-3 py-2 rounded-lg shrink-0">
-              {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </div>
-            <div className="flex items-center gap-2">
-              {getStatusBadge(studentInfo.statut)}
+            <div className="flex items-center gap-3">
+              <div className="text-sm sm:text-base text-gray-500 bg-gray-100 px-3 py-2 rounded-lg shrink-0">
+                {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </div>
+              <div className="flex items-center gap-2">
+                {getStatusBadge(studentInfo.statut)}
+              </div>
             </div>
           </div>
         </header>
 
-        {/* Aperçus Académiques Majeurs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        {/* Alert d'erreur */}
+        {error && (
+          <Alert className="bg-red-50 border-red-200">
+            <FaExclamationTriangle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
 
+        {/* APERÇUS ACADÉMIQUES - RESPONSIVE GRID */}
+        {/* Mobile: 1 colonne, Tablet: 2 colonnes, Desktop: 3 colonnes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+          
           {/* --- Emploi du Temps --- */}
-          <Card className="md:col-span-2 lg:col-span-1 hover:shadow-lg transition-all">
+          <Card className="hover:shadow-lg transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Emploi du Temps</CardTitle>
               <FaCalendarAlt className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent className="space-y-3 pt-4">
-              {nextCourses.map((course, index) => (
+              {nextCourses.length > 0 ? nextCourses.map((course, index) => (
                 <div key={index} className="flex flex-col sm:flex-row sm:justify-between text-sm gap-1 sm:gap-0">
                   <span className="font-semibold text-gray-800 truncate">{course.course}</span>
                   <div className="flex flex-col sm:items-end">
@@ -158,7 +275,9 @@ const StudentDashboard = () => {
                     <span className="text-gray-400 text-xs">{course.location}</span>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <p className="text-sm text-gray-500 text-center py-2">Aucun cours à venir</p>
+              )}
               <div className="pt-2">
                 <Link href="/dashboard/student/schedule" passHref>
                   <Button variant="link" className="p-0 h-auto text-blue-600 text-xs font-medium">
@@ -170,13 +289,13 @@ const StudentDashboard = () => {
           </Card>
           
           {/* --- Devoirs / Exercices --- */}
-          <Card className="md:col-span-2 lg:col-span-1 hover:shadow-lg transition-all">
+          <Card className="hover:shadow-lg transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Devoirs en Attente</CardTitle>
               <FaBookOpen className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent className="space-y-3 pt-4">
-              {currentHomeworks.map((hw, index) => (
+              {currentHomeworks.length > 0 ? currentHomeworks.map((hw, index) => (
                 <div key={index} className="flex justify-between text-sm items-start gap-2">
                   <div className="flex-1 min-w-0">
                     <span className="font-semibold text-gray-800 block truncate">{hw.task}</span>
@@ -186,7 +305,9 @@ const StudentDashboard = () => {
                     {hw.due}
                   </Badge>
                 </div>
-              ))}
+              )) : (
+                <p className="text-sm text-gray-500 text-center py-2">Aucun devoir en attente</p>
+              )}
               <div className="pt-2">
                 <Link href="/dashboard/student/homeworks" passHref>
                   <Button variant="link" className="p-0 h-auto text-blue-600 text-xs font-medium">
@@ -198,7 +319,7 @@ const StudentDashboard = () => {
           </Card>
 
           {/* --- Prochains Examens & Notes Récentes --- */}
-          <Card className="md:col-span-2 lg:col-span-2 hover:shadow-lg transition-all">
+          <Card className="md:col-span-2 xl:col-span-1 hover:shadow-lg transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Examens & Notes</CardTitle>
               <FaClipboardList className="h-4 w-4 text-purple-600" />
@@ -207,31 +328,43 @@ const StudentDashboard = () => {
               {/* Colonne 1: Dernière Note */}
               <div className="space-y-2">
                 <p className="text-xs uppercase text-gray-500 font-medium">Dernière Note</p>
-                <div className="text-2xl font-bold text-green-600">
-                  {latestGrade.grade}
-                </div>
-                <div className="text-xs text-gray-700">
-                  {latestGrade.subject} 
-                  <Badge variant="secondary" className="ml-2 text-xs">
-                    {latestGrade.date}
-                  </Badge>
-                </div>
-                <Progress value={80} className="h-2" />
+                {latestGrade ? (
+                  <>
+                    <div className="text-2xl font-bold text-green-600">
+                      {latestGrade.grade}
+                    </div>
+                    <div className="text-xs text-gray-700">
+                      {latestGrade.subject} 
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {latestGrade.date}
+                      </Badge>
+                    </div>
+                    <Progress value={80} className="h-2" />
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500">Aucune note récente</p>
+                )}
               </div>
               
               {/* Colonne 2: Prochain Examen */}
               <div className="space-y-2">
                 <p className="text-xs uppercase text-gray-500 font-medium">Prochain Examen</p>
-                <div className="text-lg font-bold text-gray-800 truncate">
-                  {nextExams[0].subject}
-                </div>
-                <div className="text-xs text-gray-700">
-                  Le {nextExams[0].date}
-                  <div className="text-xs text-gray-500 mt-1 truncate">{nextExams[0].topic}</div>
-                </div>
-                <Badge variant="outline" className="bg-red-50 text-red-700 text-xs">
-                  À réviser
-                </Badge>
+                {nextExams.length > 0 ? (
+                  <>
+                    <div className="text-lg font-bold text-gray-800 truncate">
+                      {nextExams[0].subject}
+                    </div>
+                    <div className="text-xs text-gray-700">
+                      Le {nextExams[0].date}
+                      <div className="text-xs text-gray-500 mt-1 truncate">{nextExams[0].topic}</div>
+                    </div>
+                    <Badge variant="outline" className="bg-red-50 text-red-700 text-xs">
+                      À réviser
+                    </Badge>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500">Aucun examen programmé</p>
+                )}
               </div>
               
               <div className="col-span-1 sm:col-span-2 pt-2">
@@ -245,26 +378,30 @@ const StudentDashboard = () => {
           </Card>
         </div>
 
-        {/* Bulletins et Évènements */}
+        {/* DEUXIÈME LIGNE - 3 COLONNES SUR DESKTOP */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           
           {/* --- Bulletins --- */}
-          <Card className="md:col-span-1 hover:shadow-lg transition-all">
+          <Card className="hover:shadow-lg transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Bulletins de Notes</CardTitle>
               <FaFileAlt className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              <div className="space-y-2">
-                <p className="text-gray-700 text-sm truncate">{latestBulletin.name}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xl font-bold text-gray-900">{latestBulletin.average}</span>
-                  <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                    Très bien
-                  </Badge>
+              {latestBulletin ? (
+                <div className="space-y-2">
+                  <p className="text-gray-700 text-sm truncate">{latestBulletin.name}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl font-bold text-gray-900">{latestBulletin.average}</span>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                      Très bien
+                    </Badge>
+                  </div>
+                  <Progress value={71} className="h-2" />
                 </div>
-                <Progress value={71} className="h-2" />
-              </div>
+              ) : (
+                <p className="text-sm text-gray-500 text-center py-4">Aucun bulletin disponible</p>
+              )}
               <Link href="/dashboard/student/grades" passHref>
                 <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm">
                   Télécharger le PDF
@@ -273,35 +410,25 @@ const StudentDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* ---Évènements Scolaires --- */}
-          <Card className="md:col-span-2 hover:shadow-lg transition-all">
+          {/* --- Évènements Scolaires --- */}
+          <Card className="md:col-span-2 hover:shadow-lg transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Évènements de Formation</CardTitle>
               <FaGraduationCap className="h-4 w-4 text-indigo-600" />
             </CardHeader>
             <CardContent className="pt-4">
               <div className="space-y-3 text-sm">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 border-b pb-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FaChartLine className="h-3 w-3 text-blue-500 flex-shrink-0" />
-                    <span className="font-semibold truncate">Workshop Développement Web</span>
+                {events.length > 0 ? events.map((event, index) => (
+                  <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 border-b pb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FaChartLine className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                      <span className="font-semibold truncate">{event.title}</span>
+                    </div>
+                    <Badge variant="outline" className="text-xs w-fit">{event.date}</Badge>
                   </div>
-                  <Badge variant="outline" className="text-xs w-fit">20 Octobre</Badge>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 border-b pb-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FaExclamationTriangle className="h-3 w-3 text-orange-500 flex-shrink-0" />
-                    <span className="font-semibold truncate">Session de révision intensive</span>
-                  </div>
-                  <Badge variant="outline" className="text-xs w-fit">22 Octobre</Badge>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 border-b pb-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FaGraduationCap className="h-3 w-3 text-green-500 flex-shrink-0" />
-                    <span className="font-semibold truncate">Rencontre avec les formateurs</span>
-                  </div>
-                  <Badge variant="outline" className="text-xs w-fit">5 Novembre</Badge>
-                </div>
+                )) : (
+                  <p className="text-sm text-gray-500 text-center py-4">Aucun événement à venir</p>
+                )}
               </div>
               <div className="pt-3">
                 <Link href="/dashboard/student/events" passHref>
@@ -315,7 +442,7 @@ const StudentDashboard = () => {
         </div>
 
         {/* Section notifications et alertes */}
-        <Card className="mt-6">
+        <Card className="hover:shadow-lg transition-all duration-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm font-medium">
               <FaExclamationTriangle className="text-orange-500" />
@@ -324,20 +451,24 @@ const StudentDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <div className="flex items-center gap-3 p-2 sm:p-3 bg-blue-50 rounded-lg">
-                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">Projet JavaScript à rendre demain</p>
-                  <p className="text-xs text-muted-foreground truncate">Site e-commerce avec React</p>
+              {currentHomeworks.length > 0 && (
+                <div className="flex items-center gap-3 p-2 sm:p-3 bg-blue-50 rounded-lg">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">Devoir à rendre: {currentHomeworks[0].task}</p>
+                    <p className="text-xs text-muted-foreground truncate">Échéance: {currentHomeworks[0].due}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 p-2 sm:p-3 bg-green-50 rounded-lg">
-                <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">Nouvelle note disponible en HTML/CSS</p>
-                  <p className="text-xs text-muted-foreground truncate">16/20 - Excellent travail !</p>
+              )}
+              {latestGrade && (
+                <div className="flex items-center gap-3 p-2 sm:p-3 bg-green-50 rounded-lg">
+                  <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">Nouvelle note disponible en {latestGrade.subject}</p>
+                    <p className="text-xs text-muted-foreground truncate">{latestGrade.grade} - Excellent travail !</p>
+                  </div>
                 </div>
-              </div>
+              )}
               {studentInfo.statut === "en_attente" && (
                 <div className="flex items-center gap-3 p-2 sm:p-3 bg-orange-50 rounded-lg">
                   <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0"></div>
@@ -352,6 +483,49 @@ const StudentDashboard = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+    </div>
+  );
+};
+
+// Skeleton loader pour le chargement
+const DashboardSkeleton = () => {
+  return (
+    <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+      <div className="p-4 sm:p-6 space-y-6">
+        {/* Header Skeleton */}
+        <div className="pb-4 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-6 w-20" />
+            </div>
+          </div>
+        </div>
+
+        {/* Grid Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {[...Array(2)].map((_, j) => (
+                  <div key={j} className="flex justify-between">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                ))}
+                <Skeleton className="h-8 w-full mt-2" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );

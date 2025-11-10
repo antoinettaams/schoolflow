@@ -1,913 +1,1000 @@
-// app/teacher/attendance/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
-  FaCalendarTimes, 
+  FaCalendarAlt, 
+  FaChalkboardTeacher, 
+  FaUsers, 
   FaCheck, 
   FaTimes, 
-  FaExclamationTriangle, 
-  FaSort, 
-  FaSortUp, 
-  FaSortDown,
-  FaUsers,
   FaEdit,
   FaSave,
-  FaSearch,
-  FaUserPlus,
-  FaTrash,
   FaClock,
-  FaCalendarAlt,
-  FaChalkboardTeacher
+  FaBook,
+  FaBuilding,
+  FaExclamationTriangle,
+  FaCheckCircle,
+  FaUser,
+  FaIdCard,
+  FaHistory,
+  FaCalendarDay,
+  FaTrash,
+  FaEye,
+  FaArrowLeft
 } from "react-icons/fa";
 
-// Interfaces TypeScript
-interface AttendanceRecord {
-  date: string;
-  courseTime: string;
-  subject: string;
-  status: "present" | "absent";
-  justified: boolean;
-  reason: string;
-  semester: string;
-}
-
 interface Student {
-  id: number;
+  id: string;
   name: string;
   studentId: string;
-  attendance: AttendanceRecord[];
+  status?: "present" | "absent";
+  justified?: boolean;
+  reason?: string;
+  date?: string;
 }
 
-interface ClassSchedule {
+interface TeacherCourse {
   id: string;
-  label: string;
+  assignationId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
   subject: string;
-  dayOfWeek: string;
-  time: string;
+  className: string;
+  filiereId: number;
+  vagueId: string;
+  students: Student[];
+  attendanceTaken: boolean;
 }
 
-interface ClassInfo {
-  id: string;
-  name: string;
-  level: string;
-  teacherSchedule: ClassSchedule[];
+interface AttendanceHistory {
+  dates: string[];
+  course: {
+    subject: string;
+    className: string;
+    schedule: string;
+  };
 }
 
-interface Semester {
-  id: string;
-  name: string;
-  start: string;
-  end: string;
+interface AttendanceDetails {
+  date: string;
+  students: Student[];
+  course: {
+    subject: string;
+    className: string;
+    schedule: string;
+  };
 }
 
-interface StudentData {
-  [key: string]: Student[];
-}
+// Composants Skeleton (garder les mêmes)
+const CourseSkeleton = () => (
+  <div className="w-full p-4 rounded-lg border border-gray-200 animate-pulse">
+    <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center gap-2">
+        <div className="w-4 h-4 bg-gray-300 rounded"></div>
+        <div className="h-4 bg-gray-300 rounded w-20"></div>
+      </div>
+      <div className="w-5 h-5 bg-gray-300 rounded-full"></div>
+    </div>
+    <div className="flex items-center gap-2 mb-1">
+      <div className="w-4 h-4 bg-gray-300 rounded"></div>
+      <div className="h-4 bg-gray-300 rounded w-24"></div>
+    </div>
+    <div className="flex items-center gap-2 mb-2">
+      <div className="w-4 h-4 bg-gray-300 rounded"></div>
+      <div className="h-3 bg-gray-300 rounded w-32"></div>
+    </div>
+    <div className="flex justify-between">
+      <div className="h-3 bg-gray-300 rounded w-12"></div>
+      <div className="h-3 bg-gray-300 rounded w-12"></div>
+      <div className="h-3 bg-gray-300 rounded w-12"></div>
+    </div>
+  </div>
+);
+
+const StudentSkeleton = () => (
+  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg animate-pulse">
+    <div className="flex-1">
+      <div className="h-5 bg-gray-300 rounded w-32 mb-2"></div>
+      <div className="h-4 bg-gray-300 rounded w-20"></div>
+    </div>
+    <div className="flex items-center gap-4">
+      <div className="h-8 bg-gray-300 rounded w-24"></div>
+      <div className="h-8 bg-gray-300 rounded w-20"></div>
+      <div className="h-8 bg-gray-300 rounded w-32"></div>
+    </div>
+  </div>
+);
 
 export default function TeacherAttendancePage() {
-  const [selectedClass, setSelectedClass] = useState("1");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedSemester, setSelectedSemester] = useState("t1");
-  const [selectedCourseTime, setSelectedCourseTime] = useState("");
-  const [sortField, setSortField] = useState("name");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [courses, setCourses] = useState<TeacherCourse[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<TeacherCourse | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
-  const [newStudent, setNewStudent] = useState({ name: "", studentId: "" });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  
+  // États pour l'historique
+  const [attendanceHistory, setAttendanceHistory] = useState<AttendanceHistory | null>(null);
+  const [selectedHistoryDate, setSelectedHistoryDate] = useState<string | null>(null);
+  const [attendanceDetails, setAttendanceDetails] = useState<AttendanceDetails | null>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Données simulées des classes AVEC LES HORAIRES HEBDOMADAIRES DU PROFESSEUR
-  const classesData: ClassInfo[] = [
-    { 
-      id: "1", 
-      name: "Classe A", 
-      level: "6ème",
-      teacherSchedule: [
-        { 
-          id: "mon-08:00-10:00", 
-          label: "Lundi 8h00 - 10h00", 
-          subject: "Mathématiques",
-          dayOfWeek: "monday",
-          time: "08:00-10:00"
-        },
-        { 
-          id: "wed-13:30-15:30", 
-          label: "Mercredi 13h30 - 15h30", 
-          subject: "Mathématiques",
-          dayOfWeek: "wednesday", 
-          time: "13:30-15:30"
-        },
-        { 
-          id: "fri-15:45-17:45", 
-          label: "Vendredi 15h45 - 17h45", 
-          subject: "Soutien Mathématiques",
-          dayOfWeek: "friday",
-          time: "15:45-17:45"
-        }
-      ]
-    },
-    { 
-      id: "2", 
-      name: "Classe B", 
-      level: "5ème",
-      teacherSchedule: [
-        { 
-          id: "tue-10:15-12:15", 
-          label: "Mardi 10h15 - 12h15", 
-          subject: "Mathématiques",
-          dayOfWeek: "tuesday",
-          time: "10:15-12:15"
-        },
-        { 
-          id: "thu-15:45-17:45", 
-          label: "Jeudi 15h45 - 17h45", 
-          subject: "Mathématiques",
-          dayOfWeek: "thursday",
-          time: "15:45-17:45"
-        }
-      ]
-    },
-    { 
-      id: "3", 
-      name: "Classe C", 
-      level: "4ème",
-      teacherSchedule: [
-        { 
-          id: "mon-10:15-12:15", 
-          label: "Lundi 10h15 - 12h15", 
-          subject: "Mathématiques",
-          dayOfWeek: "monday",
-          time: "10:15-12:15"
-        },
-        { 
-          id: "fri-08:00-10:00", 
-          label: "Vendredi 8h00 - 10h00", 
-          subject: "Mathématiques", 
-          dayOfWeek: "friday",
-          time: "08:00-10:00"
-        }
-      ]
-    },
-  ];
+  // Fonction utilitaire pour compter les étudiants avec statut
+  const getStudentsWithStatus = (course: TeacherCourse) => {
+    return course.students.filter(student => student.status !== undefined).length;
+  };
 
-  // Trimestres
-  const semesters: Semester[] = [
-    { id: "t1", name: "Premier Trimestre", start: "2024-09-01", end: "2024-12-20" },
-    { id: "t2", name: "Deuxième Trimestre", start: "2025-01-06", end: "2025-04-05" },
-    { id: "t3", name: "Troisième Trimestre", start: "2025-04-22", end: "2025-06-30" }
-  ];
+  // Charger TOUS les cours du professeur
+  const fetchTeacherCourses = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await fetch('/api/teacher/attendance?action=teacher-courses');
 
-  // Données simulées des étudiants
-  const [studentData, setStudentData] = useState<StudentData>({
-    "1": [
-      { 
-        id: 1, 
-        name: "Martin Léa", 
-        studentId: "STU001", 
-        attendance: []
-      },
-      { 
-        id: 2, 
-        name: "Dubois Hugo", 
-        studentId: "STU002", 
-        attendance: []
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors du chargement des cours');
       }
-    ],
-    "2": [
-      { 
-        id: 3, 
-        name: "Garcia Manon", 
-        studentId: "STU003", 
-        attendance: []
+
+      const data = await response.json();
+      setCourses(data.courses || []);
+      
+      // Si un cours était sélectionné, mettre à jour ses données
+      if (selectedCourse) {
+        const updatedCourse = data.courses.find((c: TeacherCourse) => c.id === selectedCourse.id);
+        setSelectedCourse(updatedCourse || null);
       }
-    ],
-    "3": [
-      { 
-        id: 4, 
-        name: "Petit Lucas", 
-        studentId: "STU004", 
-        attendance: []
+    } catch (error) {
+      console.error('Erreur:', error);
+      setError(error instanceof Error ? error.message : 'Erreur de chargement');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Charger l'historique des présences d'un cours
+  const fetchAttendanceHistory = async (courseId: string) => {
+    try {
+      setIsLoadingHistory(true);
+      const response = await fetch(`/api/teacher/attendance?action=attendance-history&courseId=${courseId}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors du chargement de l\'historique');
       }
-    ]
-  });
 
-  // Horaires de cours pour la classe sélectionnée
-  const getCurrentClassSchedule = (): ClassSchedule[] => {
-    const currentClass = classesData.find(c => c.id === selectedClass);
-    return currentClass?.teacherSchedule || [];
-  };
-
-  // Jour de la semaine pour une date
-  const getDayOfWeek = (dateString: string): string => {
-    const date = new Date(dateString);
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    return days[date.getDay()];
-  };
-
-  // Filtrer les horaires disponibles pour la date sélectionnée
-  const getAvailableTimeSlots = (): ClassSchedule[] => {
-    const currentSchedule = getCurrentClassSchedule();
-    const selectedDayOfWeek = getDayOfWeek(selectedDate);
-    
-    return currentSchedule.filter(schedule => 
-      schedule.dayOfWeek === selectedDayOfWeek
-    );
-  };
-
-  const currentClass = classesData.find(c => c.id === selectedClass);
-  const currentStudents = studentData[selectedClass] || [];
-  const availableTimeSlots = getAvailableTimeSlots();
-
-  // Vérifier si la date sélectionnée est dans le semestre choisi
-  const isDateInSelectedSemester = (): boolean => {
-    const semester = semesters.find(s => s.id === selectedSemester);
-    if (!semester) return false;
-    return selectedDate >= semester.start && selectedDate <= semester.end;
-  };
-
-  const getCurrentSubject = (): string => {
-    if (!selectedCourseTime) return "Sélectionnez un horaire";
-    const currentScheduleItem = availableTimeSlots.find(s => s.id === selectedCourseTime);
-    return currentScheduleItem?.subject || "Mathématiques";
-  };
-
-  // Obtenir le statut actuel pour la date, l'heure de cours et le semestre sélectionnés
-  const getCurrentStatus = (student: Student): AttendanceRecord => {
-    if (!selectedCourseTime) {
-      return { 
-        date: selectedDate,
-        courseTime: "",
-        subject: getCurrentSubject(),
-        status: "present", 
-        justified: false, 
-        reason: "", 
-        semester: selectedSemester
-      };
-    }
-
-    const todayRecord = student.attendance.find(a => 
-      a.date === selectedDate && 
-      a.courseTime === selectedCourseTime
-    );
-    
-    if (todayRecord) {
-      return todayRecord;
-    }
-    
-    return { 
-      date: selectedDate,
-      courseTime: selectedCourseTime,
-      subject: getCurrentSubject(),
-      status: "present", 
-      justified: false, 
-      reason: "", 
-      semester: selectedSemester
-    };
-  };
-
-  // Filtrer les étudiants selon la recherche
-  const filteredStudents = currentStudents.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.studentId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Obtenir toutes les absences d'un étudiant pour le semestre sélectionné
-  const getSemesterAbsences = (student: Student): AttendanceRecord[] => {
-    return student.attendance.filter(a => 
-      a.semester === selectedSemester && a.status === "absent"
-    );
-  };
-
-  // Obtenir les absences d'un étudiant pour la matière actuelle
-  const getCurrentSubjectAbsences = (student: Student): AttendanceRecord[] => {
-    if (!selectedCourseTime) return [];
-    
-    const currentScheduleItem = availableTimeSlots.find(s => s.id === selectedCourseTime);
-    if (!currentScheduleItem) return [];
-    
-    return student.attendance.filter(a => 
-      a.semester === selectedSemester && 
-      a.status === "absent" &&
-      a.courseTime === selectedCourseTime
-    );
-  };
-
-  // Statistiques pour le semestre sélectionné
-  const attendanceStats = {
-    totalStudents: currentStudents.length,
-    presentToday: currentStudents.filter(student => {
-      const currentStatus = getCurrentStatus(student);
-      return currentStatus.status === "present";
-    }).length,
-    absentToday: currentStudents.filter(student => {
-      const currentStatus = getCurrentStatus(student);
-      return currentStatus.status === "absent";
-    }).length,
-    totalSemesterAbsences: currentStudents.reduce((total, student) => {
-      return total + getSemesterAbsences(student).length;
-    }, 0),
-    currentSubjectAbsences: currentStudents.reduce((total, student) => {
-      return total + getCurrentSubjectAbsences(student).length;
-    }, 0)
-  };
-
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
+      const data = await response.json();
+      setAttendanceHistory(data);
+      setSelectedHistoryDate(null);
+      setAttendanceDetails(null);
+    } catch (error) {
+      console.error('Erreur:', error);
+      setError(error instanceof Error ? error.message : 'Erreur de chargement de l\'historique');
+    } finally {
+      setIsLoadingHistory(false);
     }
   };
 
-  const getSortIcon = (field: string) => {
-    if (sortField !== field) return <FaSort className="text-gray-400" />;
-    return sortDirection === "asc" ? <FaSortUp className="text-blue-600" /> : <FaSortDown className="text-blue-600" />;
-  };
+  // Charger les détails des présences pour une date spécifique
+  const fetchAttendanceByDate = async (courseId: string, date: string) => {
+    try {
+      setIsLoadingHistory(true);
+      const response = await fetch(`/api/teacher/attendance?action=attendance-by-date&courseId=${courseId}&date=${date}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors du chargement des détails');
+      }
 
-  // Trier les données
-  const sortedStudents = [...filteredStudents].sort((a, b) => {
-    let aValue: string | number = a[sortField as keyof Student] as string | number;
-    let bValue: string | number = b[sortField as keyof Student] as string | number;
-
-    if (sortField === "name") {
-      aValue = String(aValue).toLowerCase();
-      bValue = String(bValue).toLowerCase();
+      const data = await response.json();
+      setAttendanceDetails(data);
+      setSelectedHistoryDate(date);
+    } catch (error) {
+      console.error('Erreur:', error);
+      setError(error instanceof Error ? error.message : 'Erreur de chargement des détails');
+    } finally {
+      setIsLoadingHistory(false);
     }
-
-    if (sortDirection === "asc") {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
-
-  // Fonctions de gestion des présences
-  const toggleAttendance = (studentId: number) => {
-    if (!isEditing || !isDateInSelectedSemester() || !selectedCourseTime) return;
-
-    setStudentData(prev => ({
-      ...prev,
-      [selectedClass]: prev[selectedClass].map(student => {
-        if (student.id === studentId) {
-          const currentStatus = getCurrentStatus(student);
-          const newStatus = currentStatus.status === "present" ? "absent" : "present";
-          
-          const updatedAttendance = student.attendance.filter(a => 
-            !(a.date === selectedDate && a.courseTime === selectedCourseTime)
-          );
-          
-          if (newStatus === "absent") {
-            const currentScheduleItem = availableTimeSlots.find(s => s.id === selectedCourseTime);
-            updatedAttendance.push({
-              date: selectedDate,
-              courseTime: selectedCourseTime,
-              subject: currentScheduleItem?.subject || "Mathématiques",
-              status: newStatus,
-              justified: false,
-              reason: "",
-              semester: selectedSemester
-            });
-          }
-
-          return {
-            ...student,
-            attendance: updatedAttendance
-          };
-        }
-        return student;
-      })
-    }));
   };
 
-  const toggleJustification = (studentId: number) => {
-    if (!isEditing || !isDateInSelectedSemester() || !selectedCourseTime) return;
-
-    setStudentData(prev => ({
-      ...prev,
-      [selectedClass]: prev[selectedClass].map(student => {
-        if (student.id === studentId) {
-          const currentStatus = getCurrentStatus(student);
-          if (currentStatus.status === "absent") {
-            const updatedAttendance = student.attendance.filter(a => 
-              !(a.date === selectedDate && a.courseTime === selectedCourseTime)
-            );
-            updatedAttendance.push({
-              ...currentStatus,
-              justified: !currentStatus.justified,
-              reason: !currentStatus.justified ? currentStatus.reason : ""
-            });
-
-            return {
-              ...student,
-              attendance: updatedAttendance
-            };
-          }
-        }
-        return student;
-      })
-    }));
-  };
-
-  const updateReason = (studentId: number, reason: string) => {
-    if (!isEditing || !isDateInSelectedSemester() || !selectedCourseTime) return;
-
-    setStudentData(prev => ({
-      ...prev,
-      [selectedClass]: prev[selectedClass].map(student => {
-        if (student.id === studentId) {
-          const currentStatus = getCurrentStatus(student);
-          if (currentStatus.status === "absent") {
-            const updatedAttendance = student.attendance.filter(a => 
-              !(a.date === selectedDate && a.courseTime === selectedCourseTime)
-            );
-            updatedAttendance.push({
-              ...currentStatus,
-              reason
-            });
-
-            return {
-              ...student,
-              attendance: updatedAttendance
-            };
-          }
-        }
-        return student;
-      })
-    }));
-  };
-
-  // Fonctions d'ajout/suppression d'étudiants
-  const addStudent = () => {
-    if (!newStudent.name || !newStudent.studentId) {
-      alert("Veuillez remplir tous les champs");
+  // Supprimer les présences d'une date spécifique
+  const deleteAttendanceForDate = async (courseId: string, date: string) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer toutes les présences du ${formatFrenchDate(date)} ?`)) {
       return;
     }
 
-    const newStudentData: Student = {
-      id: Date.now(),
-      name: newStudent.name,
-      studentId: newStudent.studentId,
-      attendance: []
-    };
+    try {
+      setIsDeleting(true);
+      const response = await fetch(`/api/teacher/attendance?action=delete-attendance&courseId=${courseId}&date=${date}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de la suppression');
+      }
 
-    setStudentData(prev => ({
-      ...prev,
-      [selectedClass]: [...prev[selectedClass], newStudentData]
-    }));
+      const data = await response.json();
+      setSuccess(`Présences du ${formatFrenchDate(date)} supprimées avec succès`);
+      
+      // Recharger l'historique
+      if (selectedCourse) {
+        fetchAttendanceHistory(selectedCourse.id);
+      }
+      
+      setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
 
-    setNewStudent({ name: "", studentId: "" });
-    setShowAddStudentModal(false);
+    } catch (error) {
+      console.error('Erreur:', error);
+      setError(error instanceof Error ? error.message : 'Erreur lors de la suppression');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
-  const removeStudent = (studentId: number) => {
-    if (!isEditing) return;
-    
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cet élève ?")) return;
+  // Sauvegarder les présences pour une date spécifique
+  const saveAttendance = async () => {
+    if (!selectedCourse) return;
 
-    setStudentData(prev => ({
-      ...prev,
-      [selectedClass]: prev[selectedClass].filter(student => student.id !== studentId)
-    }));
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      // FILTRER : Ne envoyer que les étudiants qui ont un statut défini
+      const studentsWithStatus = selectedCourse.students
+        .filter(student => student.status !== undefined)
+        .map(student => ({
+          id: student.id,
+          status: student.status as "present" | "absent",
+          justified: student.justified || false,
+          reason: student.reason || ""
+        }));
+
+      console.log('💾 Étudiants à sauvegarder:', studentsWithStatus);
+
+      // VÉRIFICATION : Au moins un étudiant doit avoir un statut
+      if (studentsWithStatus.length === 0) {
+        setError("Veuillez définir au moins une présence avant de sauvegarder");
+        setIsSaving(false);
+        return;
+      }
+
+      const response = await fetch('/api/teacher/attendance?action=save-attendance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          courseId: selectedCourse.id,
+          date: selectedDate,
+          students: studentsWithStatus,
+          semester: "t1"
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de la sauvegarde');
+      }
+
+      const result = await response.json();
+      
+      // Mettre à jour les données avec la réponse de l'API
+      if (result.updatedCourse) {
+        setSelectedCourse(prev => prev ? {
+          ...prev,
+          students: result.updatedCourse.students,
+          attendanceTaken: result.updatedCourse.attendanceTaken
+        } : null);
+        
+        setCourses(prev => prev.map(course => 
+          course.id === selectedCourse.id 
+            ? { 
+                ...course, 
+                students: result.updatedCourse.students,
+                attendanceTaken: result.updatedCourse.attendanceTaken
+              }
+            : course
+        ));
+      }
+
+      setSuccess(`Présences sauvegardées avec succès pour le ${formatFrenchDate(selectedDate)}`);
+      setIsEditing(false);
+      
+      setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+
+    } catch (error) {
+      console.error('Erreur:', error);
+      setError(error instanceof Error ? error.message : 'Erreur lors de la sauvegarde');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // Obtenir le libellé de l'horaire actuel
-  const getCurrentTimeLabel = (): string => {
-    if (!selectedCourseTime) return "";
-    const currentScheduleItem = availableTimeSlots.find(s => s.id === selectedCourseTime);
-    return currentScheduleItem?.label || "";
+  // Basculer le statut de présence d'un étudiant
+  const toggleStudentStatus = (studentId: string) => {
+    if (!selectedCourse || !isEditing) return;
+
+    setSelectedCourse(prev => {
+      if (!prev) return null;
+
+      return {
+        ...prev,
+        students: prev.students.map(student => 
+          student.id === studentId 
+            ? { 
+                ...student, 
+                status: student.status === "present" ? "absent" : "present",
+                justified: student.status === "absent" ? false : student.justified,
+                reason: student.status === "absent" ? "" : student.reason
+              }
+            : student
+        )
+      };
+    });
   };
+
+  // Marquer un absent comme justifié/non justifié
+  const toggleJustification = (studentId: string) => {
+    if (!selectedCourse || !isEditing) return;
+
+    setSelectedCourse(prev => {
+      if (!prev) return null;
+
+      return {
+        ...prev,
+        students: prev.students.map(student => 
+          student.id === studentId && student.status === "absent"
+            ? { ...student, justified: !student.justified }
+            : student
+        )
+      };
+    });
+  };
+
+  // Mettre à jour le motif d'absence
+  const updateReason = (studentId: string, reason: string) => {
+    if (!selectedCourse || !isEditing) return;
+
+    setSelectedCourse(prev => {
+      if (!prev) return null;
+
+      return {
+        ...prev,
+        students: prev.students.map(student => 
+          student.id === studentId && student.status === "absent"
+            ? { ...student, reason }
+            : student
+        )
+      };
+    });
+  };
+
+  // Réinitialiser la présence d'un étudiant
+  const resetStudentStatus = (studentId: string) => {
+    if (!selectedCourse || !isEditing) return;
+
+    setSelectedCourse(prev => {
+      if (!prev) return null;
+
+      return {
+        ...prev,
+        students: prev.students.map(student => 
+          student.id === studentId
+            ? { 
+                ...student, 
+                status: undefined,
+                justified: false,
+                reason: ""
+              }
+            : student
+        )
+      };
+    });
+  };
+
+  // Formater la date en français
+  const formatFrenchDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // Formater la date courte
+  const formatShortDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  // Calculer les statistiques d'un cours
+  const getCourseStats = (course: TeacherCourse) => {
+    const present = course.students.filter(s => s.status === "present").length;
+    const absent = course.students.filter(s => s.status === "absent").length;
+    const notSet = course.students.filter(s => !s.status).length;
+    const total = course.students.length;
+
+    return { present, absent, notSet, total };
+  };
+
+  // Obtenir le pourcentage de complétion
+  const getCompletionPercentage = (course: TeacherCourse) => {
+    const stats = getCourseStats(course);
+    return ((stats.present + stats.absent) / stats.total) * 100;
+  };
+
+  // Revenir à la vue normale
+  const backToCourseView = () => {
+    setAttendanceHistory(null);
+    setSelectedHistoryDate(null);
+    setAttendanceDetails(null);
+  };
+
+  // Effet pour charger les cours au démarrage
+  useEffect(() => {
+    fetchTeacherCourses();
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col lg:pl-5 pt-20 lg:pt-6">
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-6 max-w-7xl mx-auto">
-          {/* En-tête */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Gestion des Présences
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Marquez les absences par créneau horaire et trimestre
-              </p>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="relative">
-                <FaCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => {
-                    setSelectedDate(e.target.value);
-                    setSelectedCourseTime("");
-                  }}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              
-              {isEditing && (
-                <button
-                  onClick={() => setShowAddStudentModal(true)}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-                >
-                  <FaUserPlus className="text-sm" />
-                  Ajouter un élève
-                </button>
-              )}
-              
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-              >
-                {isEditing ? (
-                  <>
-                    <FaSave className="text-sm" />
-                    Sauvegarder
-                  </>
-                ) : (
-                  <>
-                    <FaEdit className="text-sm" />
-                    Modifier
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Filtres */}
-          <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Classe
-                </label>
-                <select
-                  value={selectedClass}
-                  onChange={(e) => {
-                    setSelectedClass(e.target.value);
-                    setSelectedCourseTime("");
-                  }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {classesData.map(classe => (
-                    <option key={classe.id} value={classe.id}>
-                      {classe.name} - {classe.level}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Trimestre
-                </label>
-                <select
-                  value={selectedSemester}
-                  onChange={(e) => setSelectedSemester(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {semesters.map(semester => (
-                    <option key={semester.id} value={semester.id}>
-                      {semester.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  Créneau horaire
-                </label>
-                <select
-                  value={selectedCourseTime}
-                  onChange={(e) => setSelectedCourseTime(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  disabled={availableTimeSlots.length === 0}
-                >
-                  <option value="">Sélectionnez un horaire</option>
-                  {availableTimeSlots.map(time => (
-                    <option key={time.id} value={time.id}>
-                      {time.label} ({time.subject})
-                    </option>
-                  ))}
-                </select>
-                {availableTimeSlots.length === 0 && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Aucun cours programmé pour cette date
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rechercher un élève
-                </label>
-                <div className="relative">
-                  <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Nom ou matricule..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Informations sur la sélection actuelle */}
-            {selectedCourseTime && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center gap-2 text-blue-800">
-                  <FaChalkboardTeacher />
-                  <span className="text-sm font-medium">
-                    {currentClass?.name} - {getCurrentSubject()} - {getCurrentTimeLabel()}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Avertissement si la date n&apos;est pas dans le semestre */}
-            {!isDateInSelectedSemester() && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-center gap-2 text-yellow-800">
-                  <FaExclamationTriangle />
-                  <span className="text-sm font-medium">
-                    La date sélectionnée n&apos;est pas dans le trimestre choisi. 
-                    Les modifications seront enregistrées pour le trimestre sélectionné.
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Statistiques */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <div className="bg-white rounded-xl shadow-sm border p-4 text-center">
-              <div className="text-2xl font-bold text-gray-900">{attendanceStats.totalStudents}</div>
-              <div className="text-sm text-gray-500">Total élèves</div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{attendanceStats.presentToday}</div>
-              <div className="text-sm text-gray-500">Présents</div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border p-4 text-center">
-              <div className="text-2xl font-bold text-red-600">{attendanceStats.absentToday}</div>
-              <div className="text-sm text-gray-500">Absents</div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border p-4 text-center">
-              <div className="text-2xl font-bold text-orange-600">{attendanceStats.currentSubjectAbsences}</div>
-              <div className="text-sm text-gray-500">Absences {getCurrentSubject()}</div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border p-4 text-center">
-              <div className="text-2xl font-bold text-purple-600">{attendanceStats.totalSemesterAbsences}</div>
-              <div className="text-sm text-gray-500">Total absences ({selectedSemester})</div>
-            </div>
-          </div>
-
-          {/* Tableau principal avec défilement */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                  <FaCalendarTimes />
-                  Liste des élèves - {currentClass?.name}
-                  <span className="text-sm font-normal text-gray-500">
-                    {selectedCourseTime ? 
-                      `${getCurrentSubject()} - ${getCurrentTimeLabel()} - ${semesters.find(s => s.id === selectedSemester)?.name}` 
-                      : "Sélectionnez un créneau horaire"}
-                  </span>
-                </h2>
-                <div className="text-sm text-gray-500">
-                  {sortedStudents.length} élève(s)
-                </div>
-              </div>
-            </div>
-
-            <div className="overflow-auto max-h-[600px]">
-              {!selectedCourseTime ? (
-                <div className="text-center py-12">
-                  <FaClock className="text-5xl text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Sélectionnez un créneau horaire
-                  </h3>
-                  <p className="text-gray-500">
-                    Veuillez choisir un horaire de cours pour gérer les présences.
-                  </p>
-                </div>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50 sticky top-0">
-                    <tr className="border-b border-gray-200">
-                      <th 
-                        className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
-                        onClick={() => handleSort("name")}
-                      >
-                        <div className="flex items-center gap-2">
-                          Nom de l&apos;élève
-                          {getSortIcon("name")}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-left py-3 px-4 font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
-                        onClick={() => handleSort("studentId")}
-                      >
-                        <div className="flex items-center gap-2">
-                          Matricule
-                          {getSortIcon("studentId")}
-                        </div>
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900">
-                        Statut ({getCurrentTimeLabel()})
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900">Justification</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900">Motif</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900">
-                        Absences {getCurrentSubject()}
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900">
-                        Total ({selectedSemester})
-                      </th>
-                      {isEditing && (
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Actions</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedStudents.map((student) => {
-                      const currentStatus = getCurrentStatus(student);
-                      const semesterAbsences = getSemesterAbsences(student);
-                      const currentSubjectAbsences = getCurrentSubjectAbsences(student);
-                      
-                      return (
-                        <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="py-4 px-4 font-medium text-gray-900">{student.name}</td>
-                          <td className="py-4 px-4 text-gray-700">{student.studentId}</td>
-                          <td className="py-4 px-4">
-                            <button
-                              onClick={() => toggleAttendance(student.id)}
-                              disabled={!isEditing}
-                              className={`flex items-center gap-2 px-3 py-1 rounded-lg font-medium transition-colors ${
-                                isEditing ? "cursor-pointer hover:opacity-80" : "cursor-not-allowed opacity-60"
-                              } ${
-                                currentStatus.status === "present"
-                                  ? "bg-green-100 text-green-800 border border-green-200"
-                                  : "bg-red-100 text-red-800 border border-red-200"
-                              }`}
-                            >
-                              {currentStatus.status === "present" ? <><FaCheck /> Présent</> : <><FaTimes /> Absent</>}
-                            </button>
-                          </td>
-                          <td className="py-4 px-4">
-                            {currentStatus.status === "absent" && (
-                              <button
-                                onClick={() => toggleJustification(student.id)}
-                                disabled={!isEditing}
-                                className={`flex items-center gap-2 px-3 py-1 rounded-lg font-medium transition-colors ${
-                                  isEditing ? "cursor-pointer hover:opacity-80" : "cursor-not-allowed opacity-60"
-                                } ${
-                                  currentStatus.justified
-                                    ? "bg-orange-100 text-orange-800 border border-orange-200"
-                                    : "bg-gray-100 text-gray-800 border border-gray-200"
-                                }`}
-                              >
-                                <FaExclamationTriangle />
-                                {currentStatus.justified ? "Justifié" : "Non justifié"}
-                              </button>
-                            )}
-                          </td>
-                          <td className="py-4 px-4">
-                            {currentStatus.status === "absent" && (
-                              <input
-                                type="text"
-                                value={currentStatus.reason}
-                                onChange={(e) => updateReason(student.id, e.target.value)}
-                                disabled={!isEditing}
-                                placeholder="Motif de l&apos;absence..."
-                                className={`w-full px-3 py-1 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                                  isEditing ? "border-gray-300 bg-white" : "border-gray-200 bg-gray-100 cursor-not-allowed"
-                                }`}
-                              />
-                            )}
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="text-center">
-                              <span className={`px-2 py-1 rounded text-sm font-medium ${
-                                currentSubjectAbsences.length === 0 
-                                  ? "bg-green-100 text-green-800" 
-                                  : currentSubjectAbsences.length <= 2 
-                                  ? "bg-yellow-100 text-yellow-800" 
-                                  : "bg-red-100 text-red-800"
-                              }`}>
-                                {currentSubjectAbsences.length}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="text-center">
-                              <span className={`px-2 py-1 rounded text-sm font-medium ${
-                                semesterAbsences.length === 0 
-                                  ? "bg-blue-100 text-blue-800" 
-                                  : semesterAbsences.length <= 5 
-                                  ? "bg-orange-100 text-orange-800" 
-                                  : "bg-red-100 text-red-800"
-                              }`}>
-                                {semesterAbsences.length}
-                              </span>
-                            </div>
-                          </td>
-                          {isEditing && (
-                            <td className="py-4 px-4">
-                              <button
-                                onClick={() => removeStudent(student.id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Supprimer l&apos;élève"
-                              >
-                                <FaTrash className="text-sm" />
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {sortedStudents.length === 0 && selectedCourseTime && (
-              <div className="text-center py-12">
-                <FaUsers className="text-5xl text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Aucun élève trouvé
-                </h3>
-                <p className="text-gray-500">
-                  Aucun élève ne correspond à votre recherche.
-                </p>
-              </div>
-            )}
-          </div>
+    <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* En-tête */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Gestion des Présences
+          </h1>
+          <p className="text-gray-600">
+            Gérez les présences de tous vos cours - Historique complet disponible
+          </p>
         </div>
-      </div>
 
-      {/* Modal d&apos;ajout d&apos;élève */}
-      {showAddStudentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        {/* Sélecteur de date pour nouvelle présence */}
+        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-center gap-2 text-blue-600">
+              <FaCalendarDay className="text-xl" />
+              <span className="font-semibold">Date pour les présences :</span>
+            </div>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={isLoading || isSaving}
+            />
+            <div className="text-lg font-semibold text-gray-700">
+              {formatFrenchDate(selectedDate)}
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 mt-2">
+            Sélectionnez la date pour laquelle vous voulez prendre les présences
+          </p>
+        </div>
+
+        {/* Alertes */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2 text-red-800">
+              <FaExclamationTriangle />
+              <span>{error}</span>
+            </div>
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 text-green-800">
+              <FaCheckCircle />
+              <span>{success}</span>
+            </div>
+          </div>
+        )}
+
+        {/* VUE HISTORIQUE */}
+        {attendanceHistory && (
+          <div className="bg-white rounded-xl shadow-sm border mb-6">
+            <div className="p-6 border-b">
+              <div className="flex items-center gap-4 mb-4">
+                <button
+                  onClick={backToCourseView}
+                  className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold"
+                >
+                  <FaArrowLeft />
+                  Retour au cours
+                </button>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Historique des Présences - {attendanceHistory.course.subject}
+              </h2>
+              <div className="flex items-center gap-4 text-gray-600">
+                <div className="flex items-center gap-2">
+                  <FaBuilding />
+                  <span>{attendanceHistory.course.className}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FaClock />
+                  <span>{attendanceHistory.course.schedule}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Détails d'une date spécifique */}
+            {attendanceDetails && (
+              <div className="p-6 bg-blue-50 border-b">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-semibold text-blue-900">
+                    Présences du {formatFrenchDate(attendanceDetails.date)}
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => deleteAttendanceForDate(selectedCourse!.id, attendanceDetails.date)}
+                      disabled={isDeleting}
+                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      <FaTrash />
+                      {isDeleting ? "Suppression..." : "Supprimer"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid gap-3">
+                  {attendanceDetails.students.map(student => (
+                    <div
+                      key={student.id}
+                      className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-shrink-0">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <FaUser className="text-blue-600" />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">{student.name}</div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <FaIdCard className="text-gray-400" />
+                              <span>{student.studentId}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <span className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                          student.status === "present"
+                            ? "bg-green-100 text-green-800"
+                            : student.status === "absent"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}>
+                          {student.status === "present" ? "✅ Présent" : 
+                           student.status === "absent" ? "❌ Absent" : "⚪ Non renseigné"}
+                        </span>
+                        
+                        {student.status === "absent" && student.justified && (
+                          <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs">
+                            Justifié
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Liste des dates d'historique */}
             <div className="p-6">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <FaUserPlus className="text-green-600" />
-                Ajouter un élève
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Dates de présence enregistrées
               </h3>
               
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nom complet
-                  </label>
-                  <input
-                    type="text"
-                    value={newStudent.name}
-                    onChange={(e) => setNewStudent(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ex: Martin Léa"
-                  />
+              {isLoadingHistory ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <div key={n} className="p-4 border border-gray-200 rounded-lg animate-pulse">
+                      <div className="h-4 bg-gray-300 rounded w-24 mb-2"></div>
+                      <div className="h-3 bg-gray-300 rounded w-32"></div>
+                    </div>
+                  ))}
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Matricule
-                  </label>
-                  <input
-                    type="text"
-                    value={newStudent.studentId}
-                    onChange={(e) => setNewStudent(prev => ({ ...prev, studentId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ex: STU001"
-                  />
+              ) : attendanceHistory.dates.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <FaHistory className="text-4xl text-gray-300 mx-auto mb-3" />
+                  <p>Aucune présence enregistrée pour ce cours</p>
                 </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={addStudent}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-                >
-                  Ajouter
-                </button>
-                <button
-                  onClick={() => setShowAddStudentModal(false)}
-                  className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors"
-                >
-                  Annuler
-                </button>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {attendanceHistory.dates.map(date => (
+                    <button
+                      key={date}
+                      onClick={() => fetchAttendanceByDate(selectedCourse!.id, date)}
+                      className={`p-4 border rounded-lg text-left transition-all ${
+                        selectedHistoryDate === date
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-medium text-gray-900">
+                          {formatShortDate(date)}
+                        </div>
+                        <FaEye className="text-gray-400" />
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {formatFrenchDate(date)}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* VUE NORMALE (cours) */}
+        {!attendanceHistory && (
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+            {/* Liste des cours - Sidebar */}
+            <div className="xl:col-span-1">
+              <div className="bg-white rounded-xl shadow-sm border p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <FaChalkboardTeacher />
+                  Mes Cours
+                  <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    {courses.length}
+                  </span>
+                </h2>
+
+                {isLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((n) => (
+                      <CourseSkeleton key={n} />
+                    ))}
+                  </div>
+                ) : courses.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <FaChalkboardTeacher className="text-4xl text-gray-300 mx-auto mb-3" />
+                    <p>Aucun cours assigné</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {courses.map(course => {
+                      const stats = getCourseStats(course);
+                      const completion = getCompletionPercentage(course);
+                      
+                      return (
+                        <button
+                          key={course.id}
+                          onClick={() => {
+                            setSelectedCourse(course);
+                            setAttendanceHistory(null);
+                          }}
+                          className={`w-full text-left p-4 rounded-lg border transition-all ${
+                            selectedCourse?.id === course.id
+                              ? 'border-blue-500 bg-blue-50 shadow-md'
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <FaClock className="text-gray-400 text-sm" />
+                              <span className="font-semibold text-gray-900">
+                                {course.startTime} - {course.endTime}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {completion === 100 && (
+                                <FaCheckCircle className="text-green-500 text-sm" />
+                              )}
+                              <span className={`text-xs font-medium ${
+                                completion === 100 ? 'text-green-600' : 'text-gray-500'
+                              }`}>
+                                {Math.round(completion)}%
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 mb-1">
+                            <FaBook className="text-gray-400 text-sm" />
+                            <span className="font-medium text-gray-700">{course.subject}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 mb-3">
+                            <FaBuilding className="text-gray-400 text-sm" />
+                            <span className="text-sm text-gray-600">{course.className}</span>
+                          </div>
+
+                          {/* Barre de progression */}
+                          <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                            <div 
+                              className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${completion}%` }}
+                            ></div>
+                          </div>
+
+                          <div className="flex justify-between text-xs text-gray-600">
+                            <div className="flex items-center gap-1">
+                              <FaCheck className="text-green-500" />
+                              <span>{stats.present}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <FaTimes className="text-red-500" />
+                              <span>{stats.absent}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <FaUser className="text-gray-400" />
+                              <span>{stats.notSet}</span>
+                            </div>
+                            <div className="text-gray-500">
+                              {stats.total} total
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Détails du cours sélectionné */}
+            <div className="xl:col-span-3">
+              {selectedCourse ? (
+                <div className="bg-white rounded-xl shadow-sm border">
+                  {/* En-tête du cours */}
+                  <div className="p-6 border-b">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                      <div className="flex-1">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                          {selectedCourse.subject}
+                        </h2>
+                        <div className="flex flex-wrap items-center gap-4 text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <FaClock />
+                            <span>{selectedCourse.startTime} - {selectedCourse.endTime}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <FaBuilding />
+                            <span>{selectedCourse.className}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <FaUsers />
+                            <span>{selectedCourse.students.length} étudiants</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {!isEditing ? (
+                          <>
+                            <button
+                              onClick={() => fetchAttendanceHistory(selectedCourse.id)}
+                              className="flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors"
+                            >
+                              <FaHistory />
+                              Historique
+                            </button>
+                            <button
+                              onClick={() => setIsEditing(true)}
+                              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                              disabled={isLoading}
+                            >
+                              <FaEdit />
+                              {selectedCourse.attendanceTaken ? "Modifier" : "Prendre les présences"}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setIsEditing(false)}
+                              className="flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors"
+                              disabled={isSaving}
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              onClick={saveAttendance}
+                              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                              disabled={isSaving || getStudentsWithStatus(selectedCourse) === 0}
+                            >
+                              <FaSave />
+                              {isSaving ? "Sauvegarde..." : `Sauvegarder (${getStudentsWithStatus(selectedCourse)}/${selectedCourse.students.length})`}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Statistiques rapides */}
+                  <div className="px-6 py-4 bg-gray-50 border-b">
+                    <div className="flex flex-wrap gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span className="text-gray-700">
+                          <strong>{getCourseStats(selectedCourse).present}</strong> Présents
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                        <span className="text-gray-700">
+                          <strong>{getCourseStats(selectedCourse).absent}</strong> Absents
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                        <span className="text-gray-700">
+                          <strong>{getCourseStats(selectedCourse).notSet}</strong> Non renseignés
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Liste des étudiants */}
+                  <div className="p-6">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Liste des étudiants
+                      </h3>
+                      <span className="text-sm text-gray-500">
+                        {selectedCourse.students.length} étudiants
+                      </span>
+                    </div>
+
+                    {isLoading ? (
+                      <div className="space-y-3">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <StudentSkeleton key={n} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid gap-3">
+                        {selectedCourse.students.map(student => (
+                          <div
+                            key={student.id}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors gap-3"
+                          >
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3">
+                                <div className="flex-shrink-0">
+                                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <FaUser className="text-blue-600" />
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">{student.name}</div>
+                                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <FaIdCard className="text-gray-400" />
+                                    <span>{student.studentId}</span>
+                                  </div>
+                                  {student.date && (
+                                    <div className="text-xs text-gray-400 mt-1">
+                                      Dernière présence: {formatShortDate(student.date)}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                              {/* Statut de présence */}
+                              {isEditing ? (
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => toggleStudentStatus(student.id)}
+                                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                                        student.status === "present"
+                                          ? "bg-green-100 text-green-800 border border-green-200"
+                                          : student.status === "absent"
+                                          ? "bg-red-100 text-red-800 border border-red-200"
+                                          : "bg-gray-100 text-gray-800 border border-gray-200"
+                                      }`}
+                                    >
+                                      {student.status === "present" ? (
+                                        <>✅ Présent</>
+                                      ) : student.status === "absent" ? (
+                                        <>❌ Absent</>
+                                      ) : (
+                                        <>⚪ Non renseigné</>
+                                      )}
+                                    </button>
+
+                                    {student.status && (
+                                      <button
+                                        onClick={() => resetStudentStatus(student.id)}
+                                        className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                                        title="Réinitialiser"
+                                      >
+                                        ↺
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* Justification et motif (seulement si absent) */}
+                                  {student.status === "absent" && (
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                      <button
+                                        onClick={() => toggleJustification(student.id)}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium ${
+                                          student.justified
+                                            ? "bg-orange-100 text-orange-800 border border-orange-200"
+                                            : "bg-gray-100 text-gray-800 border border-gray-200"
+                                        }`}
+                                      >
+                                        {student.justified ? "✅ Justifié" : "❌ Non justifié"}
+                                      </button>
+
+                                      <input
+                                        type="text"
+                                        value={student.reason || ""}
+                                        onChange={(e) => updateReason(student.id, e.target.value)}
+                                        placeholder="Motif de l'absence..."
+                                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[200px]"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                // Affichage seul (non édition)
+                                <div className="flex items-center gap-4">
+                                  <span className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                                    student.status === "present"
+                                      ? "bg-green-100 text-green-800"
+                                      : student.status === "absent"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-gray-100 text-gray-800"
+                                  }`}>
+                                    {student.status === "present" ? "✅ Présent" : 
+                                     student.status === "absent" ? "❌ Absent" : "⚪ Non renseigné"}
+                                  </span>
+                                  
+                                  {student.status === "absent" && student.justified && (
+                                    <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs">
+                                      Justifié
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
+                  <FaChalkboardTeacher className="text-6xl text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    Sélectionnez un cours
+                  </h3>
+                  <p className="text-gray-500">
+                    Choisissez un cours dans la liste pour gérer les présences
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

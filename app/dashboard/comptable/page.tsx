@@ -1,10 +1,9 @@
 "use client";
 
-import React from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
-import { 
-  FaMoneyBillWave, 
+import {
   FaCreditCard, 
   FaFileInvoiceDollar, 
   FaCalculator,
@@ -13,26 +12,79 @@ import {
   FaBalanceScale,
   FaRegMoneyBillAlt,
   FaExclamationTriangle,
-  FaPlus
+  FaPlus,
+  FaExclamationCircle,
+  FaUsers,
+  FaSync
 } from "react-icons/fa";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
+interface ComptableData {
+  pendingPayments: number;
+  unpaidInvoices: number;
+  pendingReceipts: number;
+  monthlyRevenue: number;
+  expensesThisMonth: number;
+  budgetUtilization: number;
+  hasData: boolean;
+  stats?: {
+    totalInscriptions: number;
+    revenueTarget: number;
+  };
+}
+
 const ComptableDashboard = () => {
   const { user, isLoaded, isSignedIn } = useUser();
+  const [comptableData, setComptableData] = useState<ComptableData | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  
+  const fetchComptableData = async () => {
+    try {
+      setDataLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/comptable/dashboard');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de la récupération des données');
+      }
+      
+      const data = await response.json();
+      setComptableData(data);
+    } catch (err) {
+      console.error('Erreur:', err);
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isSignedIn) {
+      fetchComptableData();
+    }
+  }, [isSignedIn]);
+
+  const handleRefresh = () => {
+    fetchComptableData();
+  };
+
   // Loading state
-  if (!isLoaded) {
+  if (!isLoaded || dataLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Chargement de vos informations...</div>
+        <div className="text-lg flex items-center gap-3">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          Chargement de vos données financières...
+        </div>
       </div>
     );
   }
 
-  // Non connecté
   if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -41,15 +93,21 @@ const ComptableDashboard = () => {
     );
   }
 
-  // Données du comptable
-  const comptableData = {
-    pendingPayments: 18,
-    unpaidInvoices: 7,
-    pendingReceipts: 12,
-    monthlyRevenue: 125430,
-    expensesThisMonth: 89450,
-    budgetUtilization: 72
-  };
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center">
+          <FaExclamationCircle className="text-4xl text-red-500 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-red-800 mb-2">Erreur</h3>
+          <p className="text-red-700 mb-4">{error}</p>
+          <Button onClick={handleRefresh} className="bg-red-600 hover:bg-red-700">
+            <FaSync className="mr-2" />
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -71,6 +129,14 @@ const ComptableDashboard = () => {
       href: "/dashboard/comptable/paiements",
       color: "bg-green-50 border-green-200",
       buttonColor: "bg-green-600 hover:bg-green-700"
+    },
+    {
+      title: "Gérer les Inscriptions",
+      description: "Voir et gérer les inscriptions",
+      icon: <FaUsers className="text-2xl text-purple-600" />,
+      href: "/dashboard/comptable/inscriptions",
+      color: "bg-purple-50 border-purple-200",
+      buttonColor: "bg-purple-600 hover:bg-purple-700"
     }
   ];
 
@@ -80,15 +146,17 @@ const ComptableDashboard = () => {
         <div className="p-6">
           <div className="max-w-7xl mx-auto">
             
-            {/* En-tête avec info utilisateur */}
+            {/* En-tête avec bouton rafraîchir */}
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6 sticky top-0 z-10">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900">
-                    Tableau de Bord Comptable
-                  </h1>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-3xl font-bold text-gray-900">
+                      Tableau de Bord Comptable
+                    </h1>
+                  </div>
                   <p className="text-gray-600 mt-2">
-                    Bienvenue, {user.firstName} {user.lastName} 💰
+                    Bienvenue, {user.firstName} {user.lastName} 
                   </p>
                   <div className="flex items-center gap-2 mt-2">
                     <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
@@ -113,7 +181,7 @@ const ComptableDashboard = () => {
             {/* Cartes d'ajout rapide */}
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Opérations Financières</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {quickAddCards.map((card, index) => (
                   <div 
                     key={index}
@@ -143,166 +211,209 @@ const ComptableDashboard = () => {
               </div>
             </div>
 
-            {/* Contenu principal */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              
-              {/* Colonne de gauche */}
-              <div className="lg:col-span-2 space-y-6">
-                
-                {/* Statistiques */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Aperçu Financier</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <Card className="bg-white border-l-4 border-l-green-500">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Chiffre d&apos;Affaires</p>
-                            <p className="text-2xl font-bold text-gray-900">
-                              {formatCurrency(comptableData.monthlyRevenue)}
-                            </p>
-                          </div>
-                          <FaChartLine className="h-8 w-8 text-green-500" />
-                        </div>
-                        <div className="text-xs text-green-600 mt-2">+12% ce mois</div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-white border-l-4 border-l-red-500">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Dépenses du Mois</p>
-                            <p className="text-2xl font-bold text-gray-900">
-                              {formatCurrency(comptableData.expensesThisMonth)}
-                            </p>
-                          </div>
-                          <FaMoneyBillWave className="h-8 w-8 text-red-500" />
-                        </div>
-                        <div className="text-xs text-red-600 mt-2">+8% ce mois</div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-white border-l-4 border-l-blue-500">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Utilisation Budget</p>
-                            <p className="text-2xl font-bold text-gray-900">
-                              {comptableData.budgetUtilization}%
-                            </p>
-                          </div>
-                          <FaRegMoneyBillAlt className="h-8 w-8 text-blue-500" />
-                        </div>
-                        <Progress value={comptableData.budgetUtilization} className="mt-2" />
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Widgets principaux */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Paiements en Attente</CardTitle>
-                        <FaCreditCard className="h-4 w-4 text-orange-500" />
-                      </CardHeader>
-                      <CardContent className="pt-4 space-y-2">
-                        <div className="text-3xl font-bold text-orange-600">
-                          {comptableData.pendingPayments}
-                        </div>
-                        <p className="text-xs text-gray-700">À traiter</p>
-                        <Link href="/dashboard/comptable/payments" passHref>
-                          <Button variant="link" className="p-0 h-auto text-principal text-xs">
-                            Traiter <FaArrowRight className="ml-1 h-3 w-3" />
-                          </Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Factures Impayées</CardTitle>
-                        <FaFileInvoiceDollar className="h-4 w-4 text-red-500" />
-                      </CardHeader>
-                      <CardContent className="pt-4 space-y-2">
-                        <div className="text-3xl font-bold text-red-600">
-                          {comptableData.unpaidInvoices}
-                        </div>
-                        <p className="text-xs text-gray-700">Relance nécessaire</p>
-                        <Link href="/dashboard/comptable/invoices" passHref>
-                          <Button variant="link" className="p-0 h-auto text-principal text-xs">
-                            Relancer <FaArrowRight className="ml-1 h-3 w-3" />
-                          </Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Colonne de droite */}
-              <div className="space-y-6">
-                
-                {/* Alertes */}
-                <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-                  <h3 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
-                    <FaExclamationTriangle className="text-red-600" />
-                    Alertes Financières
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <div className="text-sm text-red-800">
-                        <span className="font-medium">{comptableData.unpaidInvoices} factures</span> impayées
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <div className="text-sm text-red-800">
-                        <span className="font-medium">{comptableData.pendingPayments} paiements</span> en attente
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <div className="text-sm text-red-800">
-                        <span className="font-medium">{comptableData.pendingReceipts} reçus</span> à générer
-                      </div>
-                    </div>
-                  </div>
-                  <button className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-                    Voir les alertes
-                  </button>
-                </div>
-
-                {/* État comptable */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">État Comptable</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                      <FaBalanceScale className="h-5 w-5 text-green-600" />
-                      <div>
-                        <p className="text-sm font-medium">Balance équilibrée</p>
-                        <p className="text-xs text-gray-600">Dernière vérification</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                      <FaCalculator className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <p className="text-sm font-medium">Calcul des frais</p>
-                        <p className="text-xs text-gray-600">12 filières à jour</p>
-                      </div>
-                    </div>
-                  </div>
-                  <Link href="/dashboard/comptable/balance" className="w-full mt-4 block">
-                    <Button variant="outline" className="w-full">
-                      Vérifier la balance
+            {/* Aucune donnée trouvée */}
+            {comptableData && !comptableData.hasData && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center mb-8">
+                <FaExclamationCircle className="text-4xl text-yellow-500 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-yellow-800 mb-2">
+                  Aucune donnée financière trouvée
+                </h3>
+                <p className="text-yellow-700 mb-4">
+                  Commencez par créer votre première inscription ou enregistrer un paiement.
+                </p>
+                <div className="flex gap-4 justify-center flex-wrap">
+                  <Link href="/dashboard/comptable/inscriptions">
+                    <Button className="bg-yellow-600 hover:bg-yellow-700">
+                      <FaUsers className="mr-2" />
+                      Voir les inscriptions
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard/comptable/paiements">
+                    <Button variant="outline" className="border-yellow-600 text-yellow-700">
+                      <FaCreditCard className="mr-2" />
+                      Enregistrer un paiement
                     </Button>
                   </Link>
                 </div>
-
               </div>
-            </div>
+            )}
+
+            {/* Contenu principal avec données réelles */}
+            {comptableData && comptableData.hasData && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                
+                {/* Colonne de gauche */}
+                <div className="lg:col-span-2 space-y-6">
+                  
+                  {/* Statistiques */}
+                  <div className="bg-white rounded-xl shadow-sm p-6">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Aperçu Financier</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <Card className="bg-white border-l-4 border-l-green-500">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-600">Chiffre d&apos;Affaires</p>
+                              <p className="text-2xl font-bold text-gray-900">
+                                {formatCurrency(comptableData.monthlyRevenue)}
+                              </p>
+                            </div>
+                            <FaChartLine className="h-8 w-8 text-green-500" />
+                          </div>
+                          <div className="text-xs text-green-600 mt-2">
+                            Ce mois
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-white border-l-4 border-l-blue-500">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-600">Utilisation Budget</p>
+                              <p className="text-2xl font-bold text-gray-900">
+                                {comptableData.budgetUtilization}%
+                              </p>
+                            </div>
+                            <FaRegMoneyBillAlt className="h-8 w-8 text-blue-500" />
+                          </div>
+                          <Progress value={comptableData.budgetUtilization} className="mt-2" />
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-white border-l-4 border-l-purple-500">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-600">Inscriptions</p>
+                              <p className="text-2xl font-bold text-gray-900">
+                                {comptableData.stats?.totalInscriptions || 0}
+                              </p>
+                            </div>
+                            <FaUsers className="h-8 w-8 text-purple-500" />
+                          </div>
+                          <div className="text-xs text-purple-600 mt-2">
+                            Ce mois
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Widgets principaux */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <CardTitle className="text-sm font-medium">Paiements en Attente</CardTitle>
+                          <FaCreditCard className="h-4 w-4 text-orange-500" />
+                        </CardHeader>
+                        <CardContent className="pt-4 space-y-2">
+                          <div className="text-3xl font-bold text-orange-600">
+                            {comptableData.pendingPayments}
+                          </div>
+                          <p className="text-xs text-gray-700">Inscriptions à traiter</p>
+                          <Link href="/dashboard/comptable/inscriptions" passHref>
+                            <Button variant="link" className="p-0 h-auto text-principal text-xs">
+                              Traiter <FaArrowRight className="ml-1 h-3 w-3" />
+                            </Button>
+                          </Link>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <CardTitle className="text-sm font-medium">Factures Impayées</CardTitle>
+                          <FaFileInvoiceDollar className="h-4 w-4 text-red-500" />
+                        </CardHeader>
+                        <CardContent className="pt-4 space-y-2">
+                          <div className="text-3xl font-bold text-red-600">
+                            {comptableData.unpaidInvoices}
+                          </div>
+                          <p className="text-xs text-gray-700">Relance nécessaire</p>
+                          <Link href="/dashboard/comptable/factures" passHref>
+                            <Button variant="link" className="p-0 h-auto text-principal text-xs">
+                              Relancer <FaArrowRight className="ml-1 h-3 w-3" />
+                            </Button>
+                          </Link>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Colonne de droite */}
+                <div className="space-y-6">
+                  
+                  {/* Alertes */}
+                  {(comptableData.unpaidInvoices > 0 || comptableData.pendingPayments > 0 || comptableData.pendingReceipts > 0) && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+                      <h3 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
+                        <FaExclamationTriangle className="text-red-600" />
+                        Alertes Financières
+                      </h3>
+                      <div className="space-y-3">
+                        {comptableData.unpaidInvoices > 0 && (
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <div className="text-sm text-red-800">
+                              <span className="font-medium">{comptableData.unpaidInvoices} factures</span> impayées
+                            </div>
+                          </div>
+                        )}
+                        {comptableData.pendingPayments > 0 && (
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <div className="text-sm text-red-800">
+                              <span className="font-medium">{comptableData.pendingPayments} inscriptions</span> en attente
+                            </div>
+                          </div>
+                        )}
+                        {comptableData.pendingReceipts > 0 && (
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <div className="text-sm text-red-800">
+                              <span className="font-medium">{comptableData.pendingReceipts} paiements</span> récents
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <Link href="/dashboard/comptable/alertes">
+                        <button className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                          Voir les alertes
+                        </button>
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* État comptable */}
+                  <div className="bg-white rounded-xl shadow-sm p-6">
+                    <h3 className="font-semibold text-gray-900 mb-4">État Comptable</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                        <FaBalanceScale className="h-5 w-5 text-green-600" />
+                        <div>
+                          <p className="text-sm font-medium">Données à jour</p>
+                          <p className="text-xs text-gray-600">Dernière mise à jour</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                        <FaCalculator className="h-5 w-5 text-blue-600" />
+                        <div>
+                          <p className="text-sm font-medium">Système actif</p>
+                          <p className="text-xs text-gray-600">Toutes les fonctionnalités</p>
+                        </div>
+                      </div>
+                    </div>
+                    <Link href="/dashboard/comptable/rapports" className="w-full mt-4 block">
+                      <Button variant="outline" className="w-full">
+                        Voir les rapports
+                      </Button>
+                    </Link>
+                  </div>
+
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

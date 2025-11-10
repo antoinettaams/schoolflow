@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  Search, Filter, Download, Eye, 
+  Search, Download, Eye, 
   BarChart3, TrendingUp, Award, Users, BookOpen,
   Star, Target, AlertCircle, CheckCircle, XCircle
 } from 'lucide-react';
@@ -15,8 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Progress } from "@/components/ui/progress";
 
 interface Student {
@@ -63,12 +61,11 @@ interface Stats {
 
 export default function NotesPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
-  const [vagues, setVagues] = useState<Vague[]>([]);
+  const [setVagues] = useState<Vague[]>([]);
   const [filieres, setFilieres] = useState<Filiere[]>([]);
-  const [selectedVague, setSelectedVague] = useState<string>('all');
-  const [selectedFiliere, setSelectedFiliere] = useState<string>('all');
+  const [selectedVague] = useState<string>('all');
+  const [selectedFiliere] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
