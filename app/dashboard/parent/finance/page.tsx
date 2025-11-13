@@ -17,7 +17,8 @@ import {
   FaUserGraduate,
   FaSchool,
   FaUtensils,
-  FaRunning
+  FaRunning,
+  FaExclamationTriangle
 } from "react-icons/fa";
 import { useUser } from "@clerk/nextjs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,9 +27,10 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
-// Interfaces TypeScript
-interface Fee {
+// Interfaces TypeScript basées sur l'API
+interface Fee { 
   id: number;
   description: string;
   amount: number;
@@ -46,10 +48,31 @@ interface Student {
   program: string;
   registrationStatus: "registered" | "pending";
   registrationFee: number;
-  tuitionFee: number; // Frais de scolarité annuels
+  tuitionFee: number;
   paidAmount: number;
   remainingAmount: number;
-  totalSchoolFees: number; // Total des frais scolaires (scolarité + autres)
+  totalSchoolFees: number;
+}
+
+interface FinanceData {
+  student: Student;
+  fees: Fee[];
+  summary: {
+    totalAll: number;
+    totalPaid: number;
+    totalPending: number;
+    totalOverdue: number;
+  };
+}
+
+interface ApiResponse {
+  success: boolean;
+  data: FinanceData;
+  metadata?: {
+    userRole: string;
+    studentName: string;
+    generatedAt: string;
+  };
 }
 
 // Type pour les champs de tri valides
@@ -165,63 +188,40 @@ export default function ParentFinancePage() {
   const [sortField, setSortField] = useState<SortableField>("dueDate");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [isLoading, setIsLoading] = useState(true);
+  const [financeData, setFinanceData] = useState<FinanceData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Données simulées de l'élève
-  const studentData: Student = {
-    id: "1",
-    name: "Jean Dupont",
-    class: "Terminale S",
-    program: "Scientifique",
-    registrationStatus: "registered",
-    registrationFee: 10000, // Frais d'inscription (une seule fois)
-    tuitionFee: 885000, // Frais de scolarité annuels (3 trimestres × 295000)
-    paidAmount: 523700, // Total déjà payé
-    remainingAmount: 461700, // Reste à payer
-    totalSchoolFees: 985000 // Total inscription + scolarité
-  };
-
-  const feesData: Fee[] = [
-    // Frais d'inscription (payable une seule fois)
-    { 
-      id: 1, 
-      description: "Frais d'inscription - Année scolaire 2024/2025", 
-      amount: 10000, 
-      dueDate: "01/09/2024", 
-      status: "paid", 
-      paymentDate: "28/08/2024", 
-      type: "Inscription", 
-      reference: "INS-2024-2025" 
-    },
-    // Frais de scolarité (trimestriels)
-    { 
-      id: 2, 
-      description: "Frais de scolarité - Trimestre 1", 
-      amount: 295000, 
-      dueDate: "15/09/2024", 
-      status: "paid", 
-      paymentDate: "10/09/2024", 
-      type: "Scolarité", 
-      reference: "SCO-2024-T1" 
-    },
-    { 
-      id: 3, 
-      description: "Frais de scolarité - Trimestre 2", 
-      amount: 295000, 
-      dueDate: "15/11/2024", 
-      status: "pending", 
-      paymentDate: "", 
-      type: "Scolarité", 
-      reference: "SCO-2024-T2" 
-    },
-  ];
-
-  // Simuler le chargement des données
+  // Charger les données depuis l'API
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
+    const fetchFinanceData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const response = await fetch('/api/finances');
+        const result: ApiResponse = await response.json();
 
-    return () => clearTimeout(timer);
+        if (!response.ok) {
+          throw new Error(result.error || 'Erreur lors du chargement des données');
+        }
+
+        if (result.success && result.data) {
+          setFinanceData(result.data);
+          toast.success('Données financières chargées avec succès');
+        } else {
+          throw new Error('Données non disponibles');
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+        setError(errorMessage);
+        toast.error(`Erreur: ${errorMessage}`);
+        console.error('Erreur chargement données:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFinanceData();
   }, []);
 
   const statusFilters = [
@@ -232,6 +232,8 @@ export default function ParentFinancePage() {
   ];
 
   const downloadReceipt = (fee: Fee) => {
+    if (!financeData) return;
+
     const receiptContent = `
       RECU DE PAIEMENT - SCHOOLFLOW
       ==============================
@@ -244,9 +246,9 @@ export default function ParentFinancePage() {
       Date de paiement: ${fee.paymentDate}
       Statut: Payé
       
-      Élève: ${studentData.name} - ${studentData.class}
+      Élève: ${financeData.student.name} - ${financeData.student.class}
       Parent: ${user?.fullName || "Parent"}
-      Filière: ${studentData.program}
+      Filière: ${financeData.student.program}
       Date d'émission: ${new Date().toLocaleDateString('fr-FR')}
       
       Merci pour votre confiance.
@@ -264,6 +266,8 @@ export default function ParentFinancePage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    
+    toast.success('Reçu téléchargé avec succès');
   };
 
   const handleSort = (field: SortableField) => {
@@ -280,9 +284,9 @@ export default function ParentFinancePage() {
     return sortDirection === "asc" ? <FaSortUp className="text-primary" /> : <FaSortDown className="text-primary" />;
   };
 
-  const filteredFees = feesData.filter(fee =>
+  const filteredFees = financeData?.fees.filter(fee =>
     selectedStatus === "all" || fee.status === selectedStatus
-  );
+  ) || [];
 
   // Fonction de tri
   const sortedFees = [...filteredFees].sort((a, b) => {
@@ -349,15 +353,15 @@ export default function ParentFinancePage() {
 
   const formatFCFA = (amount: number) => new Intl.NumberFormat('fr-FR').format(amount) + ' FCFA';
 
-  // Calculs des totaux
-  const totalPaid = feesData.filter(f => f.status === "paid").reduce((sum, fee) => sum + fee.amount, 0);
-  const totalPending = feesData.filter(f => f.status === "pending").reduce((sum, fee) => sum + fee.amount, 0);
-  const totalOverdue = feesData.filter(f => f.status === "overdue").reduce((sum, fee) => sum + fee.amount, 0);
-  const totalAll = feesData.reduce((sum, fee) => sum + fee.amount, 0);
+  // Calculs des totaux basés sur les données de l'API
+  const totalPaid = financeData?.summary.totalPaid || 0;
+  const totalPending = financeData?.summary.totalPending || 0;
+  const totalOverdue = financeData?.summary.totalOverdue || 0;
+  const totalAll = financeData?.summary.totalAll || 0;
 
   // Calculs par type
-  const inscriptionFees = feesData.filter(f => f.type === "Inscription");
-  const tuitionFees = feesData.filter(f => f.type === "Scolarité");
+  const inscriptionFees = financeData?.fees.filter(f => f.type === "Inscription") || [];
+  const tuitionFees = financeData?.fees.filter(f => f.type === "Scolarité") || [];
 
   const paidInscription = inscriptionFees.filter(f => f.status === "paid").reduce((sum, fee) => sum + fee.amount, 0);
   const paidTuition = tuitionFees.filter(f => f.status === "paid").reduce((sum, fee) => sum + fee.amount, 0);
@@ -374,6 +378,41 @@ export default function ParentFinancePage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col min-h-0 bg-background lg:pl-5 pt-20 lg:pt-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 lg:p-6 max-w-7xl mx-auto w-full">
+            <div className="text-center py-12">
+              <FaExclamationTriangle className="text-5xl text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">Erreur de chargement</h3>
+              <p className="text-muted-foreground mb-6">{error}</p>
+              <Button onClick={() => window.location.reload()}>
+                Réessayer
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!financeData) {
+    return (
+      <div className="flex-1 flex flex-col min-h-0 bg-background lg:pl-5 pt-20 lg:pt-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 lg:p-6 max-w-7xl mx-auto w-full">
+            <div className="text-center py-12">
+              <FaFileInvoice className="text-5xl text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">Aucune donnée disponible</h3>
+              <p className="text-muted-foreground">Les données financières ne sont pas disponibles pour le moment.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-background lg:pl-5 pt-20 lg:pt-6">
       <div className="flex-1 overflow-y-auto">
@@ -383,11 +422,10 @@ export default function ParentFinancePage() {
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Vue des frais de formation</h1>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2">
-               
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold">{studentData.name}</span>
-                  <Badge variant={studentData.registrationStatus === "registered" ? "default" : "secondary"}>
-                    {studentData.registrationStatus === "registered" ? (
+                  <span className="font-semibold">{financeData.student.name}</span>
+                  <Badge variant={financeData.student.registrationStatus === "registered" ? "default" : "secondary"}>
+                    {financeData.student.registrationStatus === "registered" ? (
                       <><FaCheckCircle className="mr-1" size={12} /> Inscrit</>
                     ) : (
                       <><FaClock className="mr-1" size={12} /> En attente</>
@@ -397,7 +435,7 @@ export default function ParentFinancePage() {
               </div>
               <div className="mt-2">
                 <Badge variant="outline" className="text-sm">
-                  Filière: {studentData.program}
+                  Filière: {financeData.student.program}
                 </Badge>
               </div>
             </div>
@@ -419,7 +457,7 @@ export default function ParentFinancePage() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Montant total:</span>
-                    <span className="font-semibold">{formatFCFA(studentData.registrationFee)}</span>
+                    <span className="font-semibold">{formatFCFA(financeData.student.registrationFee)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Payé:</span>
@@ -427,8 +465,8 @@ export default function ParentFinancePage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Statut:</span>
-                    <Badge variant={paidInscription >= studentData.registrationFee ? "default" : "secondary"}>
-                      {paidInscription >= studentData.registrationFee ? "Complètement payé" : "Partiellement payé"}
+                    <Badge variant={paidInscription >= financeData.student.registrationFee ? "default" : "secondary"}>
+                      {paidInscription >= financeData.student.registrationFee ? "Complètement payé" : "Partiellement payé"}
                     </Badge>
                   </div>
                 </div>
@@ -449,7 +487,7 @@ export default function ParentFinancePage() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Montant total:</span>
-                    <span className="font-semibold">{formatFCFA(studentData.tuitionFee)}</span>
+                    <span className="font-semibold">{formatFCFA(financeData.student.tuitionFee)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Payé:</span>
@@ -458,7 +496,7 @@ export default function ParentFinancePage() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Reste à payer:</span>
                     <span className="font-semibold text-orange-600">
-                      {formatFCFA(studentData.tuitionFee - paidTuition)}
+                      {formatFCFA(financeData.student.tuitionFee - paidTuition)}
                     </span>
                   </div>
                 </div>
@@ -642,10 +680,10 @@ export default function ParentFinancePage() {
                                 variant="outline"
                                 size="sm"
                                 className="flex items-center gap-2"
-                                disabled
+                                onClick={() => toast.info('Veuillez vous rendre à la comptabilité pour effectuer le paiement')}
                               >
                                 <FaCreditCard size={12} />
-                                <span className="hidden sm:inline">Payer à la comptabilité</span>
+                                <span className="hidden sm:inline">Payer</span>
                               </Button>
                             )}
                           </div>

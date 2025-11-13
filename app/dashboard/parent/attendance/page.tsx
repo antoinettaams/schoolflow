@@ -1,3 +1,4 @@
+// app/dashboard/parent/attendance/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -31,6 +32,16 @@ interface AttendanceRecord {
   vague: string;
 }
 
+// NOUVELLE INTERFACE POUR LES ERREURS
+interface ApiError {
+  error?: string;
+  message?: string;
+  details?: any;
+  step?: number;
+  timestamp?: string;
+}
+
+// INTERFACE PRINCIPALE CORRIGÉE
 interface ApiResponse {
   student: StudentData;
   attendance: AttendanceRecord[];
@@ -47,6 +58,9 @@ interface ApiResponse {
     modules: string[];
     semestres: string[];
   };
+  // Propriétés optionnelles pour les erreurs
+  error?: string;
+  message?: string;
 }
 
 // --- Composant Skeleton pour le chargement ---
@@ -156,31 +170,76 @@ export default function ParentAttendancePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Charger les données depuis l'API
+  // Charger les données depuis l'API - VERSION CORRIGÉE
   const fetchAttendanceData = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch('/api/parents/attendance');
+      console.log('🔄 Début du chargement des données...');
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || errorData.message || 'Erreur lors du chargement des données');
+      const response = await fetch('/api/parents/attendance', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-cache'
+      });
+      
+      console.log('📡 Statut HTTP:', response.status, response.statusText);
+      
+      // Vérifier si la réponse est vide
+      const responseText = await response.text();
+      console.log('📄 Longueur réponse:', responseText.length);
+      
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('Le serveur a retourné une réponse vide');
       }
       
-      const data: ApiResponse = await response.json();
+      // Parser le JSON avec type sécurisé
+      let data: ApiResponse | ApiError;
+      try {
+        data = JSON.parse(responseText);
+        console.log('✅ JSON parsé avec succès');
+      } catch (parseError) {
+        console.error('❌ Erreur parsing JSON:', parseError);
+        console.error('📋 Contenu reçu:', responseText);
+        throw new Error('Format de réponse invalide du serveur');
+      }
       
-      setStudentData(data.student);
-      setAttendanceData(data.attendance);
-      setStats(data.stats);
-      setFilters(data.filters);
+      // Vérifier si c'est une erreur API
+      if (!response.ok) {
+        const errorData = data as ApiError;
+        throw new Error(errorData.error || errorData.message || `Erreur ${response.status}`);
+      }
       
-      // Définir la vague de l'enfant comme filtre par défaut
-      setSelectedVague(data.student.vague);
+      // Vérifier que c'est une réponse valide (sans erreur)
+      const successData = data as ApiResponse;
+      if (successData.error) {
+        throw new Error(successData.error || successData.message || 'Erreur du serveur');
+      }
+      
+      // Validation des données
+      if (!successData.student || !successData.attendance || !successData.stats) {
+        console.error('❌ Données manquantes:', successData);
+        throw new Error('Données incomplètes reçues du serveur');
+      }
+      
+      console.log('📊 Données reçues:', {
+        student: successData.student.studentName,
+        attendanceCount: successData.attendance.length,
+        stats: successData.stats
+      });
+      
+      // Mettre à jour l'état
+      setStudentData(successData.student);
+      setAttendanceData(successData.attendance);
+      setStats(successData.stats);
+      setFilters(successData.filters);
+      setSelectedVague(successData.student.vague);
       
     } catch (error) {
-      console.error("Erreur lors du chargement des données:", error);
+      console.error("💥 Erreur lors du chargement des données:", error);
       setError(error instanceof Error ? error.message : "Impossible de charger les données d'assiduité");
     } finally {
       setIsLoading(false);
@@ -189,6 +248,7 @@ export default function ParentAttendancePage() {
 
   useEffect(() => {
     if (isLoaded && isSignedIn) {
+      console.log('👤 Utilisateur connecté, chargement des données...');
       fetchAttendanceData();
     }
   }, [isLoaded, isSignedIn]);
@@ -196,6 +256,7 @@ export default function ParentAttendancePage() {
   // Redirection si non connecté
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
+      console.log('🔒 Utilisateur non connecté, redirection...');
       router.push("/sign-in");
     }
   }, [isLoaded, isSignedIn, router]);

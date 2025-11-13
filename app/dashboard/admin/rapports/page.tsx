@@ -1,7 +1,7 @@
 // app/(dashboard)/rapports/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -9,185 +9,145 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Download, DollarSign, CreditCard, Wallet, TrendingUpIcon, FileText, BarChart3, Users, BookOpen,TrendingUp, TrendingDown, Minus, Calendar, School, UserCheck } from 'lucide-react';
+import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type TimeRange = 'week' | 'month' | 'quarter' | 'year'; 
 
+// Types pour les données
+interface KpiData {
+  title: string;
+  value: string;
+  change: string;
+  trend: 'up' | 'down' | 'stable';
+  description: string;
+  icon: string;
+}
+
+interface PerformanceData {
+  period: string;
+  [key: string]: number | string;
+}
+
+interface ModuleData {
+  module: string;
+  completion: number;
+  average: number;
+  progression: string;
+  formateur: string;
+}
+
+interface CertificationData {
+  status: string;
+  value: number;
+  color: string;
+}
+
+interface ClassReport {
+  filiere: string;
+  vague: string;
+  formateur: string;
+  progression: number;
+  moyenne: number;
+  assiduite: number;
+  modulesTermines: number;
+  modulesTotal: number;
+  satisfaction: number;
+  statut: string;
+}
+
+interface ApiResponse {
+  success: boolean;
+  data: {
+    kpiAcademiques: KpiData[];
+    kpiFinanciers: KpiData[];
+    performanceVagues: PerformanceData[];
+    performanceModules: ModuleData[];
+    statutCertification: CertificationData[];
+    rapportsClasses: ClassReport[];
+    metadata: {
+      vagues: any[];
+      filieres: any[];
+      timeRange: string;
+      generatedAt: string;
+    };
+  };
+}
+
 export default function RapportsPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>('month');
-  const [selectedWave, setSelectedWave] = useState('WAVE-2024-01');
+  const [selectedWave, setSelectedWave] = useState('all');
   const [selectedFiliere, setSelectedFiliere] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [data, setData] = useState<ApiResponse['data'] | null>(null);
 
-  // Données mockées pour centre de formation
-  const kpiData = [
-    { 
-      title: "Taux de Réussite", 
-      value: "82%", 
-      change: "+3%", 
-      trend: "up" as const, 
-      description: "Moyenne des certifications",
-      icon: <TrendingUp className="h-4 w-4" />
-    },
-    { 
-      title: "Apprenants Actifs", 
-      value: "156", 
-      change: "+12", 
-      trend: "up" as const, 
-      description: "En formation actuelle",
-      icon: <Users className="h-4 w-4" />
-    },
-    { 
-      title: "Taux de Complétion", 
-      value: "78%", 
-      change: "-2%", 
-      trend: "down" as const, 
-      description: "Modules terminés",
-      icon: <BookOpen className="h-4 w-4" />
-    },
-    { 
-      title: "Assiduité Générale", 
-      value: "91%", 
-      change: "+1%", 
-      trend: "up" as const, 
-      description: "Taux de présence moyen",
-      icon: <UserCheck className="h-4 w-4" />
+  // Charger les données
+  useEffect(() => {
+    loadData();
+  }, [timeRange, selectedWave, selectedFiliere]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        timeRange,
+        ...(selectedWave !== 'all' && { vagueId: selectedWave }),
+        ...(selectedFiliere !== 'all' && { filiereId: selectedFiliere })
+      });
+
+      const response = await fetch(`/api/rapports?${params}`);
+      const result: ApiResponse = await response.json();
+
+      if (result.success) {
+        setData(result.data);
+      } else {
+        toast.error('Erreur lors du chargement des données');
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur de connexion');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const financialKpiData = [
-    { 
-      title: "Chiffre d&apos;Affaires", 
-      value: "285K €", 
-      change: "+15%", 
-      trend: "up" as const, 
-      description: "CA mensuel",
-      icon: <DollarSign className="h-4 w-4" />
-    },
-    { 
-      title: "Recettes Totales", 
-      value: "1.2M €", 
-      change: "+22%", 
-      trend: "up" as const, 
-      description: "Année en cours",
-      icon: <CreditCard className="h-4 w-4" />
-    },
-    { 
-      title: "Dépenses", 
-      value: "890K €", 
-      change: "+8%", 
-      trend: "up" as const, 
-      description: "Année en cours",
-      icon: <TrendingUpIcon className="h-4 w-4" />
-    },
-    { 
-      title: "Bénéfice Net", 
-      value: "310K €", 
-      change: "+35%", 
-      trend: "up" as const, 
-      description: "Marge nette",
-      icon: <Wallet className="h-4 w-4" />
+  // Gestion de l'export
+  const handleExport = async (format: 'pdf' | 'excel') => {
+    try {
+      setExporting(true);
+      const response = await fetch('/api/rapports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'export',
+          format,
+          type: 'complet',
+          timeRange
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(`Export ${format} généré avec succès`);
+        // Télécharger le fichier
+        const link = document.createElement('a');
+        link.href = result.data.downloadUrl;
+        link.download = result.data.fileName;
+        link.click();
+      } else {
+        toast.error('Erreur lors de l\'export');
+      }
+    } catch (error) {
+      console.error('Erreur export:', error);
+      toast.error('Erreur lors de l\'export');
+    } finally {
+      setExporting(false);
     }
-  ];
-
-  const wavePerformanceData = [
-    { period: 'Semaine 1', 'WAVE-2024-01': 12.5, 'WAVE-2024-02': 11.8, 'WAVE-2023-04': 13.2 },
-    { period: 'Semaine 2', 'WAVE-2024-01': 13.2, 'WAVE-2024-02': 12.4, 'WAVE-2023-04': 13.8 },
-    { period: 'Semaine 3', 'WAVE-2024-01': 14.1, 'WAVE-2024-02': 13.2, 'WAVE-2023-04': 14.3 },
-    { period: 'Semaine 4', 'WAVE-2024-01': 14.8, 'WAVE-2024-02': 13.9, 'WAVE-2023-04': 14.7 },
-    { period: 'Semaine 5', 'WAVE-2024-01': 15.2, 'WAVE-2024-02': 14.3, 'WAVE-2023-04': 15.0 },
-    { period: 'Semaine 6', 'WAVE-2024-01': 15.5, 'WAVE-2024-02': 14.8, 'WAVE-2023-04': 15.2 },
-  ];
-
-  const moduleSuccessData = [
-    { module: 'Développement Web', completion: 85, average: 14.2, progression: '+5%', formateur: 'M. Diallo' },
-    { module: 'Base de Données', completion: 78, average: 13.5, progression: '+2%', formateur: 'Mme. Traoré' },
-    { module: 'Réseaux & Sécurité', completion: 72, average: 12.8, progression: '-3%', formateur: 'M. Ndiaye' },
-    { module: 'UI/UX Design', completion: 88, average: 14.8, progression: '+7%', formateur: 'Mme. Sy' },
-    { module: 'DevOps', completion: 68, average: 12.2, progression: '-5%', formateur: 'M. Ba' },
-    { module: 'Cloud Computing', completion: 75, average: 13.1, progression: '+1%', formateur: 'M. Kane' },
-  ];
-
-  // CORRECTION: Données pour le PieChart
-  const certificationData = [
-    { status: 'Certifiés', value: 65, color: '#00C49F' },
-    { status: 'En cours', value: 25, color: '#0088FE' },
-    { status: 'En échec', value: 8, color: '#FF8042' },
-    { status: 'Abandon', value: 2, color: '#FF0000' },
-  ];
-
-  const classReportData = [
-    { 
-      filiere: 'Développement Web', 
-      vague: 'WAVE-2024-01', 
-      formateur: 'M. Diallo',
-      progression: 75,
-      moyenne: 14.2,
-      assiduite: 92,
-      modulesTermines: 8,
-      modulesTotal: 12,
-      satisfaction: 4.2,
-      statut: 'Bonne progression'
-    },
-    { 
-      filiere: 'Réseaux & Sécurité', 
-      vague: 'WAVE-2024-02', 
-      formateur: 'M. Ndiaye',
-      progression: 58,
-      moyenne: 12.1,
-      assiduite: 85,
-      modulesTermines: 5,
-      modulesTotal: 10,
-      satisfaction: 3.8,
-      statut: 'Problème détecté'
-    },
-    { 
-      filiere: 'Data Science', 
-      vague: 'WAVE-2024-01', 
-      formateur: 'Mme. Traoré',
-      progression: 82,
-      moyenne: 15.1,
-      assiduite: 94,
-      modulesTermines: 9,
-      modulesTotal: 11,
-      satisfaction: 4.5,
-      statut: 'Excellente progression'
-    },
-    { 
-      filiere: 'Cloud Computing', 
-      vague: 'WAVE-2024-02', 
-      formateur: 'M. Kane',
-      progression: 65,
-      moyenne: 13.4,
-      assiduite: 88,
-      modulesTermines: 6,
-      modulesTotal: 10,
-      satisfaction: 4.0,
-      statut: 'Progression normale'
-    },
-    { 
-      filiere: 'Cyber Sécurité', 
-      vague: 'WAVE-2023-04', 
-      formateur: 'M. Ba',
-      progression: 45,
-      moyenne: 11.2,
-      assiduite: 79,
-      modulesTermines: 4,
-      modulesTotal: 9,
-      satisfaction: 3.2,
-      statut: 'Attention requise'
-    },
-    { 
-      filiere: 'Mobile Development', 
-      vague: 'WAVE-2024-01', 
-      formateur: 'Mme. Sy',
-      progression: 88,
-      moyenne: 15.8,
-      assiduite: 96,
-      modulesTermines: 10,
-      modulesTotal: 12,
-      satisfaction: 4.7,
-      statut: 'Excellente progression'
-    },
-  ];
+  };
 
   // Fonctions utilitaires
   const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
@@ -224,12 +184,21 @@ export default function RapportsPage() {
     return 'text-red-600';
   };
 
-  const handleExport = async (format: 'pdf' | 'excel') => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log(`Exporting as ${format}`);
+  const getIconComponent = (iconName: string) => {
+    switch (iconName) {
+      case 'TrendingUp': return <TrendingUp className="h-4 w-4" />;
+      case 'Users': return <Users className="h-4 w-4" />;
+      case 'BookOpen': return <BookOpen className="h-4 w-4" />;
+      case 'UserCheck': return <UserCheck className="h-4 w-4" />;
+      case 'DollarSign': return <DollarSign className="h-4 w-4" />;
+      case 'CreditCard': return <CreditCard className="h-4 w-4" />;
+      case 'TrendingUpIcon': return <TrendingUpIcon className="h-4 w-4" />;
+      case 'Wallet': return <Wallet className="h-4 w-4" />;
+      default: return <TrendingUp className="h-4 w-4" />;
+    }
   };
 
-  // CORRECTION: Fonction de rendu simplifiée pour les labels du PieChart
+  // Fonction de rendu pour les labels du PieChart
   const renderCustomizedLabel = (props: any) => {
     const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props;
     const RADIAN = Math.PI / 180;
@@ -251,6 +220,87 @@ export default function RapportsPage() {
       </text>
     );
   };
+
+  // Skeleton components
+  const SkeletonCard = () => (
+    <Card className="bg-white border-gray-200">
+      <CardHeader className="pb-3">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-3 w-48 mt-2" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-8 w-20 mb-2" />
+        <Skeleton className="h-4 w-24" />
+      </CardContent>
+    </Card>
+  );
+
+  const SkeletonChart = () => (
+    <Card className="bg-white border-gray-200">
+      <CardHeader>
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-4 w-64 mt-1" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-80 w-full" />
+      </CardContent>
+    </Card>
+  );
+
+  if (loading && !data) {
+    return (
+      <div className="h-screen flex flex-col lg:pl-5 pt-20 lg:pt-6">
+        <div className="flex-shrink-0 bg-white border-b border-gray-200">
+          <div className="p-4 md:p-6 max-w-7xl mx-auto">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-4 w-96" />
+              </div>
+              <div className="flex gap-3">
+                <Skeleton className="h-10 w-40" />
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-10 w-32" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+            {/* Skeleton KPIs */}
+            <div>
+              <Skeleton className="h-6 w-48 mb-4" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+              </div>
+            </div>
+
+            {/* Skeleton Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <SkeletonChart />
+              <SkeletonChart />
+            </div>
+
+            {/* Skeleton Table */}
+            <Card className="bg-white border-gray-200">
+              <CardHeader>
+                <Skeleton className="h-6 w-64" />
+                <Skeleton className="h-4 w-96 mt-1" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {[...Array(6)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col lg:pl-5 pt-20 lg:pt-6">
@@ -281,14 +331,31 @@ export default function RapportsPage() {
               </Select>
               
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => handleExport('excel')} className="flex-1 bg-white">
-                  <Download className="h-4 w-4 mr-2" />
-                  Excel
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleExport('excel')} 
+                  disabled={exporting}
+                  className="flex-1 bg-white"
+                >
+                  {exporting ? (
+                    <Skeleton className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  {exporting ? 'Génération...' : 'Excel'}
                 </Button>
                 
-                <Button onClick={() => handleExport('pdf')} className="flex-1">
-                  <FileText className="h-4 w-4 mr-2" />
-                  PDF
+                <Button 
+                  onClick={() => handleExport('pdf')} 
+                  disabled={exporting}
+                  className="flex-1"
+                >
+                  {exporting ? (
+                    <Skeleton className="h-4 w-4 mr-2" />
+                  ) : (
+                    <FileText className="h-4 w-4 mr-2" />
+                  )}
+                  {exporting ? 'Génération...' : 'PDF'}
                 </Button>
               </div>
             </div>
@@ -303,12 +370,12 @@ export default function RapportsPage() {
           <div>
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Indicateurs Académiques</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {kpiData.map((kpi, index) => (
+              {data?.kpiAcademiques.map((kpi, index) => (
                 <Card key={index} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                     <CardTitle className="text-sm font-medium text-gray-700">{kpi.title}</CardTitle>
                     <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center">
-                      {kpi.icon}
+                      {getIconComponent(kpi.icon)}
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -330,12 +397,12 @@ export default function RapportsPage() {
           <div>
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Indicateurs Financiers</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {financialKpiData.map((kpi, index) => (
+              {data?.kpiFinanciers.map((kpi, index) => (
                 <Card key={index} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                     <CardTitle className="text-sm font-medium text-gray-700">{kpi.title}</CardTitle>
                     <div className="h-8 w-8 rounded-full bg-green-50 flex items-center justify-center">
-                      {kpi.icon}
+                      {getIconComponent(kpi.icon)}
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -373,9 +440,12 @@ export default function RapportsPage() {
                       <SelectValue placeholder="Sélectionner une vague" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="WAVE-2024-01">WAVE 2024-01</SelectItem>
-                      <SelectItem value="WAVE-2024-02">WAVE 2024-02</SelectItem>
-                      <SelectItem value="WAVE-2023-04">WAVE 2023-04</SelectItem>
+                      <SelectItem value="all">Toutes les vagues</SelectItem>
+                      {data?.metadata.vagues.map((vague) => (
+                        <SelectItem key={vague.id} value={vague.id}>
+                          {vague.nom}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -383,7 +453,7 @@ export default function RapportsPage() {
               <CardContent>
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={wavePerformanceData}>
+                    <LineChart data={data?.performanceVagues || []}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="period" stroke="#666" />
                       <YAxis domain={[10, 16]} stroke="#666" />
@@ -395,30 +465,19 @@ export default function RapportsPage() {
                         }} 
                       />
                       <Legend />
-                      <Line 
-                        type="monotone" 
-                        dataKey="WAVE-2024-01" 
-                        stroke="#3b82f6" 
-                        strokeWidth={3}
-                        name="WAVE 2024-01"
-                        dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="WAVE-2024-02" 
-                        stroke="#10b981" 
-                        strokeWidth={3}
-                        name="WAVE 2024-02"
-                        dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="WAVE-2023-04" 
-                        stroke="#f59e0b" 
-                        strokeWidth={3}
-                        name="WAVE 2023-04"
-                        dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }}
-                      />
+                      {data?.performanceVagues.length && Object.keys(data.performanceVagues[0])
+                        .filter(key => key !== 'period')
+                        .map((key, index) => (
+                          <Line 
+                            key={key}
+                            type="monotone" 
+                            dataKey={key} 
+                            stroke={['#3b82f6', '#10b981', '#f59e0b'][index % 3]} 
+                            strokeWidth={3}
+                            name={key}
+                            dot={{ fill: ['#3b82f6', '#10b981', '#f59e0b'][index % 3], strokeWidth: 2, r: 4 }}
+                          />
+                        ))}
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -436,7 +495,7 @@ export default function RapportsPage() {
               <CardContent>
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={moduleSuccessData} layout="vertical">
+                    <BarChart data={data?.performanceModules || []} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis type="number" domain={[0, 100]} stroke="#666" />
                       <YAxis 
@@ -465,7 +524,7 @@ export default function RapportsPage() {
               </CardContent>
             </Card>
 
-            {/* Statut de Certification - CORRIGÉ */}
+            {/* Statut de Certification */}
             <Card className="bg-white border-gray-200">
               <CardHeader>
                 <CardTitle className="text-gray-900">Statut de Certification</CardTitle>
@@ -478,7 +537,7 @@ export default function RapportsPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={certificationData}
+                        data={data?.statutCertification || []}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
@@ -487,7 +546,7 @@ export default function RapportsPage() {
                         fill="#8884d8"
                         dataKey="value"
                       >
-                        {certificationData.map((entry, index) => (
+                        {data?.statutCertification.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -526,10 +585,11 @@ export default function RapportsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Toutes filières</SelectItem>
-                    <SelectItem value="dev">Développement Web</SelectItem>
-                    <SelectItem value="reseau">Réseaux & Sécurité</SelectItem>
-                    <SelectItem value="data">Data Science</SelectItem>
-                    <SelectItem value="cloud">Cloud Computing</SelectItem>
+                    {data?.metadata.filieres.map((filiere) => (
+                      <SelectItem key={filiere.id} value={filiere.id.toString()}>
+                        {filiere.nom}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -551,7 +611,7 @@ export default function RapportsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {classReportData.map((classe, index) => (
+                    {data?.rapportsClasses.map((classe, index) => (
                       <TableRow key={index} className="border-gray-100 hover:bg-gray-50/50">
                         <TableCell className="font-medium text-gray-900">{classe.filiere}</TableCell>
                         <TableCell className="text-gray-700">{classe.vague}</TableCell>
@@ -567,7 +627,7 @@ export default function RapportsPage() {
                             <span className="text-xs text-gray-600 w-8">{classe.progression}%</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-gray-700">{classe.moyenne}/20</TableCell>
+                        <TableCell className="text-gray-700">{classe.moyenne.toFixed(1)}/20</TableCell>
                         <TableCell>
                           <Badge variant={classe.assiduite >= 90 ? 'default' : 'secondary'}>
                             {classe.assiduite}%
@@ -578,7 +638,7 @@ export default function RapportsPage() {
                         </TableCell>
                         <TableCell>
                           <div className={`font-semibold ${getSatisfactionColor(classe.satisfaction)}`}>
-                            {classe.satisfaction}/5
+                            {classe.satisfaction.toFixed(1)}/5
                           </div>
                         </TableCell>
                         <TableCell>

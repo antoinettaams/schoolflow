@@ -1,12 +1,11 @@
-// app/dashboard/finances/page.tsx
 "use client";
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Search, Filter, ChevronDown, Download, Eye, 
   DollarSign, Users, CreditCard, CheckCircle, 
   XCircle, Clock, AlertCircle 
 } from 'lucide-react';
-import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 // Import des composants shadcn
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Student {
   id: string;
@@ -28,6 +28,8 @@ interface Student {
   montantPaye: number;
   dernierPaiement?: string;
   dateInscription: string;
+  vagueName: string;
+  vagueId: string;
 }
 
 interface Vague {
@@ -51,10 +53,22 @@ interface PaymentStats {
 
 export default function FinancesPage() {
   const [vagues, setVagues] = useState<Vague[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+  const [globalStats, setGlobalStats] = useState<PaymentStats>({
+    totalInscription: 0,
+    totalScolarite: 0,
+    totalPaye: 0,
+    totalRestant: 0,
+    tauxPaiement: 0,
+    studentsCount: 0,
+    completeInscriptions: 0,
+    paiementsEnRetard: 0
+  });
   const [selectedVague, setSelectedVague] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatut, setSelectedStatut] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
   // Charger les données
@@ -62,136 +76,103 @@ export default function FinancesPage() {
     loadData();
   }, []);
 
-  const loadData = () => {
-    // Données simulées
-    const mockVagues: Vague[] = [
-      {
-        id: '1',
-        name: 'Vague Janvier-Juin 2024',
-        startDate: '2024-01-15',
-        endDate: '2024-06-30',
-        students: [
-          {
-            id: 's1',
-            nom: 'Dupont',
-            prenom: 'Marie',
-            email: 'marie.dupont@email.com',
-            filiere: 'Informatique',
-            statutInscription: 'complete',
-            statutPaiement: 'paye',
-            montantInscription: 50000,
-            montantScolarite: 300000,
-            montantPaye: 350000,
-            dernierPaiement: '2024-01-10',
-            dateInscription: '2024-01-05'
-          },
-          {
-            id: 's2',
-            nom: 'Martin',
-            prenom: 'Pierre',
-            email: 'pierre.martin@email.com',
-            filiere: 'Gestion',
-            statutInscription: 'complete',
-            statutPaiement: 'partiel',
-            montantInscription: 50000,
-            montantScolarite: 250000,
-            montantPaye: 150000,
-            dernierPaiement: '2024-01-15',
-            dateInscription: '2024-01-08'
-          },
-          {
-            id: 's3',
-            nom: 'Bernard',
-            prenom: 'Sophie',
-            email: 'sophie.bernard@email.com',
-            filiere: 'Marketing',
-            statutInscription: 'partielle',
-            statutPaiement: 'en_retard',
-            montantInscription: 25000,
-            montantScolarite: 200000,
-            montantPaye: 50000,
-            dateInscription: '2024-01-12'
-          },
-          {
-            id: 's4',
-            nom: 'Moreau',
-            prenom: 'Thomas',
-            email: 'thomas.moreau@email.com',
-            filiere: 'Design',
-            statutInscription: 'complete',
-            statutPaiement: 'non_paye',
-            montantInscription: 50000,
-            montantScolarite: 280000,
-            montantPaye: 0,
-            dateInscription: '2024-01-18'
-          }
-        ]
-      },
-      {
-        id: '2',
-        name: 'Vague Septembre 2024',
-        startDate: '2024-09-01',
-        endDate: '2025-01-31',
-        students: [
-          {
-            id: 's5',
-            nom: 'Dubois',
-            prenom: 'Luc',
-            email: 'luc.dubois@email.com',
-            filiere: 'Informatique',
-            statutInscription: 'en_attente',
-            statutPaiement: 'non_paye',
-            montantInscription: 0,
-            montantScolarite: 300000,
-            montantPaye: 0,
-            dateInscription: '2024-08-20'
-          }
-        ]
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      console.log('Chargement des données depuis /api/finance...');
+      
+      const params = new URLSearchParams({
+        vagueId: selectedVague,
+        search: searchTerm,
+        statut: selectedStatut,
+      });
+
+      const response = await fetch(`/api/finance?${params}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Erreur HTTP:', response.status, errorText);
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
       }
-    ];
 
-    setVagues(mockVagues);
-    setIsLoading(false);
+      const data = await response.json();
+      console.log('Données reçues:', data);
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      setVagues(data.vagues || []);
+      setFilteredStudents(data.filteredStudents || []);
+      setGlobalStats(data.globalStats || {
+        totalInscription: 0,
+        totalScolarite: 0,
+        totalPaye: 0,
+        totalRestant: 0,
+        tauxPaiement: 0,
+        studentsCount: 0,
+        completeInscriptions: 0,
+        paiementsEnRetard: 0
+      });
+    } catch (error) {
+      console.error('Erreur détaillée:', error);
+      toast.error("Impossible de charger les données financières");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Calculer les statistiques
-  const getStats = (students: Student[]): PaymentStats => {
-    const totalInscription = students.reduce((sum, student) => sum + student.montantInscription, 0);
-    const totalScolarite = students.reduce((sum, student) => sum + student.montantScolarite, 0);
-    const totalPaye = students.reduce((sum, student) => sum + student.montantPaye, 0);
-    const totalRestant = totalInscription + totalScolarite - totalPaye;
-    const tauxPaiement = totalScolarite > 0 ? (totalPaye / (totalInscription + totalScolarite)) * 100 : 0;
-    
-    const completeInscriptions = students.filter(s => s.statutInscription === 'complete').length;
-    const paiementsEnRetard = students.filter(s => s.statutPaiement === 'en_retard').length;
+  // Recharger les données quand les filtres changent
+  useEffect(() => {
+    loadData();
+  }, [selectedVague, searchTerm, selectedStatut]);
 
-    return {
-      totalInscription,
-      totalScolarite,
-      totalPaye,
-      totalRestant,
-      tauxPaiement,
-      studentsCount: students.length,
-      completeInscriptions,
-      paiementsEnRetard
-    };
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      
+      const params = new URLSearchParams({
+        vagueId: selectedVague,
+        search: searchTerm,
+        statut: selectedStatut,
+        export: 'csv'
+      });
+
+      const response = await fetch(`/api/finance?${params}`);
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors de l\'export');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `export-finances-${new Date().toISOString().split('T')[0]}.csv`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`Les données ont été exportées (${filteredStudents.length} étudiants)`);
+    } catch (error) {
+      console.error('Erreur export:', error);
+      toast.error("Impossible d'exporter les données");
+    } finally {
+      setIsExporting(false);
+    }
   };
-
-  // Filtrer les étudiants
-  const filteredStudents = vagues.flatMap(vague => 
-    vague.students.map(student => ({ ...student, vagueName: vague.name, vagueId: vague.id }))
-  ).filter(student => {
-    const matchesVague = selectedVague === 'all' || student.vagueId === selectedVague;
-    const matchesSearch = searchTerm === '' || 
-      student.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.filiere.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatut = selectedStatut === 'all' || student.statutPaiement === selectedStatut;
-    
-    return matchesVague && matchesSearch && matchesStatut;
-  });
-
-  const globalStats = getStats(filteredStudents);
 
   // Fonctions utilitaires
   const getStatusBadge = (statut: Student['statutPaiement']) => {
@@ -234,14 +215,75 @@ export default function FinancesPage() {
   };
 
   // Types de statut pour les filtres
-  const statutTypes = ["Tous", "paye", "partiel", "en_retard", "non_paye"];
+  const statutTypes = ["all", "paye", "partiel", "en_retard", "non_paye"];
 
+  // Skeleton Loader
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-          <p className="text-muted-foreground">Chargement des données financières...</p>
+      <div className="flex flex-col min-h-screen bg-background lg:pl-5 pt-20 lg:pt-6">
+        <header className="border-b p-4 sm:p-6 sticky top-0 z-[100] shadow-sm bg-background">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="min-w-0">
+              <Skeleton className="h-8 w-64 mb-2" />
+              <Skeleton className="h-4 w-96" />
+            </div>
+            <div className="flex flex-col xs:flex-row gap-2 w-full sm:w-auto">
+              <Skeleton className="h-10 flex-1 sm:w-48 lg:w-64" />
+              <Skeleton className="h-10 flex-1 sm:flex-none" />
+              <Skeleton className="h-10 flex-1 sm:flex-none" />
+            </div>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-auto">
+          <div className="p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-6 max-w-7xl mx-auto">
+            {/* Cartes de statistiques skeletons */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+              {[...Array(4)].map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-3 sm:p-4">
+                    <Skeleton className="h-6 w-32 mb-2" />
+                    <Skeleton className="h-8 w-24" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Tableau skeleton */}
+            <Card>
+              <CardHeader className="bg-muted/50 p-4">
+                <Skeleton className="h-6 w-48" />
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <div className="min-w-[800px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {[...Array(7)].map((_, i) => (
+                            <TableHead key={i}>
+                              <Skeleton className="h-4 w-20" />
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[...Array(5)].map((_, i) => (
+                          <TableRow key={i}>
+                            {[...Array(7)].map((_, j) => (
+                              <TableCell key={j}>
+                                <Skeleton className="h-4 w-full" />
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
@@ -284,9 +326,17 @@ export default function FinancesPage() {
               <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
             </Button>
 
-            <Button className="flex items-center gap-2 flex-1 sm:flex-none">
+            <Button 
+              onClick={handleExport}
+              disabled={isExporting || filteredStudents.length === 0}
+              className="flex items-center gap-2 flex-1 sm:flex-none"
+            >
               <Download className="h-4 w-4" />
-              <span className="hidden xs:inline">Exporter</span>
+              {isExporting ? (
+                <span className="hidden xs:inline">Export...</span>
+              ) : (
+                <span className="hidden xs:inline">Exporter</span>
+              )}
             </Button>
           </div>
         </div>
@@ -330,7 +380,8 @@ export default function FinancesPage() {
                       className="cursor-pointer transition-colors capitalize text-xs"
                       onClick={() => setSelectedStatut(statut)}
                     >
-                      {statut === 'en_retard' ? 'En retard' : 
+                      {statut === 'all' ? 'Tous' : 
+                       statut === 'en_retard' ? 'En retard' : 
                        statut === 'non_paye' ? 'Non payé' : 
                        statut === 'partiel' ? 'Partiel' : 
                        statut === 'paye' ? 'Payé' : statut}
@@ -528,13 +579,6 @@ export default function FinancesPage() {
                                   </div>
                                 )}
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <Link href="/dashboard/admin/finances/student/id">
-                                  <Eye className="h-3 w-3" />
-                                </Link>
-                              </Button>
                             </TableCell>
                           </TableRow>
                         ))

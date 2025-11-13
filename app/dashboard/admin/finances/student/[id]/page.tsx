@@ -1,4 +1,4 @@
-// app/dashboard/finances/student/[id]/page.tsx
+// app/dashboard/finance/student/[id]/page.tsx
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import toast from 'react-hot-toast';
 
 interface Student {
   id: string;
@@ -49,52 +50,35 @@ export default function StudentDetailsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadStudentData = useCallback(() => {
-    // Données simulées
-    const mockStudent: Student = {
-      id: params.id as string,
-      nom: 'Dupont',
-      prenom: 'Marie',
-      email: 'marie.dupont@email.com',
-      filiere: 'Informatique',
-      telephone: '+225 07 12 34 56 78',
-      dateNaissance: '2000-05-15',
-      statutInscription: 'complete',
-      statutPaiement: 'partiel',
-      montantInscription: 50000,
-      montantScolarite: 300000,
-      montantPaye: 200000,
-      dateInscription: '2024-01-05',
-      vagueName: 'Vague Janvier-Juin 2024'
-    };
-
-    const mockPayments: Payment[] = [
-      {
-        id: 'p1',
-        date: '2024-01-05',
-        type: 'inscription',
-        montant: 50000,
-        methode: 'virement',
-        reference: 'VIR-2024-001',
-        statut: 'complete',
-        notes: 'Paiement inscription complète'
-      },
-      {
-        id: 'p2',
-        date: '2024-01-15',
-        type: 'scolarite',
-        montant: 150000,
-        methode: 'especes',
-        reference: 'ESP-2024-001',
-        statut: 'complete',
-        notes: 'Premier versement scolarité'
+ const loadStudentData = useCallback(async () => {
+  try {
+    setIsLoading(true);
+    
+    const response = await fetch(`/api/finance/student/${params.id}`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        setStudent(null);
+        return;
       }
-    ];
+      throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+    }
 
-    setStudent(mockStudent);
-    setPayments(mockPayments);
+    const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    
+    setStudent(data.student);
+    setPayments(data.payments || []);
+  } catch (error) {
+    console.error('Erreur chargement détails étudiant:', error);
+    toast.error("Impossible de charger les détails de l'étudiant");
+  } finally {
     setIsLoading(false);
-  }, [params.id]);
+  }
+}, [params.id]);
 
   useEffect(() => {
     loadStudentData();
