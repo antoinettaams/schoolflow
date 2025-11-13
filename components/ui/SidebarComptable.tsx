@@ -10,7 +10,6 @@ import {
   FaMoneyBillWave,
   FaCreditCard,
   FaFileInvoiceDollar,
-  FaChartLine,
   FaChartBar,
   FaFileAlt,
   FaCog, 
@@ -29,15 +28,10 @@ const SidebarComptable = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const pathname = usePathname();
   
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useEffect(() => {
     setIsMobileOpen(false);
@@ -46,14 +40,13 @@ const SidebarComptable = () => {
   const comptableName = user ? `${user.firstName} ${user.lastName}` : "Comptable";
   const comptableInitials = user ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}` : "C";
 
+  // CORRECTION : Supprimer la dépendance à isMounted
   const getLinkClasses = (href: string, exact = false) => {
     const baseClasses = "flex items-center gap-2 text-sm font-medium p-2 rounded-md transition";
     
-    if (!isMounted) {
-      return `${baseClasses} text-gray-700`;
-    }
+    // Toujours utiliser pathname tel quel, même s'il est undefined côté serveur
+    const isActive = pathname && (exact ? pathname === href : pathname.startsWith(href));
     
-    const isActive = exact ? pathname === href : pathname.startsWith(href);
     return [
       baseClasses,
       isActive
@@ -62,12 +55,9 @@ const SidebarComptable = () => {
     ].join(" ");
   };
 
+  // CORRECTION : Simplifier getIconClasses
   const getIconClasses = (href: string, exact = false) => {
-    if (!isMounted) {
-      return "text-principal text-base";
-    }
-    
-    const isActive = exact ? pathname === href : pathname.startsWith(href);
+    const isActive = pathname && (exact ? pathname === href : pathname.startsWith(href));
     return isActive ? "text-white text-base" : "text-principal text-base";
   };
 
@@ -104,7 +94,6 @@ const SidebarComptable = () => {
     { label: "Journal des Opérations", href: "/dashboard/comptable/journal", icon: <FaFileAlt />, category: "COMPTABILITÉ" },
   
     // ANALYSE
-    { label: "Statistiques Financières", href: "/dashboard/comptable/statistiques", icon: <FaChartLine />, category: "ANALYSE" },
     { label: "Rapports Mensuels", href: "/dashboard/comptable/rapports", icon: <FaChartBar />, category: "ANALYSE" },
   ];
 

@@ -23,16 +23,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Types pour les données
 interface MonthlyStats {
   inscriptions: number;
-  documentsProcessed: number;
+  revenue: number;
+  paiements: number;
+  approvalRate: number;
   completionRate: number;
 }
 
 interface RecentActivity {
   id: string;
   action: string;
+  description: string;
   student: string;
   time: string;
-  status: 'pending' | 'completed';
+  type: string;
+  status: string;
+}
+
+interface FinancialSummary {
+  totalRevenue: number;
+  pendingRevenue: number;
+  monthlyRevenue: number;
+  totalTransactions: number;
 }
 
 interface SecretaryData {
@@ -42,6 +53,15 @@ interface SecretaryData {
   unreadMessages: number;
   monthlyStats: MonthlyStats;
   recentActivities: RecentActivity[];
+  totalStudents: number;
+  totalInscriptions: number;
+  financialSummary: FinancialSummary;
+  metadata?: {
+    hasData: boolean;
+    lastUpdated: string;
+    dataStatus: string;
+    error?: string;
+  };
 }
 
 const SecretaryDashboard = () => {
@@ -64,10 +84,16 @@ const SecretaryDashboard = () => {
       }
       
       const data = await response.json();
+      
+      // Vérifier si c'est une réponse d'erreur structurée
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
       setDashboardData(data);
     } catch (err) {
       console.error('Erreur détaillée:', err);
-      setError('Impossible de charger les données du tableau de bord');
+      setError(err instanceof Error ? err.message : 'Impossible de charger les données du tableau de bord');
     } finally {
       setIsLoading(false);
     }
@@ -143,10 +169,20 @@ const SecretaryDashboard = () => {
     unreadMessages: 0,
     monthlyStats: {
       inscriptions: 0,
-      documentsProcessed: 0,
+      revenue: 0,
+      paiements: 0,
+      approvalRate: 0,
       completionRate: 0
     },
-    recentActivities: []
+    recentActivities: [],
+    totalStudents: 0,
+    totalInscriptions: 0,
+    financialSummary: {
+      totalRevenue: 0,
+      pendingRevenue: 0,
+      monthlyRevenue: 0,
+      totalTransactions: 0
+    }
   };
 
   const quickAddCards = [
@@ -168,7 +204,7 @@ const SecretaryDashboard = () => {
     }
   ];
 
-  // Composants Squelette (garder les mêmes que précédemment)
+  // Composants Squelette
   const HeaderSkeleton = () => (
     <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6 sticky top-0 z-10">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
@@ -268,6 +304,14 @@ const SecretaryDashboard = () => {
     </div>
   );
 
+  // Fonction pour formater les montants
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'XOF'
+    }).format(amount);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       <div className="h-screen overflow-y-auto">
@@ -366,7 +410,8 @@ const SecretaryDashboard = () => {
                     </>
                   ) : error ? (
                     <div className="text-center py-8">
-                      <div className="text-red-600 mb-4">{error}</div>
+                      <FaExclamationTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                      <div className="text-red-600 mb-4 text-sm">{error}</div>
                       <Button 
                         onClick={fetchDashboardData}
                         className="bg-blue-600 text-white hover:bg-blue-700"
@@ -402,19 +447,19 @@ const SecretaryDashboard = () => {
                           <CardContent className="p-3 sm:p-4">
                             <div className="flex items-center justify-between">
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Documents traités</p>
+                                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Revenus ce mois</p>
                                 <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
-                                  {secretaryData.monthlyStats.documentsProcessed}
+                                  {formatCurrency(secretaryData.monthlyStats.revenue)}
                                 </p>
                               </div>
                               <FaFileAlt className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0 ml-2" />
                             </div>
                             <Progress 
-                              value={Math.min(100, (secretaryData.monthlyStats.documentsProcessed / 100) * 100)} 
+                              value={Math.min(100, (secretaryData.monthlyStats.paiements / 50) * 100)} 
                               className="mt-2 h-1 sm:h-2" 
                             />
                             <p className="text-xs text-gray-500 mt-1">
-                              {secretaryData.monthlyStats.documentsProcessed} documents ce mois
+                              {secretaryData.monthlyStats.paiements} paiements traités
                             </p>
                           </CardContent>
                         </Card>
@@ -437,7 +482,7 @@ const SecretaryDashboard = () => {
                               }
                             </p>
                             <Link href="/dashboard/secretaire/inscriptions" passHref>
-                              <Button variant="link" className="p-0 h-auto text-principal text-xs">
+                              <Button variant="link" className="p-0 h-auto text-blue-600 text-xs">
                                 {secretaryData.pendingInscriptions === 0 ? "Voir" : "Traiter maintenant"} <FaArrowRight className="ml-1 h-3 w-3" />
                               </Button>
                             </Link>
@@ -460,12 +505,27 @@ const SecretaryDashboard = () => {
                               }
                             </p>
                             <Link href="/dashboard/secretaire/cartes" passHref>
-                              <Button variant="link" className="p-0 h-auto text-principal text-xs">
+                              <Button variant="link" className="p-0 h-auto text-blue-600 text-xs">
                                 {secretaryData.cardsToPrint === 0 ? "Vérifier" : "Imprimer"} <FaArrowRight className="ml-1 h-3 w-3" />
                               </Button>
                             </Link>
                           </CardContent>
                         </Card>
+                      </div>
+
+                      {/* Résumé financier */}
+                      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                        <h4 className="font-semibold text-gray-900 mb-3 text-sm">Résumé Financier</h4>
+                        <div className="grid grid-cols-2 gap-4 text-xs">
+                          <div>
+                            <p className="text-gray-600">Revenu total</p>
+                            <p className="font-semibold text-green-600">{formatCurrency(secretaryData.financialSummary.totalRevenue)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-600">Revenu ce mois</p>
+                            <p className="font-semibold text-blue-600">{formatCurrency(secretaryData.financialSummary.monthlyRevenue)}</p>
+                          </div>
+                        </div>
                       </div>
                     </>
                   )}
@@ -489,14 +549,14 @@ const SecretaryDashboard = () => {
                         secretaryData.recentActivities.map((activity) => (
                           <div key={activity.id} className="flex items-center justify-between p-2 sm:p-3 hover:bg-gray-50 rounded">
                             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                              {activity.status === 'completed' ? (
+                              {activity.status === 'completed' || activity.status === 'paye_complet' ? (
                                 <FaCheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
                               ) : (
                                 <FaExclamationTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-orange-500 flex-shrink-0" />
                               )}
                               <div className="min-w-0 flex-1">
                                 <p className="text-xs sm:text-sm font-medium truncate">{activity.action}</p>
-                                <p className="text-xs text-gray-500 truncate">{activity.student}</p>
+                                <p className="text-xs text-gray-500 truncate">{activity.description}</p>
                               </div>
                             </div>
                             <span className="text-xs text-gray-400 flex-shrink-0 ml-2">{activity.time}</span>
@@ -540,7 +600,7 @@ const SecretaryDashboard = () => {
                           <FaCalendarAlt className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0" />
                           <div className="min-w-0 flex-1">
                             <p className="text-xs sm:text-sm font-medium truncate">Aucun événement</p>
-                            <p className="text-xs text-gray-600">Programmez le premier événement</p>
+                            <p className="text-xs text-gray-600">Voir les évènements</p>
                           </div>
                         </div>
                       )}
@@ -549,9 +609,38 @@ const SecretaryDashboard = () => {
                   
                   <Link href="/dashboard/secretaire/evenements" className="w-full mt-3 sm:mt-4 block">
                     <Button variant="outline" className="w-full text-xs sm:text-sm">
-                      {secretaryData.upcomingEvents === 0 ? "Créer un événement" : "Voir tous les événements"}
+                      {secretaryData.upcomingEvents === 0 ? "Voir tous les événements" : "Voir tous les événements"}
                     </Button>
                   </Link>
+                </div>
+
+                {/* Statistiques globales */}
+                <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+                  <h3 className="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">
+                    Statistiques Globales
+                  </h3>
+                  
+                  {isLoading ? (
+                    <div className="space-y-3">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-full" />
+                    </div>
+                  ) : (
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Total étudiants</span>
+                        <span className="font-semibold text-blue-600">{secretaryData.totalStudents}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Total inscriptions</span>
+                        <span className="font-semibold text-green-600">{secretaryData.totalInscriptions}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Taux d'approbation</span>
+                        <span className="font-semibold text-orange-600">{secretaryData.monthlyStats.approvalRate}%</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
               </div>

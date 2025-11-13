@@ -1,4 +1,4 @@
-// app/api/teacher/dashboard/route.ts - VERSION CORRIGÉE AVEC VOTRE SCHÉMA
+// app/api/teacher/dashboard/route.ts - VERSION CORRIGÉE
 import { NextResponse } from "next/server";
 import { PrismaClient } from '@prisma/client'
 import { auth } from "@clerk/nextjs/server";
@@ -100,10 +100,10 @@ export async function GET(request: Request) {
 
     // CORRECTION : Récupérer les salles pour les planning assignations
     const planningAssignationsWithSalles = await Promise.all(
-      teacher.planningAssignations.map(async (assignation) => {
+      teacher.planningAssignations.map(async (assignation: any) => {
         const scheduleSlots = assignation.scheduleSlots as any[];
         const slotsWithSalles = await Promise.all(
-          scheduleSlots.map(async (slot) => {
+          scheduleSlots.map(async (slot: any) => {
             if (slot.salleId) {
               const salle = await prisma.salle.findUnique({
                 where: { id: slot.salleId }
@@ -124,7 +124,7 @@ export async function GET(request: Request) {
       })
     );
 
-    // CORRECTION : RÉCUPÉRER LES HOMEworks RÉELS DU PROFESSEUR
+    // CORRECTION : RÉCUPÉRER LES HOMEWORKS RÉELS DU PROFESSEUR
     const homeworksToCorrect = await prisma.homework.findMany({
       where: {
         teacherId: teacher.id,
@@ -197,7 +197,7 @@ export async function GET(request: Request) {
 
     // 1. SPÉCIALITÉ = Filière la plus fréquente ou première filière assignée
     const filiereCounts: { [key: string]: number } = {};
-    planningAssignationsWithSalles.forEach(pa => {
+    planningAssignationsWithSalles.forEach((pa: any) => {
       if (pa.filiere?.nom) {
         filiereCounts[pa.filiere.nom] = (filiereCounts[pa.filiere.nom] || 0) + 1;
       }
@@ -215,7 +215,7 @@ export async function GET(request: Request) {
     
     if (teacher.enseignements.length > 0) {
       // Si des enseignements existent, les utiliser (ils ont déjà les salles)
-      nextCourses = teacher.enseignements.slice(0, 3).map(enseignement => ({
+      nextCourses = teacher.enseignements.slice(0, 3).map((enseignement: any) => ({
         course: enseignement.module.nom,
         time: `${enseignement.heureDebut} - ${enseignement.heureFin}`,
         location: enseignement.salle?.nom || "Salle à définir",
@@ -227,7 +227,7 @@ export async function GET(request: Request) {
       }));
     } else {
       // Sinon, utiliser les planning assignations AVEC LES SALLES
-      nextCourses = planningAssignationsWithSalles.slice(0, 3).map((pa, index) => {
+      nextCourses = planningAssignationsWithSalles.slice(0, 3).map((pa: any, index: number) => {
         const scheduleSlots = pa.scheduleSlots as any[];
         const premierSlot = scheduleSlots?.[0];
         
@@ -261,12 +261,12 @@ export async function GET(request: Request) {
 
     // 3. FILIÈRES - Depuis les assignations (uniques)
     const filieres = [...new Set(planningAssignationsWithSalles
-      .filter(pa => pa.filiere?.nom)
-      .map(pa => pa.filiere.nom)
+      .filter((pa: any) => pa.filiere?.nom)
+      .map((pa: any) => pa.filiere.nom)
     )];
 
     // 4. STATISTIQUES - MISES À JOUR AVEC LES VRAIES DONNÉES
-    const totalStudents = planningAssignationsWithSalles.reduce((total, pa) => {
+    const totalStudents = planningAssignationsWithSalles.reduce((total: number, pa: any) => {
       return total + (pa.filiere?.students?.length || 0);
     }, 0);
 
@@ -296,12 +296,12 @@ export async function GET(request: Request) {
 
     // 5. MATIÈRES - Depuis les assignations (uniques)
     const matieres = [...new Set(planningAssignationsWithSalles
-      .filter(pa => pa.module?.nom)
-      .map(pa => pa.module.nom)
+      .filter((pa: any) => pa.module?.nom)
+      .map((pa: any) => pa.module.nom)
     )];
 
     // CORRECTION : FORMATER LES DEVOIRS RÉELS
-    const formattedHomeworks = homeworksToCorrect.map((homework, index) => {
+    const formattedHomeworks = homeworksToCorrect.map((homework: any, index: number) => {
       const totalStudents = homework.filiere?.students?.length || 0;
       
       // Calculer combien d'étudiants ont soumis (vous devriez ajouter un champ submissions dans Homework)
@@ -345,7 +345,7 @@ export async function GET(request: Request) {
       moduleId: number 
     } } = {};
 
-    recentGrades.forEach(grade => {
+    recentGrades.forEach((grade: any) => {
       const moduleName = grade.module.nom;
       const moduleId = grade.moduleId;
       
@@ -378,14 +378,14 @@ export async function GET(request: Request) {
       .map(([module, data]) => {
         // Compter le nombre d'étudiants uniques ayant des notes pour cette matière
         const gradedStudents = recentGrades
-          .filter(grade => grade.module.nom === module)
-          .map(grade => grade.studentId)
+          .filter((grade: any) => grade.module.nom === module)
+          .map((grade: any) => grade.studentId)
           .filter((value, index, self) => self.indexOf(value) === index).length;
 
         // Trouver le nombre total d'étudiants pour cette matière
         const totalStudentsForModule = planningAssignationsWithSalles
-          .filter(pa => pa.moduleId === data.moduleId)
-          .reduce((total, pa) => total + (pa.filiere?.students?.length || 0), 0);
+          .filter((pa: any) => pa.moduleId === data.moduleId)
+          .reduce((total: number, pa: any) => total + (pa.filiere?.students?.length || 0), 0);
 
         return {
           subject: module,
@@ -398,7 +398,7 @@ export async function GET(request: Request) {
 
     // Si pas assez de données de notes, compléter avec des données basées sur les assignations
     if (formattedGrades.length === 0) {
-      planningAssignationsWithSalles.slice(0, 2).forEach((pa, index) => {
+      planningAssignationsWithSalles.slice(0, 2).forEach((pa: any, index: number) => {
         const avg = index === 0 ? "14.2/20" : "16.8/20";
         formattedGrades.push({
           subject: pa.module.nom,
@@ -420,7 +420,7 @@ export async function GET(request: Request) {
 
     console.log(`📅 ${upcomingEvents.length} événements récupérés`);
 
-    const formattedEvents = upcomingEvents.map(event => {
+    const formattedEvents = upcomingEvents.map((event: any) => {
       let formattedDate = formatEventDate(event.date);
       
       return {

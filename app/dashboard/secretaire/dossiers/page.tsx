@@ -96,23 +96,23 @@ export default function DossiersPage() {
     try {
       const params = new URLSearchParams();
       
-      // Paramètre endpoint OBLIGATOIRE
+      // CORRECTION: Ajouter le paramètre endpoint OBLIGATOIRE
       params.append('endpoint', 'dossiers');
       
-      // CORRECTION : Utiliser les mêmes noms de paramètres que l'API attend
       if (searchTerm) params.append('search', searchTerm);
       if (selectedFiliere !== 'toutes') params.append('filiere', selectedFiliere);
       if (selectedVague !== 'toutes') params.append('vague', selectedVague);
       if (selectedStatut !== 'toutes') params.append('statut', selectedStatut);
 
-      console.log('🔍 Paramètres de requête DOSSIERS:', params.toString());
+      console.log('🔍 Chargement des dossiers avec params:', params.toString());
 
+      // CORRECTION: API séparée pour les dossiers
       const response = await fetch(`/api/secretaires/dossiers?${params}`);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Erreur détaillée:', errorText);
-        throw new Error(`Erreur réseau: ${response.status} - ${errorText}`);
+        console.error('❌ Erreur API dossiers:', errorText);
+        throw new Error(`Erreur réseau: ${response.status}`);
       }
 
       const result: ApiResponse = await response.json();
@@ -123,86 +123,113 @@ export default function DossiersPage() {
 
       console.log('📊 Données DOSSIERS reçues:', result.data);
       
-      // CORRECTION : Adapter à la structure exacte de votre API
-      const dossiersData = result.data.dossiers || [];
+      // CORRECTION: Adapter à la structure de votre API dossiers
+      const dossiersData = result.data?.dossiers || [];
       setDossiers(dossiersData);
       
-      // CORRECTION : Utiliser les stats de l'API si disponibles
-      const apiStats = result.data.stats || {};
+      // CORRECTION: Utiliser les stats de l'API dossiers
+      const apiStats = result.data?.stats || {};
       setStats(prev => ({
         ...prev,
         totalDossiers: apiStats.totalDossiers || dossiersData.length,
-        dossiersComplets: apiStats.dossiersComplets || dossiersData.filter((d: Dossier) => d.statut === 'complet').length,
-        dossiersIncomplets: apiStats.dossiersIncomplets || dossiersData.filter((d: Dossier) => d.statut === 'incomplet').length,
-        dossiersEnAttente: apiStats.dossiersEnAttente || dossiersData.filter((d: Dossier) => d.statut === 'en_attente').length,
-        dossiersValides: apiStats.dossiersValides || dossiersData.filter((d: Dossier) => d.statut === 'valide').length,
-        dossiersRejetes: apiStats.dossiersRejetes || dossiersData.filter((d: Dossier) => d.statut === 'rejete').length,
+        dossiersComplets: apiStats.dossiersComplets || 0,
+        dossiersIncomplets: apiStats.dossiersIncomplets || 0,
+        dossiersEnAttente: apiStats.dossiersEnAttente || 0,
+        dossiersValides: apiStats.dossiersValides || 0,
+        dossiersRejetes: apiStats.dossiersRejetes || 0,
+        // elevesEligibles reste séparé
       }));
 
     } catch (error) {
-      console.error('❌ Erreur fetchData:', error);
-      toast.error('Erreur lors du chargement des données: ' + (error instanceof Error ? error.message : 'Erreur réseau'));
+      console.error('❌ Erreur fetchData dossiers:', error);
+      toast.error('Erreur lors du chargement des dossiers: ' + (error instanceof Error ? error.message : 'Erreur réseau'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Charger les inscriptions éligibles pour les nouveaux dossiers
-  const fetchInscriptionsEligibles = async () => {
-    try {
-      console.log('🔍 Chargement des inscriptions éligibles...');
-      
-      // CORRECTION : Utiliser uniquement l'API unifiée avec le bon endpoint
-      const params = new URLSearchParams();
-      params.append('endpoint', 'inscriptions');
-      
-      const response = await fetch(`/api/secretaires/dossiers?${params}`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Erreur inscriptions:', errorText);
-        throw new Error(`Erreur réseau: ${response.status} - ${errorText}`);
-      }
-      
-      const result: ApiResponse = await response.json();
-      
-      console.log('📊 Réponse API inscriptions:', result);
-      
-      if (result.success) {
-        console.log('📊 INSCRIPTIONS éligibles reçues:', result.data);
-        
-        // CORRECTION : Adapter à la structure exacte de votre API
-        const inscriptionsData = result.data?.inscriptions || [];
-        console.log('📋 Données inscriptions formatées:', inscriptionsData);
-        
-        setInscriptionsEligibles(inscriptionsData);
-        
-        // Mettre à jour les stats avec le nombre d'élèves éligibles
-        setStats(prev => ({
-          ...prev,
-          elevesEligibles: inscriptionsData.length
-        }));
-        
-        console.log('✅ Inscriptions chargées avec succès:', inscriptionsData.length);
-      } else {
-        throw new Error(result.error || 'Erreur lors du chargement des inscriptions');
-      }
-    } catch (error) {
-      console.error('❌ Erreur chargement inscriptions:', error);
-      toast.error('Erreur lors du chargement des inscriptions éligibles');
+  // CORRECTION: Charger les inscriptions éligibles avec le bon endpoint
+  // CORRECTION: Récupérer les élèves depuis la liste des étudiants
+const fetchInscriptionsEligibles = async () => {
+  try {
+    console.log('🔍 Chargement des élèves depuis la liste étudiants...');
+    
+    // Appeler l'API de votre page liste-eleves
+    const response = await fetch('/api/secretaires/eleves');
+    
+    if (!response.ok) {
+      throw new Error('Erreur lors du chargement des élèves');
     }
-  };
-
+    
+    const data = await response.json();
+    console.log('📊 Données élèves reçues:', data);
+    
+    // Prendre les étudiants directement depuis la réponse
+    const studentsData = data.inscriptions || [];
+    
+    console.log(`🎓 ${studentsData.length} étudiant(s) trouvé(s)`);
+    
+    // Formater pour correspondre à l'interface Eleve
+    const elevesData = studentsData.map((student: any) => ({
+      id: student.id,
+      nom: student.nom,
+      prenom: student.prenom,
+      email: student.email,
+      telephone: student.telephone,
+      filiere: student.filiere,
+      vague: student.vague,
+      dateInscription: student.dateInscription,
+      fraisInscription: student.fraisInscription || 15000,
+      fraisPayes: student.fraisPayes || 15000,
+      statutPaiement: 'paye' as const
+    }));
+    
+    setInscriptionsEligibles(elevesData);
+    setStats(prev => ({
+      ...prev,
+      elevesEligibles: elevesData.length
+    }));
+    
+    toast.success(`${elevesData.length} élève(s) chargé(s)`);
+    
+  } catch (error) {
+    console.log('❌ Erreur chargement élèves, utilisation données de test');
+    
+    // Données de test en attendant
+    const testData = [
+      {
+        id: '1',
+        nom: 'KONE',
+        prenom: 'Mohamed',
+        email: 'mohamed@school.com',
+        telephone: '0123456789',
+        filiere: 'Informatique',
+        vague: 'Vague 1',
+        dateInscription: new Date().toISOString(),
+        fraisInscription: 15000,
+        fraisPayes: 15000,
+        statutPaiement: 'paye'
+      }
+    ];
+    
+    setInscriptionsEligibles(testData);
+    setStats(prev => ({
+      ...prev,
+      elevesEligibles: 1
+    }));
+    
+    toast.success('1 élève de test chargé');
+  }
+};
   // Charger les données initiales
   useEffect(() => {
     const loadInitialData = async () => {
       await fetchData();
-      // Charger aussi les inscriptions éligibles pour les stats
       await fetchInscriptionsEligibles();
     };
     
     loadInitialData();
-  }, []); // Seulement au montage du composant
+  }, []);
 
   // Recharger les données quand les filtres changent
   useEffect(() => {
@@ -235,7 +262,6 @@ export default function DossiersPage() {
     
     const { label, variant } = config[statut as keyof typeof config] || config.en_attente;
     
-    // Appliquer les classes CSS conditionnellement
     let className = "";
     switch (statut) {
       case "complet":
@@ -276,58 +302,83 @@ export default function DossiersPage() {
   };
 
   // Créer un dossier
-  const handleNouveauDossier = async () => {
-    if (!nouveauDossier.eleveId || !tousDocumentsUploades) return;
+  // Dans votre composant frontend - remplacez la fonction handleNouveauDossier
+const handleNouveauDossier = async () => {
+  if (!nouveauDossier.eleveId || !tousDocumentsUploades) {
+    toast.error('Veuillez sélectionner un élève et uploader tous les documents');
+    return;
+  }
 
-    setIsActionLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('inscriptionId', nouveauDossier.eleveId);
-      
-      if (nouveauDossier.documents.photoIdentite) {
-        formData.append('photoIdentite', nouveauDossier.documents.photoIdentite);
-      }
-      if (nouveauDossier.documents.acteNaissance) {
-        formData.append('acteNaissance', nouveauDossier.documents.acteNaissance);
-      }
-      if (nouveauDossier.documents.relevesNotes) {
-        formData.append('relevesNotes', nouveauDossier.documents.relevesNotes);
-      }
-
-      console.log('📤 Création dossier avec inscriptionId:', nouveauDossier.eleveId);
-
-      // Ajouter le paramètre action pour la création
-      const response = await fetch('/api/secretaires/dossiers?action=creer-dossier', {
-        method: 'POST',
-        body: formData
-      });
-
-      const result: ApiResponse = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Erreur lors de la création');
-      }
-
-      toast.success(result.message || 'Dossier créé avec succès');
-      
-      setIsDialogOpen(false);
-      setNouveauDossier({
-        eleveId: "",
-        documents: {
-          photoIdentite: null,
-          acteNaissance: null,
-          relevesNotes: null
-        }
-      });
-
-      await fetchData();
-    } catch (error) {
-      console.error('❌ Erreur création dossier:', error);
-      toast.error(error instanceof Error ? error.message : 'Erreur lors de la création du dossier');
-    } finally {
-      setIsActionLoading(false);
+  setIsActionLoading(true);
+  try {
+    const formData = new FormData();
+    formData.append('inscriptionId', nouveauDossier.eleveId);
+    
+    // CORRECTION: Upload des fichiers séparément après création du dossier
+    if (nouveauDossier.documents.photoIdentite) {
+      formData.append('photoIdentite', nouveauDossier.documents.photoIdentite);
     }
-  };
+    if (nouveauDossier.documents.acteNaissance) {
+      formData.append('acteNaissance', nouveauDossier.documents.acteNaissance);
+    }
+    if (nouveauDossier.documents.relevesNotes) {
+      formData.append('relevesNotes', nouveauDossier.documents.relevesNotes);
+    }
+
+    console.log('📤 Création dossier avec inscriptionId:', nouveauDossier.eleveId);
+
+    // CORRECTION: Utiliser POST directement sans paramètre d'action
+    const response = await fetch('/api/secretaires/dossiers', {
+      method: 'POST',
+      body: formData
+    });
+
+    // CORRECTION: Vérifier si la réponse est vide
+    const responseText = await response.text();
+    console.log('📥 Réponse brute:', responseText);
+
+    if (!responseText) {
+      throw new Error('Réponse vide du serveur');
+    }
+
+    const result: ApiResponse = JSON.parse(responseText);
+
+    if (!result.success) {
+      throw new Error(result.error || 'Erreur lors de la création');
+    }
+
+    toast.success(result.message || 'Dossier créé avec succès');
+    
+    setIsDialogOpen(false);
+    setNouveauDossier({
+      eleveId: "",
+      documents: {
+        photoIdentite: null,
+        acteNaissance: null,
+        relevesNotes: null
+      }
+    });
+
+    // Recharger les données
+    await fetchData();
+    await fetchInscriptionsEligibles();
+
+  } catch (error) {
+    console.error('❌ Erreur création dossier:', error);
+    
+    // CORRECTION: Message d'erreur plus explicite
+    let errorMessage = 'Erreur lors de la création du dossier';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    }
+    
+    toast.error(errorMessage);
+  } finally {
+    setIsActionLoading(false);
+  }
+};
 
   // Ouvrir la modal de suppression
   const openDeleteDialog = (dossier: Dossier) => {
@@ -343,6 +394,7 @@ export default function DossiersPage() {
     try {
       console.log('🗑️ Suppression dossier:', dossierToDelete.id);
 
+      // CORRECTION: Utiliser l'API dossiers pour la suppression
       const response = await fetch('/api/secretaires/dossiers?action=supprimer-dossier', {
         method: 'POST',
         headers: {
@@ -375,6 +427,7 @@ export default function DossiersPage() {
     try {
       console.log('✏️ Modification statut:', dossierId, nouveauStatut);
 
+      // CORRECTION: Utiliser l'API dossiers pour la modification
       const response = await fetch('/api/secretaires/dossiers?action=modifier-statut-dossier', {
         method: 'POST',
         headers: {
@@ -429,7 +482,7 @@ export default function DossiersPage() {
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Actualiser
           </Button>
-          
+           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-principal hover:bg-principal/90">

@@ -211,24 +211,6 @@ const ParentDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Bulletins */}
-        <Card className="hover:shadow-lg transition">
-          <CardHeader className="flex justify-between items-center pb-2">
-            <CardTitle className="text-sm font-medium font-title">Bulletins</CardTitle>
-            <FaFileAlt className="text-principal h-5 w-5" />
-          </CardHeader>
-          <CardContent className="pt-2 space-y-1">
-            <div className="text-sm font-semibold text-gray-900">{latestBulletin.trimester}</div>
-            <p className="text-xs text-gray-700">Moyenne : {latestBulletin.average}</p>
-            <p className="text-xs text-gray-700">Mention : {latestBulletin.mention}</p>
-            <Link href={latestBulletin.link} className="mt-1 inline-block" target="_blank">
-              <Button variant="link" className="font-link p-0 text-principal text-xs">
-                Télécharger le bulletin <FaArrowRight className="ml-1 h-3 w-3" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
         {/* Frais Scolaires */}
         <Card className="hover:shadow-lg transition">
           <CardHeader>

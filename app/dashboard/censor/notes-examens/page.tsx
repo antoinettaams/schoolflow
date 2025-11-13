@@ -35,7 +35,8 @@ import {
   Download,
   FileText,
   Sheet,
-  Plus
+  Plus,
+  RefreshCw
 } from "lucide-react";
 import {
   Dialog,
@@ -86,6 +87,10 @@ interface Grade {
   formulaUsed: string | null;
   createdAt: string;
   updatedAt: string;
+  semestreId: number | null;
+  semestreNom: string | null;
+  moyenneModule: number | null;
+  appreciation: string | null;
 }
 
 interface StudentData {
@@ -168,7 +173,7 @@ export default function GestionNotesCenseur() {
     students: [] as { id: string; name: string }[],
   });
 
-  // Chargement des données
+  // ⭐ CHARGEMENT CORRIGÉ : Utilisation correcte des données
   const loadStudents = async () => {
     try {
       setIsLoading(true);
@@ -203,7 +208,7 @@ export default function GestionNotesCenseur() {
       }
 
       if (data.grades && Array.isArray(data.grades)) {
-        // Transformation des données
+        // ⭐ TRANSFORMATION CORRIGÉE : Utilisation correcte des données
         const studentsMap = new Map();
         
         data.grades.forEach((grade: Grade) => {
@@ -218,32 +223,45 @@ export default function GestionNotesCenseur() {
               filiereId: grade.filiere.id,
               vague: grade.vague.nom,
               vagueId: grade.vague.id,
-              semestre: "Semestre 1",
+              semestre: grade.semestreNom || "Semestre non défini", // ⭐ Utilisation du semestre réel
               modules: [],
               moyenneGenerale: 0,
               rang: grade.rang || undefined,
-              appreciation: "",
+              appreciation: grade.appreciation || "", // ⭐ Utilisation de l'appréciation réelle
               originalGrades: []
             });
           }
           
           const student = studentsMap.get(studentKey);
+          
+          // ⭐ CORRECTION : Utilisation de moyenneModule ou moyenne calculée
+          const moduleMoyenne = grade.moyenneModule !== null ? grade.moyenneModule : grade.moyenne;
+          
           student.modules.push({
             module: grade.module.nom,
             moduleId: grade.module.id,
-            moyenneGenerale: grade.moyenne || 0,
+            moyenneGenerale: moduleMoyenne || 0,
             coefficient: grade.module.coefficient,
-            semestre: "Semestre 1"
+            semestre: grade.semestreNom || "Semestre non défini"
           });
           student.originalGrades.push(grade);
         });
         
-        // Calculer la moyenne générale pour chaque étudiant
+        // ⭐ CALCUL CORRIGÉ : Moyenne générale avec gestion des cas null
         const transformedStudents = Array.from(studentsMap.values()).map(student => {
-          const totalPoints = student.modules.reduce((sum: number, module: any) => 
+          const modulesAvecNotes = student.modules.filter(module => module.moyenneGenerale > 0);
+          
+          if (modulesAvecNotes.length === 0) {
+            return {
+              ...student,
+              moyenneGenerale: 0
+            };
+          }
+          
+          const totalPoints = modulesAvecNotes.reduce((sum: number, module: any) => 
             sum + (module.moyenneGenerale * module.coefficient), 0
           );
-          const totalCoefficients = student.modules.reduce((sum: number, module: any) => 
+          const totalCoefficients = modulesAvecNotes.reduce((sum: number, module: any) => 
             sum + module.coefficient, 0
           );
           
@@ -253,7 +271,7 @@ export default function GestionNotesCenseur() {
           };
         });
         
-        console.log(`🎓 ${transformedStudents.length} étudiants chargés`);
+        console.log(`🎓 ${transformedStudents.length} étudiants chargés avec leurs notes`);
         setStudents(transformedStudents);
       } else {
         console.warn("⚠️ Aucune donnée de grade reçue");
@@ -310,7 +328,7 @@ export default function GestionNotesCenseur() {
     setShowDeleteModal(true);
   };
 
-  // Sauvegarde des modifications
+  // ⭐ SAUVEGARDE CORRIGÉE : Envoi des données complètes
   const saveChanges = async () => {
     try {
       setIsSaving(true);
@@ -318,22 +336,20 @@ export default function GestionNotesCenseur() {
 
       const updates = [];
       
-      // Préparer les données de mise à jour
+      // Préparer les données de mise à jour CORRECTES
       for (const student of students) {
         for (const grade of student.originalGrades) {
           const updateData = {
-            studentId: grade.student.id,
-            moduleId: grade.module.id.toString(),
-            filiereId: grade.filiere.id.toString(),
-            vagueId: grade.vague.id,
-            teacherId: grade.teacher.id,
+            id: grade.id, // ⭐ IMPORTANT: Inclure l'ID pour la mise à jour
             interrogation1: grade.notes.interrogation1,
             interrogation2: grade.notes.interrogation2,
             interrogation3: grade.notes.interrogation3,
             devoir: grade.notes.devoir,
             composition: grade.notes.composition,
             rang: student.rang !== undefined ? student.rang : grade.rang,
-            formulaUsed: grade.formulaUsed
+            formulaUsed: grade.formulaUsed,
+            appreciation: student.appreciation || grade.appreciation,
+            moyenneModule: student.moyenneGenerale !== undefined ? student.moyenneGenerale : grade.moyenneModule
           };
 
           updates.push(updateData);
@@ -342,18 +358,19 @@ export default function GestionNotesCenseur() {
 
       console.log(`📤 Envoi de ${updates.length} mises à jour...`);
 
-      // Envoyer toutes les mises à jour
+      // ⭐ CORRECTION : Utiliser PUT pour la mise à jour
       const results = await Promise.all(
         updates.map(updateData =>
           fetch("/api/censor/grades", {
-            method: "POST",
+            method: "PUT",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify(updateData),
-          }).then(response => {
+          }).then(async response => {
             if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
+              const errorText = await response.text();
+              throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
             }
             return response.json();
           })
@@ -363,7 +380,7 @@ export default function GestionNotesCenseur() {
       console.log("✅ Toutes les mises à jour sauvegardées:", results);
       toast.success("Modifications sauvegardées avec succès!");
 
-      // Recharger les données
+      // Recharger les données pour voir les changements
       await loadStudents();
 
     } catch (error) {
@@ -378,46 +395,142 @@ export default function GestionNotesCenseur() {
   const handleExport = async () => {
     try {
       setIsExporting(true);
-      
-      const toastId = toast.loading("Préparation de l'export...");
+      const toastId = toast.loading("Génération de l'export...");
 
-      const params = new URLSearchParams();
-      params.append("format", exportOptions.format);
-      params.append("includeDetails", exportOptions.includeDetails.toString());
-      if (exportOptions.filiere !== "all") params.append("filiere", exportOptions.filiere);
-      if (exportOptions.vague !== "all") params.append("vague", exportOptions.vague);
+      const exportData = students.flatMap(student => 
+        student.originalGrades.map(grade => ({
+          'Étudiant': `${grade.student.firstName} ${grade.student.lastName}`,
+          'Numéro Étudiant': grade.student.studentNumber,
+          'Filière': grade.filiere.nom,
+          'Vague': grade.vague.nom,
+          'Module': grade.module.nom,
+          'Coefficient': grade.module.coefficient,
+          'Type Module': grade.module.typeModule,
+          'Interrogation 1': grade.notes.interrogation1 || '',
+          'Interrogation 2': grade.notes.interrogation2 || '',
+          'Interrogation 3': grade.notes.interrogation3 || '',
+          'Devoir': grade.notes.devoir || '',
+          'Composition': grade.notes.composition || '',
+          'Moyenne Module': grade.moyenneModule?.toFixed(2) || grade.moyenne?.toFixed(2) || '',
+          'Moyenne Générale': student.moyenneGenerale?.toFixed(2) || '',
+          'Rang': student.rang || '',
+          'Appréciation': student.appreciation || '',
+          'Enseignant': `${grade.teacher.firstName} ${grade.teacher.lastName}`,
+          'Semestre': grade.semestreNom || '',
+          'Date création': new Date(grade.createdAt).toLocaleDateString('fr-FR')
+        }))
+      );
 
-      const response = await fetch(`/api/censor/export?${params}`);
-      
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`);
+      if (exportData.length === 0) {
+        toast.dismiss(toastId);
+        toast.error("Aucune donnée à exporter");
+        return;
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.style.display = "none";
-      a.href = url;
-      
-      // Nom du fichier selon le format
-      const formatExtension = exportOptions.format === 'excel' ? 'xlsx' : exportOptions.format;
+      let blob: Blob;
+      let filename: string;
       const timestamp = new Date().toISOString().split('T')[0];
-      a.download = `notes-${timestamp}.${formatExtension}`;
-      
-      document.body.appendChild(a);
-      a.click();
+
+      switch (exportOptions.format) {
+        case 'csv':
+          const csvContent = generateCSV(exportData);
+          blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          filename = `notes-${timestamp}.csv`;
+          break;
+
+        case 'excel':
+          const excelContent = generateCSV(exportData);
+          blob = new Blob([excelContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+          filename = `notes-${timestamp}.xlsx`;
+          break;
+
+        case 'pdf':
+          const pdfContent = generatePDF(exportData);
+          blob = new Blob([pdfContent], { type: 'application/pdf' });
+          filename = `notes-${timestamp}.pdf`;
+          break;
+
+        default:
+          const defaultContent = generateCSV(exportData);
+          blob = new Blob([defaultContent], { type: 'text/csv;charset=utf-8;' });
+          filename = `notes-${timestamp}.csv`;
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       toast.dismiss(toastId);
-      toast.success(`Export ${exportOptions.format.toUpperCase()} réussi!`);
+      toast.success(`Export ${exportOptions.format.toUpperCase()} réussi !`);
       setShowExportModal(false);
-      
+
     } catch (error) {
-      console.error("❌ Erreur export:", error);
-      toast.error(`Erreur lors de l'export: ${error instanceof Error ? error.message : "Erreur inconnue"}`);
+      console.error('❌ Erreur export:', error);
+      toast.error("Erreur lors de l'export");
     } finally {
       setIsExporting(false);
     }
+  };
+
+  // Fonction pour générer CSV
+  const generateCSV = (data: any[]): string => {
+    if (data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]);
+    const csvRows = [
+      headers.join(','),
+      ...data.map(row => 
+        headers.map(header => {
+          const value = row[header];
+          return typeof value === 'string' && value.includes(',') 
+            ? `"${value}"` 
+            : value;
+        }).join(',')
+      )
+    ];
+    
+    return csvRows.join('\n');
+  };
+
+  // Fonction pour générer PDF
+  const generatePDF = (data: any[]): string => {
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Export des Notes</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+          </style>
+        </head>
+        <body>
+          <h1>Export des Notes - ${new Date().toLocaleDateString('fr-FR')}</h1>
+          <table>
+            <thead>
+              <tr>
+                ${Object.keys(data[0] || {}).map(key => `<th>${key}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map(row => `
+                <tr>
+                  ${Object.values(row).map(value => `<td>${value}</td>`).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    
+    return htmlContent;
   };
 
   // Suppression d'un grade
@@ -432,7 +545,8 @@ export default function GestionNotesCenseur() {
       });
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Erreur HTTP: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
@@ -450,7 +564,7 @@ export default function GestionNotesCenseur() {
     }
   };
 
-  // Skeleton pour le tableau
+  // Skeleton Components
   const TableSkeleton = () => (
     <div className="space-y-4">
       {Array.from({ length: 6 }).map((_, index) => (
@@ -468,7 +582,6 @@ export default function GestionNotesCenseur() {
     </div>
   );
 
-  // Skeleton pour les cartes de filtre
   const FilterSkeleton = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {Array.from({ length: 4 }).map((_, index) => (
@@ -497,10 +610,7 @@ export default function GestionNotesCenseur() {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Skeleton pour les filtres */}
             <FilterSkeleton />
-
-            {/* Skeleton pour le tableau */}
             <div className="overflow-x-auto rounded-lg border">
               <Table>
                 <TableHeader>
@@ -538,7 +648,8 @@ export default function GestionNotesCenseur() {
           <CardContent className="p-8 text-center">
             <div className="text-red-600 text-xl mb-4">Erreur</div>
             <div className="text-gray-600 mb-4">{error}</div>
-            <Button onClick={loadStudents} className="bg-blue-600 text-white">
+            <Button onClick={loadStudents} className="bg-blue-600 text-white flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" />
               Réessayer
             </Button>
           </CardContent>
@@ -631,8 +742,9 @@ export default function GestionNotesCenseur() {
               <Button 
                 onClick={loadStudents}
                 variant="outline"
-                className="w-full"
+                className="w-full flex items-center gap-2"
               >
+                <RefreshCw className="w-4 h-4" />
                 Actualiser
               </Button>
             </div>
@@ -754,7 +866,6 @@ export default function GestionNotesCenseur() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* Format d'export */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Format d'export</label>
               <div className="grid grid-cols-3 gap-2">
@@ -788,7 +899,6 @@ export default function GestionNotesCenseur() {
               </div>
             </div>
 
-            {/* Filtres d'export */}
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium">Filière</label>
@@ -831,7 +941,6 @@ export default function GestionNotesCenseur() {
               </div>
             </div>
 
-            {/* Options supplémentaires */}
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -898,12 +1007,14 @@ export default function GestionNotesCenseur() {
                   <p><strong>Nom:</strong> {selectedStudent.nom}</p>
                   <p><strong>Filière:</strong> {selectedStudent.filiere}</p>
                   <p><strong>Vague:</strong> {selectedStudent.vague}</p>
+                  <p><strong>Semestre:</strong> {selectedStudent.semestre}</p>
                 </div>
                 <div>
                   <h3 className="font-semibold">Statistiques</h3>
                   <p><strong>Moyenne générale:</strong> {selectedStudent.moyenneGenerale?.toFixed(2)}</p>
                   <p><strong>Rang:</strong> {selectedStudent.rang || "Non défini"}</p>
                   <p><strong>Nombre de modules:</strong> {selectedStudent.modules.length}</p>
+                  <p><strong>Appréciation:</strong> {selectedStudent.appreciation || "Non définie"}</p>
                 </div>
               </div>
               
@@ -912,8 +1023,11 @@ export default function GestionNotesCenseur() {
                 <div className="space-y-2">
                   {selectedStudent.modules.map((module) => (
                     <div key={module.moduleId} className="flex justify-between items-center border-b pb-2">
-                      <span>{module.module}</span>
-                      <span className="font-semibold">{module.moyenneGenerale.toFixed(2)}</span>
+                      <div>
+                        <span className="font-medium">{module.module}</span>
+                        <span className="text-sm text-gray-500 ml-2">(Coeff: {module.coefficient})</span>
+                      </div>
+                      <span className="font-semibold">{module.moyenneGenerale.toFixed(2)}/20</span>
                     </div>
                   ))}
                 </div>

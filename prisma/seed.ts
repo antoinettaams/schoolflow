@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma";
-import { UserRole } from "@prisma/client";
+import { UserRole, FraisStatut, TypeFrais } from "@prisma/client";
 
 async function main() {
   console.log("🔹 Début du seed...");
@@ -64,13 +64,27 @@ async function main() {
 
   console.log("✅ Users créés");
 
+  // ---- VAGUE ----
+  const vague = await prisma.vague.create({
+    data: {
+      nom: "Vague 1",
+      description: "Vague initiale",
+      semestres: "1,2,3",
+      dateDebut: new Date(),
+      dateFin: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+    },
+  });
+
+  console.log("✅ Vague créée");
+
   // ---- STUDENT ----
   const student = await prisma.student.create({
     data: {
       userId: studentUser.id,
       studentNumber: "STU001",
-      vagueNumber: "V001",
+      vagueNumber: 1, // ✅ CORRIGÉ : nombre au lieu de string
       filiereId: 1, // Informatique
+      vagueId: vague.id, // ✅ AJOUT : lien vers la vague
     },
   });
 
@@ -94,17 +108,6 @@ async function main() {
 
   console.log("✅ Students, Teachers, Parents créés");
 
-  // ---- VAGUE ----
-  const vague = await prisma.vague.create({
-    data: {
-      nom: "Vague 1",
-      description: "Vague initiale",
-      semestres: "1,2,3",
-      dateDebut: new Date(),
-      dateFin: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-    },
-  });
-
   // ---- VAGUE-FILIERE pivot ----
   await prisma.vagueFiliere.create({
     data: {
@@ -113,7 +116,80 @@ async function main() {
     },
   });
 
-  console.log("✅ Vagues et pivot créés");
+  console.log("✅ Pivot Vague-Filière créé");
+
+  // ---- FRAIS DE FORMATION ----
+  await prisma.fraisFormation.create({
+    data: {
+      filiereId: 1,
+      vagueId: vague.id,
+      fraisScolarite: 885000,
+      servicesInclus: [ // ✅ CORRIGÉ : champ Json requis
+        "Cours théoriques",
+        "Travaux pratiques", 
+        "Accès bibliothèque",
+        "Support pédagogique"
+      ],
+      statut: FraisStatut.ACTIF,
+    },
+  });
+
+  console.log("✅ Frais de formation créés");
+
+  // ---- FRAIS CONFIGURATION ----
+  await prisma.fraisConfiguration.create({
+    data: {
+      type: TypeFrais.INSCRIPTION_UNIVERSEL, // ✅ CORRIGÉ : utilisation de l'enum
+      montant: 50000,
+      description: "Frais d'inscription universel",
+      createdById: adminUser.id, // ✅ CORRIGÉ : champ requis
+    },
+  });
+
+  console.log("✅ Configuration des frais créée");
+
+  // ---- INSCRIPTION (pour tester les paiements) ----
+  const inscription = await prisma.inscription.create({
+    data: {
+      nom: "Doe",
+      prenom: "John",
+      email: "john.doe@school.com",
+      telephone: "+1234567890",
+      fraisInscription: 50000,
+      statut: "APPROUVE",
+      filiereId: 1,
+      vagueId: vague.id,
+      createdById: adminUser.id,
+    },
+  });
+
+  console.log("✅ Inscription créée");
+
+  // ---- PAIEMENT (pour tester) ----
+  await prisma.paiement.create({
+    data: {
+      inscriptionId: inscription.id,
+      montant: 50000,
+      modePaiement: "especes",
+      reference: "PAY-001",
+      createdById: adminUser.id,
+    },
+  });
+
+  console.log("✅ Paiement test créé");
+
+  // ---- MODULE (pour la structure académique) ----
+  await prisma.module.create({
+    data: {
+      nom: "Algorithmique",
+      coefficient: 3,
+      typeModule: "theorique",
+      description: "Introduction aux algorithmes",
+      filiereId: 1,
+    },
+  });
+
+  console.log("✅ Module créé");
 
   console.log("🎉 Seed terminé !");
 }

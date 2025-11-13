@@ -10,7 +10,10 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get('action');
 
     if (!clerkUserId) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+      return NextResponse.json({ 
+        success: false,
+        error: "Non authentifié" 
+      }, { status: 401 });
     }
 
     console.log('🔍 Vérification des droits pour:', clerkUserId);
@@ -33,12 +36,14 @@ export async function GET(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ 
+        success: false,
         error: "Accès non autorisé. Rôle CENSEUR ou ADMIN requis." 
       }, { status: 403 });
     }
 
     console.log('✅ Accès autorisé pour:', user.firstName, user.lastName, '- Rôle:', user.role);
 
+    // ACTION: Récupérer tous les enregistrements
     if (action === 'all-records') {
       try {
         // Récupérer toutes les présences avec les relations
@@ -83,7 +88,7 @@ export async function GET(request: NextRequest) {
           orderBy: {
             date: 'desc'
           },
-          take: 500
+          take: 1000 // Augmenter la limite
         });
 
         console.log('📊 Nombre de présences récupérées:', attendanceRecords.length);
@@ -125,14 +130,15 @@ export async function GET(request: NextRequest) {
           success: true,
           records: formattedRecords,
           total: formattedRecords.length,
-          message: `${formattedRecords.length} enregistrements chargés`
+          message: `${formattedRecords.length} enregistrements chargés avec succès`
         });
 
       } catch (dbError) {
         console.error('❌ Erreur base de données:', dbError);
         return NextResponse.json({
-          error: "Erreur lors de l'accès aux données",
-          details: dbError instanceof Error ? dbError.message : 'Unknown database error'
+          success: false,
+          error: "Erreur lors de l'accès aux données de présence",
+          details: dbError instanceof Error ? dbError.message : 'Erreur inconnue de la base de données'
         }, { status: 500 });
       }
     }
@@ -173,6 +179,7 @@ export async function GET(request: NextRequest) {
       } catch (error) {
         console.error('❌ Erreur statistiques:', error);
         return NextResponse.json({
+          success: false,
           error: "Erreur lors du calcul des statistiques"
         }, { status: 500 });
       }
@@ -189,14 +196,10 @@ export async function GET(request: NextRequest) {
           select: { nom: true }
         });
         
-        // CORRECTION : Utilisation de groupBy pour éviter l'erreur TypeScript
-        const modules = await prisma.attendance.groupBy({
-          by: ['subject'],
-          where: {
-            subject: {
-              not: "" // Filtrer les chaînes vides
-            }
-          }
+        // Récupérer les modules distincts
+        const modules = await prisma.module.findMany({
+          select: { nom: true },
+          distinct: ['nom']
         });
         
         const teachers = await prisma.teacher.findMany({
@@ -214,18 +217,20 @@ export async function GET(request: NextRequest) {
           success: true,
           filieres: filieres.map(f => f.nom),
           vagues: vagues.map(v => v.nom),
-          modules: modules.map(m => m.subject).filter(subject => subject && subject.trim() !== ''),
+          modules: modules.map(m => m.nom),
           teachers: teachers.map(t => `${t.user.firstName} ${t.user.lastName}`)
         });
       } catch (error) {
         console.error('❌ Erreur options filtre:', error);
         return NextResponse.json({
-          error: "Erreur lors du chargement des options"
+          success: false,
+          error: "Erreur lors du chargement des options de filtre"
         }, { status: 500 });
       }
     }
 
     return NextResponse.json({ 
+      success: false,
       error: "Action non valide",
       availableActions: ['all-records', 'stats', 'filter-options']
     }, { status: 400 });
@@ -233,8 +238,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("❌ Erreur API censor attendance:", error);
     return NextResponse.json({ 
+      success: false,
       error: "Erreur serveur interne",
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Erreur inconnue'
     }, { status: 500 });
   }
-}
+} 

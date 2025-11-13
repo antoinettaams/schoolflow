@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,17 +11,20 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Download, FileText, Calendar, Eye, MoreHorizontal, BarChart3, Plus } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Search, Download, FileText, Calendar, Eye, MoreHorizontal, BarChart3, Plus, Trash2, Edit } from "lucide-react";
+import { Toaster, toast } from 'react-hot-toast';
 
 interface Rapport {
   id: string;
   titre: string;
   type: "vague" | "mensuel" | "annuel" | "special";
   vague: string;
+  vagueId?: string;
   periode: string;
   dateGeneration: string;
   generePar: string;
-  statut: "generé" | "en_cours" | "erreur";
+  statut: "en_cours" | "genere" | "erreur";
   taille: string;
   resume: string;
   statistiques: {
@@ -32,15 +35,48 @@ interface Rapport {
   };
 }
 
+interface Vague {
+  id: string;
+  nom: string;
+}
+
+interface NouveauRapport {
+  titre: string;
+  type: "vague" | "mensuel" | "annuel" | "special";
+  vague: string;
+  periode: string;
+  resume: string;
+  inclusions: {
+    inscriptions: boolean;
+    paiements: boolean;
+    cartes: boolean;
+    dossiers: boolean;
+  };
+}
+
 export default function RapportsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("tous");
   const [selectedVague, setSelectedVague] = useState<string>("toutes");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [rapports, setRapports] = useState<Rapport[]>([]);
+  const [vagues, setVagues] = useState<Vague[]>([]);
+  const [statistiques, setStatistiques] = useState({
+    totalRapports: 0,
+    rapportsVague: 0,
+    rapportsMensuels: 0,
+    espaceUtilise: '0 MB'
+  });
   
-  const [nouveauRapport, setNouveauRapport] = useState({
+  const [nouveauRapport, setNouveauRapport] = useState<NouveauRapport>({
     titre: "",
-    type: "vague" as "vague" | "mensuel" | "annuel" | "special",
+    type: "vague",
     vague: "",
     periode: "",
     resume: "",
@@ -52,72 +88,74 @@ export default function RapportsPage() {
     }
   });
 
-  const VAGUES = [
-    "Vague 1 - 2024",
-    "Vague 2 - 2024", 
-    "Vague 3 - 2024"
-  ];
+  const [rapportEnEdition, setRapportEnEdition] = useState<Rapport | null>(null);
+  const [rapportASupprimer, setRapportASupprimer] = useState<Rapport | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const [rapports, setRapports] = useState<Rapport[]>([
-    {
-      id: "RAP-V1-2024",
-      titre: "Rapport Vague 1 - 2024",
-      type: "vague",
-      vague: "Vague 1 - 2024",
-      periode: "Janvier - Mars 2024",
-      dateGeneration: "2024-04-01",
-      generePar: "Marie Dubois",
-      statut: "generé",
-      taille: "3.2 MB",
-      resume: "Rapport complet de la première vague de formation avec analyse des performances",
-      statistiques: {
-        inscriptions: 45,
-        paiements: 42,
-        cartesGenerees: 40,
-        dossiersComplets: 38
-      }
-    },
-    {
-      id: "RAP-M01-2024",
-      titre: "Rapport Mensuel - Janvier 2024",
-      type: "mensuel",
-      vague: "Vague 1 - 2024",
-      periode: "Janvier 2024",
-      dateGeneration: "2024-02-01",
-      generePar: "Système Automatique",
-      statut: "generé",
-      taille: "1.8 MB",
-      resume: "Activités du mois de janvier : inscriptions, paiements et génération de cartes",
-      statistiques: {
-        inscriptions: 25,
-        paiements: 22,
-        cartesGenerees: 20,
-        dossiersComplets: 18
-      }
-    },
-  ]);
+  // Charger les données
+  useEffect(() => {
+    fetchRapports();
+  }, []);
 
-const getTypeBadge = (type: string) => {
-  const types = {
-    vague: { label: "Par Vague", variant: "default" as const },
-    mensuel: { label: "Mensuel", variant: "secondary" as const },
-    annuel: { label: "Annuel", variant: "outline" as const },
-    special: { label: "Spécial", variant: "destructive" as const } // "success" → "destructive"
+  const fetchRapports = async () => {
+    try {
+      setLoading(true);
+      const apiUrl = '/api/secretaires/rapports';
+      console.log('🔄 Début appel API:', apiUrl);
+      
+      const response = await fetch(apiUrl);
+      console.log('📡 Statut réponse:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Erreur réponse:', errorText);
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ Données reçues:', data);
+      
+      if (data.success) {
+        setRapports(data.data.rapports || []);
+        setVagues(data.data.vagues || []);
+        setStatistiques(data.data.statistiques || {
+          totalRapports: 0,
+          rapportsVague: 0,
+          rapportsMensuels: 0,
+          espaceUtilise: '0 MB'
+        });
+      } else {
+        throw new Error(data.error || 'Erreur inconnue');
+      }
+    } catch (error: any) {
+      console.error('❌ Erreur complète:', error);
+      toast.error(`Erreur lors du chargement des rapports: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
-  
-  const config = types[type as keyof typeof types];
-  return <Badge variant={config.variant}>{config.label}</Badge>;
-};
+
+  const getTypeBadge = (type: string) => {
+    const types = {
+      vague: { label: "Par Vague", variant: "default" as const },
+      mensuel: { label: "Mensuel", variant: "secondary" as const },
+      annuel: { label: "Annuel", variant: "outline" as const },
+      special: { label: "Spécial", variant: "destructive" as const }
+    };
+    
+    const config = types[type as keyof typeof types];
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
 
   const getStatutBadge = (statut: string) => {
     const config = {
-  generé: { label: "Généré", variant: "default" as const },
-  en_cours: { label: "En cours", variant: "outline" as const },
-  erreur: { label: "Erreur", variant: "destructive" as const }
-};
+      genere: { label: "Généré", variant: "default" as const },
+      en_cours: { label: "En cours", variant: "outline" as const },
+      erreur: { label: "Erreur", variant: "destructive" as const }
+    };
 
-const { label, variant } = config[statut as keyof typeof config];
-return <Badge variant={variant}>{label}</Badge>;
+    const { label, variant } = config[statut as keyof typeof config];
+    return <Badge variant={variant}>{label}</Badge>;
   };
 
   // Filtrage des rapports
@@ -132,53 +170,220 @@ return <Badge variant={variant}>{label}</Badge>;
     return matchesSearch && matchesType && matchesVague;
   });
 
-  const rapportsVague = rapports.filter(r => r.type === "vague").length;
-  const rapportsMensuels = rapports.filter(r => r.type === "mensuel").length;
+  const handleNouveauRapport = async () => {
+    try {
+      setCreating(true);
+      console.log('🔄 Création rapport:', nouveauRapport);
+      
+      const response = await fetch('/api/secretaires/rapports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(nouveauRapport)
+      });
 
-  const handleNouveauRapport = () => {
-    // Simuler des statistiques basées sur les inclusions choisies
-    const statistiques = {
-      inscriptions: nouveauRapport.inclusions.inscriptions ? Math.floor(Math.random() * 50) + 20 : 0,
-      paiements: nouveauRapport.inclusions.paiements ? Math.floor(Math.random() * 45) + 15 : 0,
-      cartesGenerees: nouveauRapport.inclusions.cartes ? Math.floor(Math.random() * 40) + 10 : 0,
-      dossiersComplets: nouveauRapport.inclusions.dossiers ? Math.floor(Math.random() * 35) + 5 : 0
-    };
+      console.log('📡 Statut création:', response.status);
 
-    const nouveauRapportData: Rapport = {
-      id: `RAP-${Date.now()}`,
-      titre: nouveauRapport.titre,
-      type: nouveauRapport.type,
-      vague: nouveauRapport.vague,
-      periode: nouveauRapport.periode,
-      dateGeneration: new Date().toISOString().split('T')[0],
-      generePar: "Secrétaire",
-      statut: "generé",
-      taille: "2.1 MB",
-      resume: nouveauRapport.resume,
-      statistiques
-    };
-
-    setRapports([...rapports, nouveauRapportData]);
-    setIsDialogOpen(false);
-    
-    // Reset du formulaire
-    setNouveauRapport({
-      titre: "",
-      type: "vague",
-      vague: "",
-      periode: "",
-      resume: "",
-      inclusions: {
-        inscriptions: true,
-        paiements: true,
-        cartes: true,
-        dossiers: true
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Erreur création:', errorText);
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
       }
-    });
+
+      const data = await response.json();
+      console.log('✅ Rapport créé:', data);
+
+      if (data.success) {
+        setRapports([data.data.rapport, ...rapports]);
+        setIsDialogOpen(false);
+        
+        // Reset du formulaire
+        setNouveauRapport({
+          titre: "",
+          type: "vague",
+          vague: "",
+          periode: "",
+          resume: "",
+          inclusions: {
+            inscriptions: true,
+            paiements: true,
+            cartes: true,
+            dossiers: true
+          }
+        });
+
+        toast.success('Rapport créé avec succès!');
+      }
+    } catch (error: any) {
+      console.error('❌ Erreur création rapport:', error);
+      toast.error(error.message || 'Erreur lors de la création du rapport');
+    } finally {
+      setCreating(false);
+    }
   };
+
+  const handleModifierRapport = async () => {
+    if (!rapportEnEdition) return;
+
+    try {
+      setUpdating(true);
+      setActionLoading(rapportEnEdition.id);
+      console.log('🔄 Modification rapport:', rapportEnEdition);
+      
+      const response = await fetch('/api/secretaires/rapports', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: rapportEnEdition.id,
+          titre: rapportEnEdition.titre,
+          type: rapportEnEdition.type,
+          vague: rapportEnEdition.vagueId || rapportEnEdition.vague,
+          periode: rapportEnEdition.periode,
+          resume: rapportEnEdition.resume,
+          inclusions: {
+            inscriptions: true,
+            paiements: true,
+            cartes: true,
+            dossiers: true
+          }
+        })
+      });
+
+      console.log('📡 Statut modification:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Erreur modification:', errorText);
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Rapport modifié:', data);
+
+      if (data.success) {
+        // Mettre à jour la liste des rapports
+        setRapports(rapports.map(r => 
+          r.id === rapportEnEdition.id ? data.data.rapport : r
+        ));
+        setIsEditDialogOpen(false);
+        setRapportEnEdition(null);
+
+        toast.success('Rapport modifié avec succès!');
+      }
+    } catch (error: any) {
+      console.error('❌ Erreur modification rapport:', error);
+      toast.error(error.message || 'Erreur lors de la modification du rapport');
+    } finally {
+      setUpdating(false);
+      setActionLoading(null);
+    }
+  };
+
+  const handleSupprimerRapport = async () => {
+    if (!rapportASupprimer) return;
+
+    try {
+      setDeleting(true);
+      setActionLoading(rapportASupprimer.id);
+      console.log('🔄 Suppression rapport:', rapportASupprimer.id);
+      
+      const response = await fetch(`/api/secretaires/rapports?id=${rapportASupprimer.id}`, {
+        method: 'DELETE',
+      });
+
+      console.log('📡 Statut suppression:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Erreur suppression:', errorText);
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Rapport supprimé:', data);
+
+      if (data.success) {
+        // Retirer le rapport de la liste
+        setRapports(rapports.filter(r => r.id !== rapportASupprimer.id));
+        setIsDeleteDialogOpen(false);
+        setRapportASupprimer(null);
+        toast.success('Rapport supprimé avec succès!');
+      }
+    } catch (error: any) {
+      console.error('❌ Erreur suppression rapport:', error);
+      toast.error(error.message || 'Erreur lors de la suppression du rapport');
+    } finally {
+      setDeleting(false);
+      setActionLoading(null);
+    }
+  };
+
+  const handleOuvrirModification = (rapport: Rapport) => {
+    setRapportEnEdition(rapport);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleOuvrirSuppression = (rapport: Rapport) => {
+    setRapportASupprimer(rapport);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleExport = async (rapportId: string, format: 'pdf' | 'excel') => {
+    const toastId = toast.loading(`Export ${format.toUpperCase()} en cours...`);
+    
+    try {
+      // Simulation d'export
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.success(`Rapport exporté en ${format.toUpperCase()}`, { id: toastId });
+    } catch (error) {
+      toast.error('Erreur lors de l\'export', { id: toastId });
+    }
+  };
+
+  // Composants Skeleton
+  const SkeletonCard = () => (
+    <Card className="bg-white border-gray-200">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-4 w-4 rounded-full" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-6 w-16 mb-1" />
+        <Skeleton className="h-3 w-32" />
+      </CardContent>
+    </Card>
+  );
+
+  const SkeletonTableRow = () => (
+    <TableRow>
+      <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+      <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+      <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+      <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+    </TableRow>
+  );
 
   return (
     <div className="p-6 overflow-y-auto space-y-6 lg:pl-5 pt-20 lg:pt-6">
+      {/* Toaster pour les notifications */}
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+        }}
+      />
+      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Rapports d&apos;Activité</h1>
@@ -189,12 +394,12 @@ return <Badge variant={variant}>{label}</Badge>;
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-principal hover:bg-principal/90">
+            <Button className="bg-blue-600 hover:bg-blue-700">
               <Plus className="w-4 h-4 mr-2" />
               Nouveau Rapport
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-white max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Créer un nouveau rapport</DialogTitle>
               <DialogDescription>
@@ -226,7 +431,7 @@ return <Badge variant={variant}>{label}</Badge>;
                     <SelectTrigger>
                       <SelectValue placeholder="Type de rapport" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       <SelectItem value="vague">Par Vague</SelectItem>
                       <SelectItem value="mensuel">Mensuel</SelectItem>
                       <SelectItem value="annuel">Annuel</SelectItem>
@@ -236,7 +441,7 @@ return <Badge variant={variant}>{label}</Badge>;
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="vague">Vague *</Label>
+                  <Label htmlFor="vague">Vague</Label>
                   <Select
                     value={nouveauRapport.vague}
                     onValueChange={(value) => setNouveauRapport({ ...nouveauRapport, vague: value })}
@@ -244,10 +449,11 @@ return <Badge variant={variant}>{label}</Badge>;
                     <SelectTrigger>
                       <SelectValue placeholder="Sélectionnez une vague" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {VAGUES.map((vague) => (
-                        <SelectItem key={vague} value={vague}>
-                          {vague}
+                    <SelectContent className="bg-white">
+                      <SelectItem value="toutes">Toutes les vagues</SelectItem>
+                      {vagues.map((vague) => (
+                        <SelectItem key={vague.id} value={vague.id}>
+                          {vague.nom}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -379,7 +585,11 @@ return <Badge variant={variant}>{label}</Badge>;
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-blue-800">Vague:</span>
-                      <span className="font-medium">{nouveauRapport.vague || "-"}</span>
+                      <span className="font-medium">
+                        {nouveauRapport.vague ? 
+                          vagues.find(v => v.id === nouveauRapport.vague)?.nom || nouveauRapport.vague 
+                          : "Toutes les vagues"}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-blue-800">Période:</span>
@@ -402,62 +612,246 @@ return <Badge variant={variant}>{label}</Badge>;
               </Button>
               <Button 
                 onClick={handleNouveauRapport}
-                disabled={!nouveauRapport.titre || !nouveauRapport.vague || !nouveauRapport.periode}
-                className="bg-principal hover:bg-principal/90"
+                disabled={!nouveauRapport.titre || !nouveauRapport.periode || creating}
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                <FileText className="w-4 h-4 mr-2" />
-                Générer le rapport
+                {creating ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Générer le rapport
+                  </>
+                )}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
+      {/* Dialog de modification */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="bg-white max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modifier le rapport</DialogTitle>
+            <DialogDescription>
+              Modifiez les informations du rapport
+            </DialogDescription>
+          </DialogHeader>
+
+          {rapportEnEdition && (
+            <div className="space-y-6 py-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-titre">Titre du rapport *</Label>
+                  <Input
+                    id="edit-titre"
+                    value={rapportEnEdition.titre}
+                    onChange={(e) => setRapportEnEdition({
+                      ...rapportEnEdition,
+                      titre: e.target.value
+                    })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-type">Type de rapport *</Label>
+                  <Select
+                    value={rapportEnEdition.type}
+                    onValueChange={(value: "vague" | "mensuel" | "annuel" | "special") => 
+                      setRapportEnEdition({
+                        ...rapportEnEdition,
+                        type: value
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Type de rapport" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="vague">Par Vague</SelectItem>
+                      <SelectItem value="mensuel">Mensuel</SelectItem>
+                      <SelectItem value="annuel">Annuel</SelectItem>
+                      <SelectItem value="special">Spécial</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-vague">Vague</Label>
+                  <Select
+                    value={rapportEnEdition.vagueId || rapportEnEdition.vague}
+                    onValueChange={(value) => setRapportEnEdition({
+                      ...rapportEnEdition,
+                      vagueId: value
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez une vague" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="toutes">Toutes les vagues</SelectItem>
+                      {vagues.map((vague) => (
+                        <SelectItem key={vague.id} value={vague.id}>
+                          {vague.nom}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-periode">Période couverte *</Label>
+                  <Input
+                    id="edit-periode"
+                    value={rapportEnEdition.periode}
+                    onChange={(e) => setRapportEnEdition({
+                      ...rapportEnEdition,
+                      periode: e.target.value
+                    })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-resume">Résumé et observations</Label>
+                <Textarea
+                  id="edit-resume"
+                  value={rapportEnEdition.resume}
+                  onChange={(e) => setRapportEnEdition({
+                    ...rapportEnEdition,
+                    resume: e.target.value
+                  })}
+                  rows={4}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleModifierRapport}
+              disabled={!rapportEnEdition?.titre || !rapportEnEdition?.periode || updating}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {updating ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                  Modification...
+                </>
+              ) : (
+                <>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Modifier le rapport
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de suppression */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="bg-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Supprimer le rapport</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer le rapport "{rapportASupprimer?.titre}" ? 
+              Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={deleting}
+            >
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleSupprimerRapport}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                  Suppression...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Supprimer
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Statistiques */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Rapports</CardTitle>
-            <FileText className="h-4 w-4 text-gray-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{rapports.length}</div>
-            <p className="text-xs text-gray-600">Rapports générés</p>
-          </CardContent>
-        </Card>
+        {loading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : (
+          <>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Rapports</CardTitle>
+                <FileText className="h-4 w-4 text-gray-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{statistiques.totalRapports}</div>
+                <p className="text-xs text-gray-600">Rapports générés</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Par Vague</CardTitle>
-            <Calendar className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{rapportsVague}</div>
-            <p className="text-xs text-gray-600">Rapports de vagues</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Par Vague</CardTitle>
+                <Calendar className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{statistiques.rapportsVague}</div>
+                <p className="text-xs text-gray-600">Rapports de vagues</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Mensuels</CardTitle>
-            <BarChart3 className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{rapportsMensuels}</div>
-            <p className="text-xs text-gray-600">Cette année</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Mensuels</CardTitle>
+                <BarChart3 className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{statistiques.rapportsMensuels}</div>
+                <p className="text-xs text-gray-600">Cette année</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Espace</CardTitle>
-            <FileText className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">45.2 MB</div>
-            <p className="text-xs text-gray-600">Rapports stockés</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Espace</CardTitle>
+                <FileText className="h-4 w-4 text-purple-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{statistiques.espaceUtilise}</div>
+                <p className="text-xs text-gray-600">Rapports stockés</p>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Filtres */}
@@ -499,9 +893,9 @@ return <Badge variant={variant}>{label}</Badge>;
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="toutes">Toutes les vagues</SelectItem>
-                {VAGUES.map((vague) => (
-                  <SelectItem key={vague} value={vague}>
-                    {vague}
+                {vagues.map((vague) => (
+                  <SelectItem key={vague.id} value={vague.nom}>
+                    {vague.nom}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -520,7 +914,7 @@ return <Badge variant={variant}>{label}</Badge>;
         <CardHeader>
           <CardTitle>Rapports Disponibles</CardTitle>
           <CardDescription>
-            {filteredRapports.length} rapport(s) trouvé(s)
+            {loading ? "Chargement..." : `${filteredRapports.length} rapport(s) trouvé(s)`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -539,68 +933,95 @@ return <Badge variant={variant}>{label}</Badge>;
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRapports.map((rapport) => (
-                  <TableRow key={rapport.id}>
-                    <TableCell className="font-medium">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-gray-500" />
-                          {rapport.titre}
-                        </div>
-                        <div className="text-sm text-gray-500 max-w-md">
-                          {rapport.resume}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getTypeBadge(rapport.type)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{rapport.vague}</Badge>
-                    </TableCell>
-                    <TableCell>{rapport.periode}</TableCell>
-                    <TableCell>
-                      <div className="text-xs space-y-1">
-                        <div>Inscriptions: {rapport.statistiques.inscriptions}</div>
-                        <div>Paiements: {rapport.statistiques.paiements}</div>
-                        <div>Cartes: {rapport.statistiques.cartesGenerees}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(rapport.dateGeneration).toLocaleDateString('fr-FR')}
-                    </TableCell>
-                    <TableCell>
-                      {getStatutBadge(rapport.statut)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm">
-                          <Eye className="w-4 h-4 mr-1" />
-                          Voir
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Download className="w-4 h-4 mr-1" />
-                          PDF
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-sm">
-                            <DropdownMenuItem>Modifier</DropdownMenuItem>
-                            <DropdownMenuItem>Dupliquer</DropdownMenuItem>
-                            <DropdownMenuItem>Partager</DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
-                              Supprimer
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                {loading ? (
+                  // Skeleton pour le tableau
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <SkeletonTableRow key={index} />
+                  ))
+                ) : filteredRapports.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                      Aucun rapport trouvé
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredRapports.map((rapport) => (
+                    <TableRow key={rapport.id} className="group hover:bg-gray-50">
+                      <TableCell className="font-medium">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-gray-500" />
+                            {rapport.titre}
+                          </div>
+                          <div className="text-sm text-gray-500 max-w-md">
+                            {rapport.resume}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getTypeBadge(rapport.type)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{rapport.vague}</Badge>
+                      </TableCell>
+                      <TableCell>{rapport.periode}</TableCell>
+                      <TableCell>
+                        <div className="text-xs space-y-1">
+                          <div>Inscriptions: {rapport.statistiques.inscriptions}</div>
+                          <div>Paiements: {rapport.statistiques.paiements}</div>
+                          <div>Cartes: {rapport.statistiques.cartesGenerees}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(rapport.dateGeneration).toLocaleDateString('fr-FR')}
+                      </TableCell>
+                      <TableCell>
+                        {getStatutBadge(rapport.statut)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleExport(rapport.id, 'pdf')}
+                          >
+                            <Download className="w-4 h-4 mr-1" />
+                            PDF
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0 data-[state=open]:bg-muted"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Ouvrir le menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-white w-[160px]">
+                              <DropdownMenuItem 
+                                onClick={() => handleOuvrirModification(rapport)}
+                                disabled={updating && actionLoading === rapport.id}
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                {updating && actionLoading === rapport.id ? 'Modification...' : 'Modifier'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => handleOuvrirSuppression(rapport)}
+                                disabled={deleting && actionLoading === rapport.id}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                {deleting && actionLoading === rapport.id ? 'Suppression...' : 'Supprimer'}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

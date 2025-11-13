@@ -15,8 +15,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import toast, { Toaster } from 'react-hot-toast';
 
-// Composants Skeleton optimisés
+// Import des bibliothèques d'export
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { utils, writeFile } from 'xlsx';
+
+// Composants Skeleton optimisés 
 const SkeletonCard = () => (
   <Card className="w-full">
     <CardHeader className="pb-3">
@@ -34,6 +41,7 @@ const SkeletonTableRow = () => (
     <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
     <TableCell><Skeleton className="h-4 w-2/3" /></TableCell>
     <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+    <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
     <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
     <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
     <TableCell><Skeleton className="h-4 w-1/2" /></TableCell>
@@ -162,6 +170,369 @@ export default function PaiementsComptablePage() {
     semester: '',
     description: ''
   });
+
+  // FONCTIONS D'EXPORT
+  const exportToPDF = () => {
+    if (!payments || payments.length === 0) {
+      toast.error("Aucune donnée à exporter en PDF");
+      return;
+    }
+
+    const toastId = toast.loading("Génération du PDF en cours...");
+
+    setTimeout(() => {
+      try {
+        const doc = new jsPDF();
+        
+        // En-tête du document
+        doc.setFontSize(20);
+        doc.setTextColor(40, 40, 40);
+        doc.text("Gestion des Paiements - Comptable", 14, 15);
+        
+        // Informations générales
+        doc.setFontSize(11);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Total des paiements: ${payments.length}`, 14, 25);
+        doc.text(`Montant total: ${formatMoney(payments.reduce((sum, p) => sum + p.montant, 0))}`, 14, 32);
+        doc.text(`Paiements en attente: ${payments.filter(p => p.statut === 'en_attente').length}`, 14, 39);
+        doc.text(`Paiements approuvés: ${payments.filter(p => p.statut === 'approuve').length}`, 14, 46);
+        doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 14, 53);
+
+        // Préparation des données du tableau
+        const tableData = payments.map(payment => [
+          payment.studentName,
+          payment.filiere,
+          payment.vague,
+          getTypeLabel(payment.type),
+          payment.methode,
+          formatFCFA(payment.montant),
+          new Date(payment.datePaiement).toLocaleDateString('fr-FR'),
+          payment.statut === 'en_attente' ? 'En attente' : 
+          payment.statut === 'approuve' ? 'Approuvé' : 
+          payment.statut === 'rejete' ? 'Rejeté' : 'Saisi manuel',
+          payment.reference
+        ]);
+
+        // Tableau principal
+        autoTable(doc, {
+          head: [['Élève', 'Filière', 'Vague', 'Type', 'Méthode', 'Montant', 'Date', 'Statut', 'Référence']],
+          body: tableData,
+          startY: 65,
+          styles: { 
+            fontSize: 8,
+            cellPadding: 2,
+          },
+          headStyles: { 
+            fillColor: [59, 130, 246],
+            textColor: 255,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: {
+            fillColor: [248, 250, 252]
+          },
+          margin: { top: 65 },
+          theme: 'grid'
+        });
+
+        // Statistiques par statut
+        const summaryY = (doc as any).lastAutoTable.finalY + 15;
+        if (summaryY < 250) {
+          doc.setFontSize(12);
+          doc.setTextColor(40, 40, 40);
+          doc.text("Statistiques par Statut", 14, summaryY);
+          
+          const statsData = [
+            ['En attente', payments.filter(p => p.statut === 'en_attente').length.toString()],
+            ['Approuvé', payments.filter(p => p.statut === 'approuve').length.toString()],
+            ['Rejeté', payments.filter(p => p.statut === 'rejete').length.toString()],
+            ['Saisi manuel', payments.filter(p => p.statut === 'saisi_manuel').length.toString()]
+          ];
+
+          autoTable(doc, {
+            body: statsData,
+            startY: summaryY + 5,
+            styles: { fontSize: 9 },
+            columnStyles: {
+              0: { fontStyle: 'bold', cellWidth: 60 },
+              1: { cellWidth: 40, halign: 'center' }
+            },
+            head: [['Statut', 'Nombre']],
+            headStyles: { 
+              fillColor: [16, 185, 129],
+              textColor: 255
+            },
+            margin: { top: 10 }
+          });
+        }
+
+        // Pied de page
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setFontSize(8);
+          doc.setTextColor(150, 150, 150);
+          doc.text(
+            `Page ${i} / ${pageCount} - Gestion des paiements comptable`,
+            doc.internal.pageSize.width / 2,
+            doc.internal.pageSize.height - 10,
+            { align: 'center' }
+          );
+        }
+
+        // Sauvegarde du fichier
+        const fileName = `paiements-comptable-${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+        
+        toast.success("PDF généré avec succès!", {
+          icon: "📄",
+          id: toastId
+        });
+        
+      } catch (error) {
+        console.error("Erreur lors de l'export PDF:", error);
+        toast.error("Erreur lors de la génération du PDF", {
+          icon: "❌",
+          id: toastId
+        });
+      }
+    }, 2000);
+  };
+
+  const exportToExcel = () => {
+    if (!payments || payments.length === 0) {
+      toast.error("Aucune donnée à exporter en Excel");
+      return;
+    }
+
+    const toastId = toast.loading("Export Excel en cours...");
+
+    setTimeout(() => {
+      try {
+        // Préparation des données
+        const data = payments.map(payment => ({
+          'Élève': payment.studentName,
+          'Parent': payment.parentName,
+          'Filière': payment.filiere,
+          'Vague': payment.vague,
+          'Type': getTypeLabel(payment.type),
+          'Méthode': payment.methode,
+          'Montant': payment.montant,
+          'Date': new Date(payment.datePaiement).toLocaleDateString('fr-FR'),
+          'Statut': payment.statut === 'en_attente' ? 'En attente' : 
+                   payment.statut === 'approuve' ? 'Approuvé' : 
+                   payment.statut === 'rejete' ? 'Rejeté' : 'Saisi manuel',
+          'Référence': payment.reference,
+          'Semestre': payment.semester || 'N/A',
+          'Description': payment.description,
+          'Créé par': payment.createdBy || 'Système'
+        }));
+
+        // Création du workbook
+        const wb = utils.book_new();
+        
+        // Feuille principale
+        const ws = utils.json_to_sheet(data);
+        
+        // En-têtes et métadonnées
+        const metadata = [
+          ["Gestion des Paiements - Comptable"],
+          [`Total des paiements: ${payments.length}`],
+          [`Montant total: ${formatMoney(payments.reduce((sum, p) => sum + p.montant, 0))}`],
+          [`Paiements en attente: ${payments.filter(p => p.statut === 'en_attente').length}`],
+          [`Paiements approuvés: ${payments.filter(p => p.statut === 'approuve').length}`],
+          [`Généré le: ${new Date().toLocaleDateString('fr-FR')}`],
+          [] // ligne vide
+        ];
+        
+        utils.sheet_add_aoa(ws, metadata, { origin: 'A1' });
+        
+        // Ajuster la largeur des colonnes
+        const colWidths = [
+          { wch: 20 }, // Élève
+          { wch: 15 }, // Parent
+          { wch: 15 }, // Filière
+          { wch: 12 }, // Vague
+          { wch: 12 }, // Type
+          { wch: 12 }, // Méthode
+          { wch: 15 }, // Montant
+          { wch: 12 }, // Date
+          { wch: 12 }, // Statut
+          { wch: 20 }, // Référence
+          { wch: 12 }, // Semestre
+          { wch: 25 }, // Description
+          { wch: 15 }  // Créé par
+        ];
+        ws['!cols'] = colWidths;
+
+        utils.book_append_sheet(wb, ws, 'Paiements');
+
+        // Feuille de statistiques
+        const statsData = [
+          { 'Statut': 'En attente', 'Nombre': payments.filter(p => p.statut === 'en_attente').length },
+          { 'Statut': 'Approuvé', 'Nombre': payments.filter(p => p.statut === 'approuve').length },
+          { 'Statut': 'Rejeté', 'Nombre': payments.filter(p => p.statut === 'rejete').length },
+          { 'Statut': 'Saisi manuel', 'Nombre': payments.filter(p => p.statut === 'saisi_manuel').length }
+        ];
+        
+        const wsStats = utils.json_to_sheet(statsData);
+        utils.book_append_sheet(wb, wsStats, 'Statistiques');
+
+        // Sauvegarde
+        const fileName = `paiements-comptable-${new Date().toISOString().split('T')[0]}.xlsx`;
+        writeFile(wb, fileName);
+        
+        toast.success("Fichier Excel exporté!", {
+          icon: "📊",
+          id: toastId
+        });
+        
+      } catch (error) {
+        console.error("Erreur lors de l'export Excel:", error);
+        toast.error("Erreur lors de l'export Excel", {
+          icon: "❌",
+          id: toastId
+        });
+      }
+    }, 1500);
+  };
+
+  const exportToCSV = () => {
+    if (!payments || payments.length === 0) {
+      toast.error("Aucune donnée à exporter en CSV");
+      return;
+    }
+
+    const toastId = toast.loading("Export CSV en cours...");
+
+    setTimeout(() => {
+      try {
+        const headers = ['Élève', 'Parent', 'Filière', 'Vague', 'Type', 'Méthode', 'Montant', 'Date', 'Statut', 'Référence', 'Semestre', 'Description'];
+        
+        const csvContent = [
+          "Gestion des Paiements - Comptable",
+          `Total des paiements: ${payments.length}`,
+          `Montant total: ${formatMoney(payments.reduce((sum, p) => sum + p.montant, 0))}`,
+          `Généré le: ${new Date().toLocaleDateString('fr-FR')}`,
+          '',
+          headers.join(','),
+          ...payments.map(payment => {
+            return [
+              `"${payment.studentName}"`,
+              `"${payment.parentName}"`,
+              `"${payment.filiere}"`,
+              `"${payment.vague}"`,
+              `"${getTypeLabel(payment.type)}"`,
+              `"${payment.methode}"`,
+              payment.montant,
+              `"${new Date(payment.datePaiement).toLocaleDateString('fr-FR')}"`,
+              `"${payment.statut === 'en_attente' ? 'En attente' : 
+                 payment.statut === 'approuve' ? 'Approuvé' : 
+                 payment.statut === 'rejete' ? 'Rejeté' : 'Saisi manuel'}"`,
+              `"${payment.reference}"`,
+              `"${payment.semester || 'N/A'}"`,
+              `"${payment.description}"`
+            ].join(',');
+          })
+        ].join('\n');
+
+        // Création et téléchargement du fichier
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `paiements-comptable-${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.success("Fichier CSV généré!", {
+          icon: "📋",
+          id: toastId
+        });
+        
+      } catch (error) {
+        console.error("Erreur lors de l'export CSV:", error);
+        toast.error("Erreur lors de l'export CSV", {
+          icon: "❌",
+          id: toastId
+        });
+      }
+    }, 1000);
+  };
+
+  const handlePrint = () => {
+    toast.loading("Préparation de l'impression...");
+    
+    setTimeout(() => {
+      window.print();
+      toast.success("Document prêt pour l'impression!", {
+        icon: "🖨️"
+      });
+    }, 1000);
+  };
+
+  // Fonction pour déterminer les types de paiement disponibles pour un étudiant
+  const getAvailablePaymentTypes = (studentId: string): Array<'inscription' | 'scolarite' | 'cantine' | 'activites'> => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return ['inscription', 'scolarite', 'cantine', 'activites'];
+
+    const availableTypes: Array<'inscription' | 'scolarite' | 'cantine' | 'activites'> = ['cantine', 'activites'];
+    
+    // Vérifier si l'inscription est déjà payée
+    const hasPaidRegistration = student.paidAmount >= student.registrationFee;
+    
+    if (!hasPaidRegistration) {
+      availableTypes.unshift('inscription');
+    }
+    
+    // Toujours permettre la scolarité
+    availableTypes.unshift('scolarite');
+
+    return availableTypes;
+  };
+
+  // Fonction pour vérifier si un type est disponible
+  const isPaymentTypeAvailable = (studentId: string, type: string): boolean => {
+    return getAvailablePaymentTypes(studentId).includes(type as any);
+  };
+
+  // Vérifier si l'inscription est déjà payée
+  const isInscriptionAlreadyPaid = (studentId: string): boolean => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return false;
+    
+    return student.paidAmount >= student.registrationFee;
+  };
+
+  // Validation du formulaire
+  const validateManualPaymentForm = (): string | null => {
+    if (!manualPaymentForm.studentId) return 'Veuillez sélectionner un étudiant';
+    if (!manualPaymentForm.type) return 'Veuillez sélectionner un type de paiement';
+    if (!manualPaymentForm.montant || manualPaymentForm.montant <= 0) return 'Le montant doit être supérieur à 0';
+    if (!manualPaymentForm.methode) return 'Veuillez sélectionner une méthode de paiement';
+    if (!manualPaymentForm.date) return 'Veuillez sélectionner une date';
+    
+    // Validation spécifique selon la méthode
+    if (manualPaymentForm.methode === 'cheque') {
+      if (!manualPaymentForm.banque) return 'Veuillez saisir la banque pour un chèque';
+      if (!manualPaymentForm.numeroCheque) return 'Veuillez saisir le numéro de chèque';
+    }
+    
+    if (manualPaymentForm.methode === 'virement') {
+      if (!manualPaymentForm.banque) return 'Veuillez saisir la banque pour un virement';
+      if (!manualPaymentForm.numeroCompte) return 'Veuillez saisir le numéro de compte';
+    }
+    
+    if (manualPaymentForm.methode === 'mobile_money') {
+      if (!manualPaymentForm.operateurMobile) return 'Veuillez sélectionner un opérateur mobile';
+      if (!manualPaymentForm.numeroTelephone) return 'Veuillez saisir le numéro de téléphone';
+    }
+
+    return null;
+  };
 
   // Charger les données
   const fetchData = async () => {
@@ -316,15 +687,18 @@ export default function PaiementsComptablePage() {
           p.id === paymentId ? data.data as Payment : p
         ));
         setApiMessage('Paiement approuvé avec succès');
+        toast.success('Paiement approuvé avec succès');
         
         // Recharger les données pour mettre à jour les statistiques
         fetchData();
       } else {
         setError(data.error || 'Erreur lors de l\'approbation');
+        toast.error(data.error || 'Erreur lors de l\'approbation');
       }
     } catch (err) {
       console.error('Erreur approbation:', err);
       setError('Erreur lors de l\'approbation');
+      toast.error('Erreur lors de l\'approbation');
     }
   };
 
@@ -345,12 +719,15 @@ export default function PaiementsComptablePage() {
           p.id === paymentId ? data.data as Payment : p
         ));
         setApiMessage('Paiement rejeté avec succès');
+        toast.success('Paiement rejeté avec succès');
       } else {
         setError(data.error || 'Erreur lors du rejet');
+        toast.error(data.error || 'Erreur lors du rejet');
       }
     } catch (err) {
       console.error('Erreur rejet:', err);
       setError('Erreur lors du rejet');
+      toast.error('Erreur lors du rejet');
     }
   };
 
@@ -365,6 +742,7 @@ export default function PaiementsComptablePage() {
         setIsDetailModalOpen(true);
       } else {
         setError(data.error || 'Erreur lors du chargement des détails');
+        toast.error(data.error || 'Erreur lors du chargement des détails');
       }
     } catch (err) {
       console.error('Erreur détails:', err);
@@ -393,8 +771,17 @@ export default function PaiementsComptablePage() {
 
   const handleManualPaymentSubmit = async () => {
     try {
-      if (!manualPaymentForm.studentId || !manualPaymentForm.montant || !manualPaymentForm.methode || !manualPaymentForm.date) {
-        setError('Veuillez remplir tous les champs obligatoires');
+      const validationError = validateManualPaymentForm();
+      if (validationError) {
+        setError(validationError);
+        toast.error(validationError);
+        return;
+      }
+
+      // Vérifier la disponibilité du type de paiement
+      if (!isPaymentTypeAvailable(manualPaymentForm.studentId, manualPaymentForm.type)) {
+        setError('Ce type de paiement n\'est plus disponible pour cet étudiant');
+        toast.error('Ce type de paiement n\'est plus disponible pour cet étudiant');
         return;
       }
 
@@ -423,6 +810,7 @@ export default function PaiementsComptablePage() {
         setPayments(prev => [data.data as Payment, ...prev]);
         setIsManualPaymentModalOpen(false);
         setApiMessage('Paiement enregistré avec succès !');
+        toast.success('Paiement enregistré avec succès !');
         
         // Reset du formulaire
         setManualPaymentForm({
@@ -440,11 +828,13 @@ export default function PaiementsComptablePage() {
         // Recharger les données pour mettre à jour les statistiques
         fetchData();
       } else {
-        setError(data.error || 'Erreur lors de la création');
+        setError(data.error || data.message || 'Erreur lors de la création');
+        toast.error(data.error || data.message || 'Erreur lors de la création');
       }
     } catch (err) {
       console.error('Erreur création:', err);
-      setError('Erreur lors de la création');
+      setError('Erreur de connexion lors de la création du paiement');
+      toast.error('Erreur de connexion lors de la création du paiement');
     }
   };
 
@@ -617,6 +1007,7 @@ export default function PaiementsComptablePage() {
 
   const handleRefresh = () => {
     fetchData();
+    toast.success('Données actualisées');
   };
 
   // Loading Skeleton
@@ -690,581 +1081,652 @@ export default function PaiementsComptablePage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
-      {/* Header */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestion des Paiements</h1>
-            <p className="text-gray-600 mt-1">Saisie et validation des paiements physiques</p>
-            {apiMessage && (
-              <div className="flex items-center gap-2 mt-2">
-                <Info className="h-4 w-4 text-blue-500" />
-                <span className="text-sm text-blue-600">{apiMessage}</span>
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-0">
-            <Button variant="outline" onClick={handleRefresh} className="flex items-center justify-center">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Actualiser
-            </Button>
-            <Button variant="outline" className="flex items-center justify-center">
-              <Download className="h-4 w-4 mr-2" />
-              Exporter
-            </Button>
-            <Button onClick={() => setIsManualPaymentModalOpen(true)} className="flex items-center justify-center">
-              <Plus className="h-4 w-4 mr-2" />
-              Saisir Paiement
-            </Button>
-          </div>
-        </div>
-
-        {/* Message d'erreur */}
-        {error && (
-          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-              <div>
-                <p className="font-medium text-red-800">Erreur</p>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setError(null)}
-                className="ml-auto text-red-600 hover:text-red-700"
-              >
-                ×
+    <>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 4000,
+          },
+        }}
+      />
+      
+      <div className="flex flex-col h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+        {/* Header */}
+        <div className="flex-shrink-0 bg-white border-b border-gray-200 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestion des Paiements</h1>
+              <p className="text-gray-600 mt-1">Saisie et validation des paiements physiques</p>
+              {apiMessage && (
+                <div className="flex items-center gap-2 mt-2">
+                  <Info className="h-4 w-4 text-blue-500" />
+                  <span className="text-sm text-blue-600">{apiMessage}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-0">
+              <Button variant="outline" onClick={handleRefresh} className="flex items-center justify-center">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Actualiser
+              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center justify-center">
+                    <Download className="h-4 w-4 mr-2" />
+                    Exporter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-white w-48">
+                  <DropdownMenuItem 
+                    onClick={exportToPDF}
+                    className="flex items-center cursor-pointer"
+                  >
+                    <span className="text-red-500 mr-2">📄</span>
+                    <span>Export PDF</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={exportToExcel}
+                    className="flex items-center cursor-pointer"
+                  >
+                    <span className="text-green-500 mr-2">📊</span>
+                    <span>Export Excel</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={exportToCSV}
+                    className="flex items-center cursor-pointer"
+                  >
+                    <span className="text-blue-500 mr-2">📋</span>
+                    <span>Export CSV</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={handlePrint}
+                    className="flex items-center cursor-pointer"
+                  >
+                    <span className="text-gray-500 mr-2">🖨️</span>
+                    <span>Imprimer</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <Button onClick={() => setIsManualPaymentModalOpen(true)} className="flex items-center justify-center">
+                <Plus className="h-4 w-4 mr-2" />
+                Saisir Paiement
               </Button>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Contenu scrollable */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-6 space-y-6 max-w-7xl mx-auto">
-          {/* Cartes de statistiques */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">En Attente</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{stats.totalEnAttente}</div>
-                <p className="text-xs text-gray-600 mt-1">{formatMoney(stats.totalMontantEnAttente)}</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Approuvés</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.totalApprouves}</div>
-                <p className="text-xs text-gray-600 mt-1">{formatMoney(stats.totalMontantApprouve)}</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Total Paiements</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{stats.totalPaiements}</div>
-                <p className="text-xs text-gray-600 mt-1">paiements traités</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Montant Total</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">
-                  {formatMoney(stats.totalMontant)}
+          {/* Message d'erreur */}
+          {error && (
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-red-500" />
+                <div>
+                  <p className="font-medium text-red-800">Erreur</p>
+                  <p className="text-sm text-red-700 mt-1">{error}</p>
                 </div>
-                <p className="text-xs text-gray-600 mt-1">tous statuts</p>
-              </CardContent>
-            </Card>
-          </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setError(null)}
+                  className="ml-auto text-red-600 hover:text-red-700"
+                >
+                  ×
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
 
-          {/* Filtres et recherche */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      placeholder="Rechercher par élève, parent ou filière..."
-                      className="pl-10 bg-white border-gray-300"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+        {/* Contenu scrollable */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-6 max-w-7xl mx-auto">
+            {/* Cartes de statistiques */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">En Attente</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-orange-600">{stats.totalEnAttente}</div>
+                  <p className="text-xs text-gray-600 mt-1">{formatMoney(stats.totalMontantEnAttente)}</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Approuvés</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{stats.totalApprouves}</div>
+                  <p className="text-xs text-gray-600 mt-1">{formatMoney(stats.totalMontantApprouve)}</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Total Paiements</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">{stats.totalPaiements}</div>
+                  <p className="text-xs text-gray-600 mt-1">paiements traités</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">Montant Total</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-purple-600">
+                    {formatMoney(stats.totalMontant)}
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">tous statuts</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filtres et recherche */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        placeholder="Rechercher par élève, parent ou filière..."
+                        className="pl-10 bg-white border-gray-300"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Select value={selectedStatut} onValueChange={setSelectedStatut}>
+                      <SelectTrigger className="w-[150px] bg-white border-gray-300">
+                        <Filter className="h-4 w-4 mr-2" />
+                        <SelectValue placeholder="Tous statuts" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tous statuts</SelectItem>
+                        <SelectItem value="en_attente">En attente</SelectItem>
+                        <SelectItem value="approuve">Approuvé</SelectItem>
+                        <SelectItem value="rejete">Rejeté</SelectItem>
+                        <SelectItem value="saisi_manuel">Saisi manuel</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={selectedType} onValueChange={setSelectedType}>
+                      <SelectTrigger className="w-[150px] bg-white border-gray-300">
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        <SelectValue placeholder="Tous types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tous types</SelectItem>
+                        <SelectItem value="inscription">Inscription</SelectItem>
+                        <SelectItem value="scolarite">Scolarité</SelectItem>
+                        <SelectItem value="cantine">Cantine</SelectItem>
+                        <SelectItem value="activites">Activités</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Select value={selectedStatut} onValueChange={setSelectedStatut}>
-                    <SelectTrigger className="w-[150px] bg-white border-gray-300">
-                      <Filter className="h-4 w-4 mr-2" />
-                      <SelectValue placeholder="Tous statuts" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tous statuts</SelectItem>
-                      <SelectItem value="en_attente">En attente</SelectItem>
-                      <SelectItem value="approuve">Approuvé</SelectItem>
-                      <SelectItem value="rejete">Rejeté</SelectItem>
-                      <SelectItem value="saisi_manuel">Saisi manuel</SelectItem>
-                    </SelectContent>
-                  </Select>
+              </CardContent>
+            </Card>
 
-                  <Select value={selectedType} onValueChange={setSelectedType}>
-                    <SelectTrigger className="w-[150px] bg-white border-gray-300">
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      <SelectValue placeholder="Tous types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tous types</SelectItem>
-                      <SelectItem value="inscription">Inscription</SelectItem>
-                      <SelectItem value="scolarite">Scolarité</SelectItem>
-                      <SelectItem value="cantine">Cantine</SelectItem>
-                      <SelectItem value="activites">Activités</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tableau des paiements */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Paiements</CardTitle>
-              <CardDescription>
-                {filteredPayments.length} paiement(s) trouvé(s)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Élève & Parent</TableHead>
-                      <TableHead>Filière & Vague</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Semestre</TableHead>
-                      <TableHead>Méthode</TableHead>
-                      <TableHead>Montant</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Statut</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPayments.length === 0 ? (
+            {/* Tableau des paiements */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Paiements</CardTitle>
+                <CardDescription>
+                  {filteredPayments.length} paiement(s) trouvé(s)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center py-8">
-                          <div className="text-gray-500">
-                            Aucun paiement trouvé
-                          </div>
-                        </TableCell>
+                        <TableHead>Élève & Parent</TableHead>
+                        <TableHead>Filière & Vague</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Semestre</TableHead>
+                        <TableHead>Méthode</TableHead>
+                        <TableHead>Montant</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ) : (
-                      filteredPayments.map((payment) => (
-                        <TableRow key={payment.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{payment.studentName}</div>
-                              <div className="text-sm text-gray-600">{payment.parentName}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              <div>{payment.filiere}</div>
-                              <div className="text-gray-600 text-xs">{payment.vague}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="max-w-[200px]">
-                            <div className="text-sm truncate" title={payment.description}>
-                              {payment.description}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize">
-                              {getTypeLabel(payment.type)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {payment.semester ? (
-                              <Badge variant="secondary" className="text-xs">
-                                {payment.semester}
-                              </Badge>
-                            ) : (
-                              <span className="text-gray-400 text-xs">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {getMethodBadge(payment.methode)}
-                          </TableCell>
-                          <TableCell className="font-semibold text-green-600">
-                            {formatFCFA(payment.montant)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              {new Date(payment.datePaiement).toLocaleDateString('fr-FR')}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {getStatusBadge(payment.statut)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => handleViewDetails(payment)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              
-                              {payment.statut === 'en_attente' && (
-                                <>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => handleApprovePayment(payment.id)}
-                                    className="text-green-600 border-green-200 hover:bg-green-50"
-                                  >
-                                    <CheckCircle className="h-4 w-4" />
-                                  </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => handleRejectPayment(payment.id)}
-                                    className="text-red-600 border-red-200 hover:bg-red-50"
-                                  >
-                                    <XCircle className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
+                    </TableHeader>
+                    <TableBody>
+                      {filteredPayments.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={10} className="text-center py-8">
+                            <div className="text-gray-500">
+                              Aucun paiement trouvé
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                      ) : (
+                        filteredPayments.map((payment) => (
+                          <TableRow key={payment.id}>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{payment.studentName}</div>
+                                <div className="text-sm text-gray-600">{payment.parentName}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <div>{payment.filiere}</div>
+                                <div className="text-gray-600 text-xs">{payment.vague}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="max-w-[200px]">
+                              <div className="text-sm truncate" title={payment.description}>
+                                {payment.description}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="capitalize">
+                                {getTypeLabel(payment.type)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {payment.semester ? (
+                                <Badge variant="secondary" className="text-xs">
+                                  {payment.semester}
+                                </Badge>
+                              ) : (
+                                <span className="text-gray-400 text-xs">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {getMethodBadge(payment.methode)}
+                            </TableCell>
+                            <TableCell className="font-semibold text-green-600">
+                              {formatFCFA(payment.montant)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                {new Date(payment.datePaiement).toLocaleDateString('fr-FR')}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(payment.statut)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleViewDetails(payment)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                
+                                {payment.statut === 'en_attente' && (
+                                  <>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => handleApprovePayment(payment.id)}
+                                      className="text-green-600 border-green-200 hover:bg-green-50"
+                                    >
+                                      <CheckCircle className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => handleRejectPayment(payment.id)}
+                                      className="text-red-600 border-red-200 hover:bg-red-50"
+                                    >
+                                      <XCircle className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
 
-      {/* Modal de détail */}
-      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-md bg-white">
-          <DialogHeader>
-            <DialogTitle>Détails du Paiement</DialogTitle>
-          </DialogHeader>
-          
-          {selectedPayment && (
-            <div className="space-y-4 bg-white">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span className="font-medium text-gray-700">Élève:</span>
-                  <span>{selectedPayment.studentName}</span>
-                </div>
-                
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span className="font-medium text-gray-700">Filière:</span>
-                  <span>{selectedPayment.filiere}</span>
-                </div>
-
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span className="font-medium text-gray-700">Vague:</span>
-                  <span>{selectedPayment.vague}</span>
-                </div>
-
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span className="font-medium text-gray-700">Type:</span>
-                  <Badge variant="outline" className="capitalize">
-                    {getTypeLabel(selectedPayment.type)}
-                  </Badge>
-                </div>
-
-                {selectedPayment.semester && (
+        {/* Modal de détail */}
+        <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+          <DialogContent className="max-w-md bg-white max-h-screen overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Détails du Paiement</DialogTitle>
+            </DialogHeader>
+            
+            {selectedPayment && (
+              <div className="space-y-4 bg-white">
+                <div className="space-y-3">
                   <div className="flex justify-between items-center border-b pb-2">
-                    <span className="font-medium text-gray-700">Semestre:</span>
-                    <Badge variant="secondary">{selectedPayment.semester}</Badge>
+                    <span className="font-medium text-gray-700">Élève:</span>
+                    <span>{selectedPayment.studentName}</span>
                   </div>
+                  
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-medium text-gray-700">Filière:</span>
+                    <span>{selectedPayment.filiere}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-medium text-gray-700">Vague:</span>
+                    <span>{selectedPayment.vague}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-medium text-gray-700">Type:</span>
+                    <Badge variant="outline" className="capitalize">
+                      {getTypeLabel(selectedPayment.type)}
+                    </Badge>
+                  </div>
+
+                  {selectedPayment.semester && (
+                    <div className="flex justify-between items-center border-b pb-2">
+                      <span className="font-medium text-gray-700">Semestre:</span>
+                      <Badge variant="secondary">{selectedPayment.semester}</Badge>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-medium text-gray-700">Montant:</span>
+                    <span className="font-bold text-green-600 text-lg">
+                      {formatFCFA(selectedPayment.montant)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-medium text-gray-700">Méthode:</span>
+                    {getMethodBadge(selectedPayment.methode)}
+                  </div>
+
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-medium text-gray-700">Statut:</span>
+                    {getStatusBadge(selectedPayment.statut)}
+                  </div>
+
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-medium text-gray-700">Date:</span>
+                    <span>{new Date(selectedPayment.datePaiement).toLocaleDateString('fr-FR')}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-medium text-gray-700">Référence:</span>
+                    <span className="font-mono text-sm">{selectedPayment.reference}</span>
+                  </div>
+
+                  {selectedPayment.createdBy && (
+                    <div className="flex justify-between items-center border-b pb-2">
+                      <span className="font-medium text-gray-700">Créé par:</span>
+                      <span>{selectedPayment.createdBy}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Résumé financier de l'élève */}
+                {selectedPayment.studentId && (
+                  <Card className="mt-4">
+                    <CardContent className="p-4">
+                      <h4 className="font-semibold text-gray-900 mb-3">Situation Financière</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Total payé:</span>
+                          <span className="font-semibold text-green-600">
+                            {formatFCFA(students.find(s => s.id === selectedPayment.studentId)?.paidAmount || 0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Reste à payer:</span>
+                          <span className="font-semibold text-orange-600">
+                            {formatFCFA(students.find(s => s.id === selectedPayment.studentId)?.remainingAmount || 0)}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
 
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span className="font-medium text-gray-700">Montant:</span>
-                  <span className="font-bold text-green-600 text-lg">
-                    {formatFCFA(selectedPayment.montant)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span className="font-medium text-gray-700">Méthode:</span>
-                  {getMethodBadge(selectedPayment.methode)}
-                </div>
-
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span className="font-medium text-gray-700">Statut:</span>
-                  {getStatusBadge(selectedPayment.statut)}
-                </div>
-
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span className="font-medium text-gray-700">Date:</span>
-                  <span>{new Date(selectedPayment.datePaiement).toLocaleDateString('fr-FR')}</span>
-                </div>
-
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span className="font-medium text-gray-700">Référence:</span>
-                  <span className="font-mono text-sm">{selectedPayment.reference}</span>
-                </div>
-
-                {selectedPayment.createdBy && (
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <span className="font-medium text-gray-700">Créé par:</span>
-                    <span>{selectedPayment.createdBy}</span>
+                {selectedPayment.statut === 'en_attente' && (
+                  <div className="flex gap-3 pt-4 border-t">
+                    <Button 
+                      onClick={() => handleApprovePayment(selectedPayment.id)}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Approuver
+                    </Button>
+                    <Button 
+                      onClick={() => handleRejectPayment(selectedPayment.id)}
+                      variant="outline"
+                      className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Rejeter
+                    </Button>
                   </div>
                 )}
               </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
-              {/* Résumé financier de l'élève */}
-              {selectedPayment.studentId && (
-                <Card className="mt-4">
-                  <CardContent className="p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3">Situation Financière</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Total payé:</span>
-                        <span className="font-semibold text-green-600">
-                          {formatFCFA(students.find(s => s.id === selectedPayment.studentId)?.paidAmount || 0)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Reste à payer:</span>
-                        <span className="font-semibold text-orange-600">
-                          {formatFCFA(students.find(s => s.id === selectedPayment.studentId)?.remainingAmount || 0)}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {selectedPayment.statut === 'en_attente' && (
-                <div className="flex gap-3 pt-4 border-t">
-                  <Button 
-                    onClick={() => handleApprovePayment(selectedPayment.id)}
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Approuver
-                  </Button>
-                  <Button 
-                    onClick={() => handleRejectPayment(selectedPayment.id)}
-                    variant="outline"
-                    className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
-                  >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Rejeter
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal de saisie manuelle */}
-      <Dialog open={isManualPaymentModalOpen} onOpenChange={setIsManualPaymentModalOpen}>
-        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Saisir un Paiement Manuel</DialogTitle>
-            <DialogDescription>
-              Enregistrer un paiement reçu physiquement
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid grid-cols-2 gap-4 bg-white">
-            <div className="space-y-2">
-              <Label htmlFor="student" className="text-gray-700">Élève *</Label>
-              <Select 
-                value={manualPaymentForm.studentId}
-                onValueChange={(value) => handleFormChange('studentId', value)}
-              >
-                <SelectTrigger className="bg-white border-gray-300">
-                  <SelectValue placeholder="Sélectionner un élève" />
-                </SelectTrigger>
-                <SelectContent>
-                  {students.map(student => (
-                    <SelectItem key={student.id} value={student.id}>
-                      {student.name} - {student.filiere} ({student.vague})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="type" className="text-gray-700">Type *</Label>
-              <Select 
-                value={manualPaymentForm.type}
-                onValueChange={(value: 'inscription' | 'scolarite' | 'cantine' | 'activites') => handleFormChange('type', value)}
-              >
-                <SelectTrigger className="bg-white border-gray-300">
-                  <SelectValue placeholder="Type de paiement" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="inscription">Inscription</SelectItem>
-                  <SelectItem value="scolarite">Scolarité</SelectItem>
-                  <SelectItem value="cantine">Cantine</SelectItem>
-                  <SelectItem value="activites">Activités</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {manualPaymentForm.type === 'scolarite' && manualPaymentForm.studentId && (
+        {/* Modal de saisie manuelle */}
+        <Dialog open={isManualPaymentModalOpen} onOpenChange={setIsManualPaymentModalOpen}>
+          <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Saisir un Paiement Manuel</DialogTitle>
+              <DialogDescription>
+                Enregistrer un paiement reçu physiquement
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-2 gap-4 bg-white">
               <div className="space-y-2">
-                <Label htmlFor="semester" className="text-gray-700">Semestre *</Label>
+                <Label htmlFor="student" className="text-gray-700">Élève *</Label>
                 <Select 
-                  value={manualPaymentForm.semester || ''}
-                  onValueChange={(value) => handleFormChange('semester', value)}
+                  value={manualPaymentForm.studentId}
+                  onValueChange={(value) => handleFormChange('studentId', value)}
                 >
                   <SelectTrigger className="bg-white border-gray-300">
-                    <SelectValue placeholder="Sélectionner un semestre" />
+                    <SelectValue placeholder="Sélectionner un élève" />
                   </SelectTrigger>
                   <SelectContent>
-                    {getAvailableSemesters(manualPaymentForm.studentId).map(semester => (
-                      <SelectItem key={semester} value={semester}>
-                        {semester}
+                    {students.map(student => (
+                      <SelectItem key={student.id} value={student.id}>
+                        {student.name} - {student.filiere} ({student.vague})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="type" className="text-gray-700">Type *</Label>
+                <Select 
+                  value={manualPaymentForm.type}
+                  onValueChange={(value: 'inscription' | 'scolarite' | 'cantine' | 'activites') => handleFormChange('type', value)}
+                  disabled={!manualPaymentForm.studentId}
+                >
+                  <SelectTrigger className="bg-white border-gray-300">
+                    <SelectValue placeholder="Type de paiement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {manualPaymentForm.studentId ? (
+                      getAvailablePaymentTypes(manualPaymentForm.studentId).map(type => (
+                        <SelectItem key={type} value={type}>
+                          {type === 'inscription' ? 'Inscription' : 
+                           type === 'scolarite' ? 'Scolarité' :
+                           type === 'cantine' ? 'Cantine' : 'Activités'}
+                          {type === 'inscription' && isInscriptionAlreadyPaid(manualPaymentForm.studentId) && ' (Déjà payé)'}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <>
+                        <SelectItem value="inscription">Inscription</SelectItem>
+                        <SelectItem value="scolarite">Scolarité</SelectItem>
+                        <SelectItem value="cantine">Cantine</SelectItem>
+                        <SelectItem value="activites">Activités</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+                {manualPaymentForm.studentId && !isPaymentTypeAvailable(manualPaymentForm.studentId, manualPaymentForm.type) && (
+                  <p className="text-xs text-red-500 mt-1">
+                    Ce type de paiement n'est plus disponible pour cet étudiant
+                  </p>
+                )}
+              </div>
+
+              {manualPaymentForm.type === 'scolarite' && manualPaymentForm.studentId && (
+                <div className="space-y-2">
+                  <Label htmlFor="semester" className="text-gray-700">Semestre *</Label>
+                  <Select 
+                    value={manualPaymentForm.semester || ''}
+                    onValueChange={(value) => handleFormChange('semester', value)}
+                  >
+                    <SelectTrigger className="bg-white border-gray-300">
+                      <SelectValue placeholder="Sélectionner un semestre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getAvailableSemesters(manualPaymentForm.studentId).map(semester => (
+                        <SelectItem key={semester} value={semester}>
+                          {semester}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="montant" className="text-gray-700">Montant (FCFA) *</Label>
+                <Input 
+                  type="number" 
+                  placeholder="0"
+                  value={manualPaymentForm.montant || ''}
+                  onChange={(e) => handleFormChange('montant', parseInt(e.target.value) || 0)}
+                  className="bg-white border-gray-300"
+                />
+                {manualPaymentForm.studentId && (
+                  <p className="text-xs text-gray-500">
+                    Suggestion: {formatFCFA(getAmountSuggestions(manualPaymentForm.studentId, manualPaymentForm.type))}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="methode" className="text-gray-700">Méthode *</Label>
+                <Select 
+                  value={manualPaymentForm.methode}
+                  onValueChange={(value: 'especes' | 'cheque' | 'virement' | 'mobile_money') => handleFormChange('methode', value)}
+                >
+                  <SelectTrigger className="bg-white border-gray-300">
+                    <SelectValue placeholder="Méthode de paiement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="especes">Espèces</SelectItem>
+                    <SelectItem value="cheque">Chèque</SelectItem>
+                    <SelectItem value="virement">Virement</SelectItem>
+                    <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="date" className="text-gray-700">Date *</Label>
+                <Input 
+                  type="date" 
+                  value={manualPaymentForm.date}
+                  onChange={(e) => handleFormChange('date', e.target.value)}
+                  className="bg-white border-gray-300"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reference" className="text-gray-700">Référence</Label>
+                <Input 
+                  placeholder="Numéro de chèque, référence..."
+                  value={manualPaymentForm.reference}
+                  onChange={(e) => handleFormChange('reference', e.target.value)}
+                  className="bg-white border-gray-300"
+                />
+              </div>
+
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="description" className="text-gray-700">Description</Label>
+                <Input 
+                  placeholder="Description du paiement"
+                  value={manualPaymentForm.description}
+                  onChange={(e) => handleFormChange('description', e.target.value)}
+                  className="bg-white border-gray-300"
+                />
+              </div>
+
+              {/* Champs spécifiques selon la méthode de paiement */}
+              {renderMethodSpecificFields()}
+
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="notes" className="text-gray-700">Notes</Label>
+                <Textarea 
+                  placeholder="Informations complémentaires..."
+                  value={manualPaymentForm.notes}
+                  onChange={(e) => handleFormChange('notes', e.target.value)}
+                  className="bg-white border-gray-300"
+                />
+              </div>
+            </div>
+
+            {/* Résumé de l'élève sélectionné */}
+            {manualPaymentForm.studentId && (
+              <Card className="mt-4">
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Total payé:</span>
+                      <p className="font-semibold text-green-600">
+                        {formatFCFA(students.find(s => s.id === manualPaymentForm.studentId)?.paidAmount || 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Reste à payer:</span>
+                      <p className="font-semibold text-orange-600">
+                        {formatFCFA(students.find(s => s.id === manualPaymentForm.studentId)?.remainingAmount || 0)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="montant" className="text-gray-700">Montant (FCFA) *</Label>
-              <Input 
-                type="number" 
-                placeholder="0"
-                value={manualPaymentForm.montant || ''}
-                onChange={(e) => handleFormChange('montant', parseInt(e.target.value) || 0)}
-                className="bg-white border-gray-300"
-              />
-              {manualPaymentForm.studentId && (
-                <p className="text-xs text-gray-500">
-                  Suggestion: {formatFCFA(getAmountSuggestions(manualPaymentForm.studentId, manualPaymentForm.type))}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="methode" className="text-gray-700">Méthode *</Label>
-              <Select 
-                value={manualPaymentForm.methode}
-                onValueChange={(value: 'especes' | 'cheque' | 'virement' | 'mobile_money') => handleFormChange('methode', value)}
-              >
-                <SelectTrigger className="bg-white border-gray-300">
-                  <SelectValue placeholder="Méthode de paiement" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="especes">Espèces</SelectItem>
-                  <SelectItem value="cheque">Chèque</SelectItem>
-                  <SelectItem value="virement">Virement</SelectItem>
-                  <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="date" className="text-gray-700">Date *</Label>
-              <Input 
-                type="date" 
-                value={manualPaymentForm.date}
-                onChange={(e) => handleFormChange('date', e.target.value)}
-                className="bg-white border-gray-300"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="reference" className="text-gray-700">Référence</Label>
-              <Input 
-                placeholder="Numéro de chèque, référence..."
-                value={manualPaymentForm.reference}
-                onChange={(e) => handleFormChange('reference', e.target.value)}
-                className="bg-white border-gray-300"
-              />
-            </div>
-
-            <div className="col-span-2 space-y-2">
-              <Label htmlFor="description" className="text-gray-700">Description</Label>
-              <Input 
-                placeholder="Description du paiement"
-                value={manualPaymentForm.description}
-                onChange={(e) => handleFormChange('description', e.target.value)}
-                className="bg-white border-gray-300"
-              />
-            </div>
-
-            {/* Champs spécifiques selon la méthode de paiement */}
-            {renderMethodSpecificFields()}
-
-            <div className="col-span-2 space-y-2">
-              <Label htmlFor="notes" className="text-gray-700">Notes</Label>
-              <Textarea 
-                placeholder="Informations complémentaires..."
-                value={manualPaymentForm.notes}
-                onChange={(e) => handleFormChange('notes', e.target.value)}
-                className="bg-white border-gray-300"
-              />
-            </div>
-          </div>
-
-          {/* Résumé de l'élève sélectionné */}
-          {manualPaymentForm.studentId && (
-            <Card className="mt-4">
-              <CardContent className="p-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Total payé:</span>
-                    <p className="font-semibold text-green-600">
-                      {formatFCFA(students.find(s => s.id === manualPaymentForm.studentId)?.paidAmount || 0)}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Reste à payer:</span>
-                    <p className="font-semibold text-orange-600">
-                      {formatFCFA(students.find(s => s.id === manualPaymentForm.studentId)?.remainingAmount || 0)}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <DialogFooter className="bg-white">
-            <Button variant="outline" onClick={() => setIsManualPaymentModalOpen(false)}>
-              Annuler
-            </Button>
-            <Button onClick={handleManualPaymentSubmit}>
-              <Save className="h-4 w-4 mr-2" />
-              Enregistrer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            <DialogFooter className="bg-white">
+              <Button variant="outline" onClick={() => setIsManualPaymentModalOpen(false)}>
+                Annuler
+              </Button>
+              <Button onClick={handleManualPaymentSubmit}>
+                <Save className="h-4 w-4 mr-2" />
+                Enregistrer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
   );
 }

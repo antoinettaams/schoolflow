@@ -1,11 +1,10 @@
-// app/api/censor/reports/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Fonctions utilitaires
+// Fonctions utilitaires (gardez les mêmes)
 function calculateTimeCorrection(planifiee: string, reelle: string): string {
   try {
     const planifieeMinutes = timeToMinutes(planifiee);
@@ -22,7 +21,6 @@ function calculateTimeCorrection(planifiee: string, reelle: string): string {
 
 function timeToMinutes(time: string): number {
   try {
-    // Gérer les formats "2h", "2h30", "2h15", etc.
     const hoursMatch = time.match(/(\d+)h/);
     const minutesMatch = time.match(/(\d+)$/);
     
@@ -49,7 +47,7 @@ function calculateRespectDelais(planifiee: string, reelle: string): number {
   try {
     const planifieeMinutes = timeToMinutes(planifiee);
     const reelleMinutes = timeToMinutes(reelle);
-    const tolerance = 15; // 15 minutes de tolérance
+    const tolerance = 15;
     
     const difference = Math.abs(reelleMinutes - planifieeMinutes);
     return difference <= tolerance ? 100 : Math.max(0, 100 - (difference - tolerance));
@@ -188,10 +186,10 @@ export async function GET(request: NextRequest) {
     const teacherId = searchParams.get('teacherId');
     const moduleId = searchParams.get('moduleId');
 
-    // Récupérer toutes les filières avec leurs modules et professeurs
+    // Récupérer toutes les filières avec leurs modules et TOUS les formateurs
     if (action === 'filieres') {
       try {
-        // Récupérer toutes les filières
+        // Récupérer toutes les filières avec leurs relations
         const filieres = await prisma.filiere.findMany({
           include: {
             modules: {
@@ -203,7 +201,8 @@ export async function GET(request: NextRequest) {
                         user: {
                           select: {
                             firstName: true,
-                            lastName: true
+                            lastName: true,
+                            email: true // AJOUT: Inclure l'email
                           }
                         }
                       }
@@ -224,7 +223,8 @@ export async function GET(request: NextRequest) {
                     user: {
                       select: {
                         firstName: true,
-                        lastName: true
+                        lastName: true,
+                        email: true // AJOUT: Inclure l'email
                       }
                     }
                   }
@@ -239,13 +239,14 @@ export async function GET(request: NextRequest) {
 
         console.log('📊 Filieres trouvées:', filieres.length);
 
-        // Récupérer tous les professeurs (pour avoir une liste complète)
+        // Récupérer TOUS les professeurs avec leurs enseignements
         const allTeachers = await prisma.teacher.findMany({
           include: {
             user: {
               select: {
                 firstName: true,
-                lastName: true
+                lastName: true,
+                email: true // AJOUT: Inclure l'email
               }
             },
             enseignements: {
@@ -256,6 +257,11 @@ export async function GET(request: NextRequest) {
                   }
                 }
               }
+            },
+            planningAssignations: {
+              include: {
+                filiere: true
+              }
             }
           },
           orderBy: {
@@ -265,26 +271,34 @@ export async function GET(request: NextRequest) {
           }
         });
 
+        console.log('👨‍🏫 Total des formateurs trouvés:', allTeachers.length);
+
+        // Formater les filières avec TOUS les formateurs associés
         const formattedFilieres = filieres.map(filiere => {
-          // Professeurs spécifiques à cette filière
+          // 1. Formateurs des enseignements de cette filière
           const teachersFromEnseignements = filiere.modules.flatMap(module =>
             module.enseignements.map(ens => ({
               id: ens.teacher.id,
               nom: `${ens.teacher.user.firstName} ${ens.teacher.user.lastName}`,
-              modules: [module.nom]
+              email: ens.teacher.user.email, // AJOUT: Email disponible maintenant
+              type: 'Enseignement',
+              module: module.nom
             }))
           );
 
+          // 2. Formateurs du planning de cette filière
           const teachersFromPlanning = filiere.planningAssignations.map(pa => ({
             id: pa.teacher.id,
             nom: `${pa.teacher.user.firstName} ${pa.teacher.user.lastName}`,
-            modules: ['Planning']
+            email: pa.teacher.user.email, // AJOUT: Email disponible maintenant
+            type: 'Planning',
+            module: 'Planning général'
           }));
 
-          // Combiner et dédupliquer
-          const allFiliereTeachers = [...teachersFromEnseignements, ...teachersFromPlanning];
+          // Combiner et dédupliquer par ID
+          const allTeachersForFiliere = [...teachersFromEnseignements, ...teachersFromPlanning];
           const uniqueTeachers = Array.from(
-            new Map(allFiliereTeachers.map(teacher => [teacher.id, teacher])).values()
+            new Map(allTeachersForFiliere.map(teacher => [teacher.id, teacher])).values()
           );
 
           return {
@@ -295,25 +309,46 @@ export async function GET(request: NextRequest) {
               nom: module.nom,
               coefficient: module.coefficient,
               typeModule: module.typeModule,
+              // Formateurs spécifiques à ce module
               formateurs: module.enseignements.map(ens => ({
                 id: ens.teacher.id,
-                nom: `${ens.teacher.user.firstName} ${ens.teacher.user.lastName}`
+                nom: `${ens.teacher.user.firstName} ${ens.teacher.user.lastName}`,
+                email: ens.teacher.user.email // AJOUT: Email disponible maintenant
               }))
             })),
             vagues: filiere.vaguesPivot.map(vp => ({
               id: vp.vague.id,
               nom: vp.vague.nom
             })),
-            tousLesFormateurs: uniqueTeachers
+            // TOUS les formateurs associés à cette filière
+            tousLesFormateurs: uniqueTeachers.sort((a, b) => a.nom.localeCompare(b.nom))
           };
         });
 
-        // Liste de tous les professeurs pour les filtres globaux
-        const allTeachersFormatted = allTeachers.map(teacher => ({
-          id: teacher.id,
-          nom: `${teacher.user.firstName} ${teacher.user.lastName}`,
-          modules: teacher.enseignements.map(ens => ens.module.nom)
-        }));
+        // Liste complète de TOUS les professeurs pour les filtres globaux
+        const allTeachersFormatted = allTeachers.map(teacher => {
+          const enseignements = teacher.enseignements.map(ens => ({
+            module: ens.module.nom,
+            filiere: ens.module.filiere.nom
+          }));
+
+          const planning = teacher.planningAssignations.map(pa => ({
+            filiere: pa.filiere.nom,
+            type: 'Planning'
+          }));
+
+          return {
+            id: teacher.id,
+            nom: `${teacher.user.firstName} ${teacher.user.lastName}`,
+            email: teacher.user.email, // CORRIGÉ: Email disponible maintenant
+            enseignements: enseignements,
+            planning: planning,
+            // Tous les modules enseignés (pour filtrage)
+            modules: enseignements.map(e => e.module),
+            // Toutes les filières associées
+            filieres: [...new Set([...enseignements.map(e => e.filiere), ...planning.map(p => p.filiere)])]
+          };
+        });
 
         return NextResponse.json({
           success: true,
@@ -330,14 +365,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Récupérer les professeurs avec filtres optionnels
+    // Récupérer les professeurs avec filtres OPTIMISÉ
     if (action === 'teachers') {
       try {
         let whereClause: any = {};
 
+        // Si une filière est spécifiée, trouver les formateurs associés
         if (filiereId && filiereId !== 'all') {
           whereClause.OR = [
             {
+              // Formateurs via enseignements
               enseignements: {
                 some: {
                   module: {
@@ -347,6 +384,7 @@ export async function GET(request: NextRequest) {
               }
             },
             {
+              // Formateurs via planning
               planningAssignations: {
                 some: {
                   filiereId: parseInt(filiereId)
@@ -356,6 +394,7 @@ export async function GET(request: NextRequest) {
           ];
         }
 
+        // Si un module est spécifié
         if (moduleId && moduleId !== 'all') {
           whereClause.enseignements = {
             some: {
@@ -370,16 +409,25 @@ export async function GET(request: NextRequest) {
             user: {
               select: {
                 firstName: true,
-                lastName: true
+                lastName: true,
+                email: true // AJOUT: Inclure l'email
               }
             },
             enseignements: {
               include: {
-                module: true
+                module: {
+                  include: {
+                    filiere: true
+                  }
+                }
+              }
+            },
+            planningAssignations: {
+              include: {
+                filiere: true
               }
             }
           },
-          distinct: ['id'],
           orderBy: {
             user: {
               firstName: 'asc'
@@ -387,21 +435,106 @@ export async function GET(request: NextRequest) {
           }
         });
 
-        const formattedTeachers = teachers.map(teacher => ({
-          id: teacher.id,
-          nom: `${teacher.user.firstName} ${teacher.user.lastName}`,
-          modules: teacher.enseignements.map(ens => ens.module.nom)
-        }));
+        console.log(`👨‍🏫 Formateurs trouvés avec filtres: ${teachers.length}`);
+
+        const formattedTeachers = teachers.map(teacher => {
+          const modulesEnseignes = teacher.enseignements.map(ens => ens.module.nom);
+          const filieresPlanning = teacher.planningAssignations.map(pa => pa.filiere.nom);
+          
+          return {
+            id: teacher.id,
+            nom: `${teacher.user.firstName} ${teacher.user.lastName}`,
+            email: teacher.user.email, // CORRIGÉ: Email disponible maintenant
+            modules: modulesEnseignes,
+            filieres: [...new Set([...teacher.enseignements.map(ens => ens.module.filiere.nom), ...filieresPlanning])],
+            // Détails pour debug
+            details: {
+              enseignements: teacher.enseignements.length,
+              planning: teacher.planningAssignations.length
+            }
+          };
+        });
 
         return NextResponse.json({
           success: true,
-          teachers: formattedTeachers
+          teachers: formattedTeachers,
+          count: formattedTeachers.length
         });
 
       } catch (dbError) {
         console.error('❌ Erreur base de données teachers:', dbError);
         return NextResponse.json({
           error: "Erreur lors de l'accès aux professeurs",
+          details: dbError instanceof Error ? dbError.message : 'Unknown database error'
+        }, { status: 500 });
+      }
+    }
+
+    // Récupérer TOUS les formateurs (sans filtre)
+    if (action === 'all-teachers') {
+      try {
+        const allTeachers = await prisma.teacher.findMany({
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true // AJOUT: Inclure l'email
+              }
+            },
+            enseignements: {
+              include: {
+                module: {
+                  include: {
+                    filiere: true
+                  }
+                }
+              }
+            },
+            planningAssignations: {
+              include: {
+                filiere: true
+              }
+            }
+          },
+          orderBy: {
+            user: {
+              firstName: 'asc'
+            }
+          }
+        });
+
+        const formattedTeachers = allTeachers.map(teacher => {
+          return {
+            id: teacher.id,
+            nom: `${teacher.user.firstName} ${teacher.user.lastName}`,
+            email: teacher.user.email, // CORRIGÉ: Email disponible maintenant
+            enseignements: teacher.enseignements.map(ens => ({
+              module: ens.module.nom,
+              filiere: ens.module.filiere.nom
+            })),
+            planning: teacher.planningAssignations.map(pa => ({
+              filiere: pa.filiere.nom
+            })),
+            // Pour la compatibilité
+            modules: teacher.enseignements.map(ens => ens.module.nom),
+            filieres: [...new Set([
+              ...teacher.enseignements.map(ens => ens.module.filiere.nom),
+              ...teacher.planningAssignations.map(pa => pa.filiere.nom)
+            ])]
+          };
+        });
+
+        return NextResponse.json({
+          success: true,
+          teachers: formattedTeachers,
+          total: formattedTeachers.length
+        });
+
+      } catch (dbError) {
+        console.error('❌ Erreur base de données all-teachers:', dbError);
+        return NextResponse.json({
+          error: "Erreur lors de l'accès à tous les professeurs",
           details: dbError instanceof Error ? dbError.message : 'Unknown database error'
         }, { status: 500 });
       }
@@ -568,21 +701,21 @@ export async function GET(request: NextRequest) {
     // Récupérer les options pour les formulaires
     if (action === 'form-options') {
       try {
-        const [filieres, vagues, teachers] = await Promise.all([
+        const [filieres, vagues, teachers, modules] = await Promise.all([
           prisma.filiere.findMany({
-            select: {
-              id: true,
-              nom: true
+            include: {
+              modules: true,
+              vaguesPivot: {
+                include: {
+                  vague: true
+                }
+              }
             },
             orderBy: {
               nom: 'asc'
             }
           }),
           prisma.vague.findMany({
-            select: {
-              id: true,
-              nom: true
-            },
             orderBy: {
               nom: 'asc'
             }
@@ -592,7 +725,13 @@ export async function GET(request: NextRequest) {
               user: {
                 select: {
                   firstName: true,
-                  lastName: true
+                  lastName: true,
+                  email: true // AJOUT: Inclure l'email
+                }
+              },
+              enseignements: {
+                include: {
+                  module: true
                 }
               }
             },
@@ -601,19 +740,47 @@ export async function GET(request: NextRequest) {
                 firstName: 'asc'
               }
             }
+          }),
+          prisma.module.findMany({
+            include: {
+              filiere: true
+            },
+            orderBy: {
+              nom: 'asc'
+            }
           })
         ]);
 
         const formattedTeachers = teachers.map(teacher => ({
           id: teacher.id,
-          nom: `${teacher.user.firstName} ${teacher.user.lastName}`
+          nom: `${teacher.user.firstName} ${teacher.user.lastName}`,
+          email: teacher.user.email, // CORRIGÉ: Email disponible maintenant
+          modules: teacher.enseignements.map(ens => ens.module.nom)
+        }));
+
+        const formattedFilieres = filieres.map(filiere => ({
+          id: filiere.id,
+          nom: filiere.nom,
+          modules: filiere.modules.map(module => ({
+            id: module.id,
+            nom: module.nom
+          })),
+          vagues: filiere.vaguesPivot.map(vp => ({
+            id: vp.vague.id,
+            nom: vp.vague.nom
+          }))
         }));
 
         return NextResponse.json({
           success: true,
-          filieres,
-          vagues,
-          teachers: formattedTeachers
+          filieres: formattedFilieres,
+          vagues: vagues,
+          teachers: formattedTeachers,
+          modules: modules.map(module => ({
+            id: module.id,
+            nom: module.nom,
+            filiere: module.filiere.nom
+          }))
         });
 
       } catch (dbError) {
@@ -627,7 +794,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ 
       error: "Action non valide",
-      availableActions: ['filieres', 'teachers', 'reports', 'stats', 'form-options']
+      availableActions: ['filieres', 'teachers', 'all-teachers', 'reports', 'stats', 'form-options']
     }, { status: 400 });
 
   } catch (error) {
@@ -639,6 +806,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Gardez votre code POST existant inchangé
 export async function POST(request: NextRequest) {
   try {
     const { userId: clerkUserId } = await auth();

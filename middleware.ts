@@ -30,6 +30,7 @@ const rolePermissions = {
   // SECRÉTAIRE - Son dashboard et inscription étudiants
   'Secretaire': [
     '/dashboard/secretaire',
+    '/dashboard/comptable',
     '/auth/signup'
   ],
 

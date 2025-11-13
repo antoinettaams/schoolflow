@@ -1,11 +1,14 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db { 
+datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-} 
+}
 
 model User {
   id           String   @id @default(cuid())
@@ -18,18 +21,30 @@ model User {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  createdById  String?
+  
+  // Relations
   events       Event[]
   parent       Parent?
   student      Student?
   teacher      Teacher?
-  createdBy    User?    @relation("UserCreatedUsers", fields: [createdById], references: [id])
-  createdUsers User[]   @relation("UserCreatedUsers")
-  report               Report[]
+  
+  // Relations de création
+  createdById  String?
+  createdBy    User?    @relation("UserCreation", fields: [createdById], references: [id])
+  createdUsers User[]   @relation("UserCreation")
+  
+  // Rapports d'activité (créés par l'utilisateur)
+  bilan       Bilan[]
+  
+  // Autres relations
+  reports              Report[]
   inscriptionsCreees   Inscription[] @relation("UserInscriptions")
   fraisConfigurations  FraisConfiguration[]
   paiementsCrees       Paiement[]
   dossier              Dossier[]
+  modeleCarte          ModeleCarte[]
+  impressions          ImpressionCarte[]
+  historiques          HistoriqueCarte[]
 
   @@map("users")
 }
@@ -42,11 +57,16 @@ model Student {
   vagueId       String?
   createdAt     DateTime @default(now())
   vagueNumber   Int?
+  
+  // Relations
   filiere       Filiere? @relation(fields: [filiereId], references: [id])
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   vague         Vague?   @relation("VagueStudents", fields: [vagueId], references: [id])
   grades        Grade[]
   attendance    Attendance[]
+  cartes        CarteEtudiante[]
+  facture       Facture[]
+  operation     Operation[]
 
   @@map("students")
 }
@@ -56,6 +76,8 @@ model Teacher {
   userId               String                @unique
   matiere              String
   createdAt            DateTime              @default(now())
+  
+  // Relations
   enseignements        Enseignement[]
   planningAssignations PlanningAssignation[]
   homeworks            Homework[]
@@ -87,6 +109,8 @@ model Filiere {
   dureeFormation       String
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
+  
+  // Relations
   modules              Module[]
   planningAssignations PlanningAssignation[]
   semestres            Semestre[]
@@ -97,6 +121,8 @@ model Filiere {
   inscriptions         Inscription[]
   fraisFormations      FraisFormation[]
   attendance           Attendance[]
+  cartesEtudiantes     CarteEtudiante[]
+
   @@map("filieres")
 }
 
@@ -109,8 +135,11 @@ model Semestre {
   filiereId   Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  // Relations
   modules     Module[]
   filiere     Filiere  @relation(fields: [filiereId], references: [id], onDelete: Cascade)
+  grade       Grade[]
 
   @@map("semestres")
 }
@@ -125,6 +154,8 @@ model Module {
   semestreId           Int?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
+  
+  // Relations
   enseignements        Enseignement[]
   filiere              Filiere               @relation(fields: [filiereId], references: [id], onDelete: Cascade)
   semestre             Semestre?             @relation(fields: [semestreId], references: [id])
@@ -133,6 +164,7 @@ model Module {
   grades               Grade[]
   report               Report[]
   attendance           Attendance[]
+
   @@map("modules")
 }
 
@@ -146,6 +178,8 @@ model Enseignement {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   salleId      String?
+  
+  // Relations
   module       Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   teacher      Teacher  @relation(fields: [professeurId], references: [id], onDelete: Cascade)
   salle        Salle?   @relation(fields: [salleId], references: [id])
@@ -163,6 +197,8 @@ model Vague {
   isActive             Boolean               @default(true)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
+  
+  // Relations
   planningAssignations PlanningAssignation[]
   students             Student[]             @relation("VagueStudents")
   filieresPivot        VagueFiliere[]
@@ -172,6 +208,8 @@ model Vague {
   inscriptions         Inscription[]
   fraisFormations      FraisFormation[]
   attendance           Attendance[]
+  cartesEtudiantes     CarteEtudiante[]
+  bilans               Bilan[]               @relation("VagueBilan")
 
   @@map("vagues")
 }
@@ -179,6 +217,8 @@ model Vague {
 model VagueFiliere {
   vagueId   String
   filiereId Int
+  
+  // Relations
   filiere   Filiere @relation(fields: [filiereId], references: [id], onDelete: Cascade)
   vague     Vague   @relation(fields: [vagueId], references: [id], onDelete: Cascade)
 
@@ -196,6 +236,8 @@ model PlanningAssignation {
   schedulePeriod Json
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  
+  // Relations
   filiere        Filiere  @relation(fields: [filiereId], references: [id])
   module         Module   @relation(fields: [moduleId], references: [id])
   teacher        Teacher  @relation(fields: [teacherId], references: [id])
@@ -220,6 +262,8 @@ model Event {
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  // Relations
   createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
   @@map("events")
@@ -232,6 +276,8 @@ model Salle {
   isActive      Boolean        @default(true)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  
+  // Relations
   enseignements Enseignement[]
 
   @@map("salles")
@@ -250,12 +296,14 @@ model Homework {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   teacherId    String
-  teacher      Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   filiereId    Int?
-  filiere      Filiere? @relation(fields: [filiereId], references: [id])
   vagueId      String?
-  vague        Vague?   @relation(fields: [vagueId], references: [id])
   moduleId     Int?
+  
+  // Relations
+  teacher      Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  filiere      Filiere? @relation(fields: [filiereId], references: [id])
+  vague        Vague?   @relation(fields: [vagueId], references: [id])
   module       Module?  @relation(fields: [moduleId], references: [id])
 
   @@map("homeworks")
@@ -263,24 +311,24 @@ model Homework {
 
 model Grade {
   id            String   @id @default(cuid())
-  
-  // Relations
+
+  // Relations EXISTANTES
   studentId     String
   student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
+
   moduleId      Int
   module        Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  
+
   filiereId     Int
   filiere       Filiere  @relation(fields: [filiereId], references: [id], onDelete: Cascade)
-  
+
   vagueId       String
   vague         Vague    @relation(fields: [vagueId], references: [id], onDelete: Cascade)
-  
+
   teacherId     String
   teacher       Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
-  // Notes
+  // Notes EXISTANTES
   interrogation1 Float?
   interrogation2 Float?
   interrogation3 Float?
@@ -288,74 +336,77 @@ model Grade {
   composition   Float?
   rang          Int?
 
-  // Formule utilisée
+  // Formule utilisée EXISTANTE
   formulaUsed   String?
+
+  // AJOUTS POUR LE BILAN ACADEMIQUE
+  semestreId    Int?
+  semestre      Semestre? @relation(fields: [semestreId], references: [id])
+  moyenneModule  Float?
+  appreciation  String?
+  estValide     Boolean  @default(false)
+  session       String   @default("principale")
 
   // Timestamps
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  // Contrainte d'unicité
-  @@unique([studentId, moduleId, filiereId, vagueId])
+  @@unique([studentId, moduleId, filiereId, vagueId, semestreId, session])
   @@map("grades")
 }
 
 model GradeFormula {
   id          String   @id @default(cuid())
-  name        String   // Ex: "Formule Standard", "Formule Technique"
-  formula     String   // Ex: "(interro*0.3 + devoir*0.3 + compo*0.4)"
+  name        String
+  formula     String
   description String?
-  
-  // Relations
   teacherId   String
-  teacher     Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  
-  // Timestamps
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  // Relations
+  teacher     Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   @@map("grade_formulas")
 }
 
 model Attendance {
   id          String   @id @default(cuid())
-  
+
   // Relations
   studentId   String
   student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
+
   teacherId   String
   teacher     Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
-  // Relations supplémentaires CORRIGÉES
   filiereId   Int?
   filiere     Filiere? @relation(fields: [filiereId], references: [id])
-  
+
   vagueId     String?
   vague       Vague?   @relation(fields: [vagueId], references: [id])
-  
+
   moduleId    Int?
   module      Module?  @relation(fields: [moduleId], references: [id])
 
   // Données de présence
   date        DateTime
-  courseTime  String   // Ex: "08:00-10:00"
+  courseTime  String
   subject     String
-  status      String   // "present" ou "absent"
+  status      String
   justified   Boolean  @default(false)
   reason      String?
-  semester    String   // Ex: "t1", "t2", "t3"
+  semester    String
 
   // Timestamps
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Contraintes d'unicité
   @@unique([studentId, date, courseTime, semester])
-  @@index([teacherId])
   @@map("attendances")
 }
 
+// RAPPORT DE COURS
 model Report {
   id                String   @id @default(cuid())
   moduleId          Int
@@ -364,14 +415,14 @@ model Report {
   date              DateTime
   chapitre          String
   objectif          String
-  dureePlanifiee    String   // Format: "2h" ou "2h30"
-  dureeReelle       String   // Format: "2h" ou "2h30"
-  progression       String   // "Terminé" | "Partiel" | "Non terminé"
+  dureePlanifiee    String
+  dureeReelle       String
+  progression       String
   difficulte        String?
-  evaluation        Float    // 1-5
+  evaluation        Float
   commentaireProf   String?
   commentaireCenseur String?
-  createdBy         String   // ID de l'utilisateur qui a créé le rapport
+  createdBy         String
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -396,21 +447,19 @@ model Inscription {
   fraisInscription Int
   fraisPayes      Int               @default(0)
   datePaiement    DateTime?
-  
-  // Relations
   filiereId       Int?
   vagueId         String?
-  createdById     String?
-  
-  filiere         Filiere?          @relation(fields: [filiereId], references: [id])
-  vague           Vague?            @relation(fields: [vagueId], references: [id])
-  createdBy       User?             @relation("UserInscriptions", fields: [createdById], references: [id])
-  paiements       Paiement[]
-  dossier         Dossier[]
-  
-  // Timestamps
+  createdById     String
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+
+  // Relations
+  filiere         Filiere?          @relation(fields: [filiereId], references: [id])
+  vague           Vague?            @relation(fields: [vagueId], references: [id])
+  createdBy       User              @relation("UserInscriptions", fields: [createdById], references: [id])
+  paiements       Paiement[]
+  dossier         Dossier[]
+  operation       Operation[]
 
   @@map("inscriptions")
 }
@@ -422,31 +471,33 @@ model Paiement {
   datePaiement    DateTime @default(now())
   modePaiement    String
   reference       String?
-  createdById     String
-  createdBy       User     @relation(fields: [createdById], references: [id])
-  inscription     Inscription @relation(fields: [inscriptionId], references: [id], onDelete: Cascade)
-  
+  createdById     String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  // Relations
+  createdBy       User?    @relation(fields: [createdById], references: [id])
+  inscription     Inscription @relation(fields: [inscriptionId], references: [id], onDelete: Cascade)
+  facture         Facture[]
+  operation       Operation[]
 
   @@map("paiements")
 }
 
-// CORRECTION DES MODÈLES FRAIS
 model FraisFormation {
   id              String         @id @default(cuid())
   vagueId         String
   filiereId       Int
   fraisScolarite  Int
-  servicesInclus  Json           // CORRIGÉ: Changé de String à Json
+  servicesInclus  Json
   statut          FraisStatut    @default(ACTIF)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-  
+
   // Relations
   vague           Vague          @relation(fields: [vagueId], references: [id], onDelete: Cascade)
   filiere         Filiere        @relation(fields: [filiereId], references: [id], onDelete: Cascade)
-  
+
   @@unique([vagueId, filiereId])
   @@map("frais_formations")
 }
@@ -457,13 +508,212 @@ model FraisConfiguration {
   montant     Int
   description String?
   createdById String
-  createdBy   User       @relation(fields: [createdById], references: [id])
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+
+  // Relations
+  createdBy   User       @relation(fields: [createdById], references: [id])
 
   @@map("frais_configurations")
 }
 
+model Dossier {
+  id              String         @id @default(cuid())
+  inscriptionId   String         @unique
+  statut          StatutDossier  @default(EN_ATTENTE)
+  dateCreation    DateTime       @default(now())
+  dateMaj         DateTime       @updatedAt
+  photoIdentite   String?
+  acteNaissance   String?
+  relevesNotes    String?
+  autresDocuments Json?
+  createdBy       String
+
+  // Relations
+  inscription     Inscription    @relation(fields: [inscriptionId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@map("dossiers")
+}
+
+model CarteEtudiante {
+  id              String        @id @default(cuid())
+  numeroCarte     String        @unique
+  dateExpiration  DateTime
+  dateCreation    DateTime      @default(now())
+  statut          StatutCarte   @default(ACTIVE)
+  includeQRCode   Boolean       @default(true)
+  includePhoto    Boolean       @default(true)
+  studentId       String
+  vagueId         String
+  filiereId       Int
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  student         Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  vague           Vague         @relation(fields: [vagueId], references: [id], onDelete: Cascade)
+  filiere         Filiere       @relation(fields: [filiereId], references: [id], onDelete: Cascade)
+  historiqueCarte HistoriqueCarte[]
+  impressionCarte ImpressionCarte[]
+
+  @@map("cartes_etudiantes")
+}
+
+model ImpressionCarte {
+  id              String   @id @default(cuid())
+  carteId         String
+  dateImpression  DateTime @default(now())
+  imprimePar      String
+  typeImpression  TypeImpression
+  nombreCopies    Int      @default(1)
+
+  // Relations
+  carte           CarteEtudiante @relation(fields: [carteId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [imprimePar], references: [id], onDelete: Cascade)
+
+  @@map("impressions_cartes")
+}
+
+model ModeleCarte {
+  id              String   @id @default(cuid())
+  nom             String
+  description     String?
+  designConfig    Json
+  estActif        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdById     String
+
+  // Relations
+  createdBy       User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@map("modeles_cartes")
+}
+
+model HistoriqueCarte {
+  id              String      @id @default(cuid())
+  carteId         String
+  ancienStatut    StatutCarte
+  nouveauStatut   StatutCarte
+  raison          String?
+  dateChangement  DateTime    @default(now())
+  modifiePar      String
+
+  // Relations
+  carte           CarteEtudiante @relation(fields: [carteId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [modifiePar], references: [id], onDelete: Cascade)
+
+  @@map("historique_cartes")
+}
+
+model ParametresCarte {
+  id                      String   @id @default(cuid())
+  dureeValiditeMois       Int      @default(12)
+  prefixeNumeroCarte      String   @default("CF")
+  formatNumeroCarte       String   @default("CF-YYYY-NNN")
+  logoParDefaut           String?
+  signatureDirecteur      String?
+  mentionsLegales         String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@map("parametres_cartes")
+}
+
+model Facture {
+  id               String         @id @default(cuid())
+  numero           String         @unique
+  paiementId       String         @unique
+  studentId        String
+  typePaiement     String
+  methodePaiement  String
+  datePaiement     DateTime
+  montantTotal     Int
+  statut           FactureStatut  @default(generee)
+  semester         String?
+  notes            String?
+  banque           String?
+  numeroCheque     String?
+  numeroCompte     String?
+  operateurMobile  String?
+  numeroTelephone  String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Relations
+  student          Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  paiement         Paiement       @relation(fields: [paiementId], references: [id], onDelete: Cascade)
+  items            FactureItem[]
+
+  @@map("factures")
+}
+
+model FactureItem {
+  id          String   @id @default(cuid())
+  factureId   String
+  description String
+  quantite    Int      @default(1)
+  prixUnitaire Int
+  montant     Int
+
+  // Relations
+  facture     Facture @relation(fields: [factureId], references: [id], onDelete: Cascade)
+
+  @@map("facture_items")
+}
+
+model Operation {
+  id        String   @id @default(cuid())
+  date      DateTime
+  vague     String
+  filiere   String
+  libelle   String
+  debit     Int      @default(0)
+  credit    Int      @default(0)
+  reference String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type      String   @default("manuel")
+  source    String   @default("manuel") 
+  statut    String   @default("comptabilise")
+  
+  inscriptionId String?
+  inscription   Inscription? @relation(fields: [inscriptionId], references: [id])
+  
+  paiementId    String?
+  paiement      Paiement?    @relation(fields: [paiementId], references: [id])
+
+  studentId     String?
+  student       Student?     @relation(fields: [studentId], references: [id])
+
+  @@map("operation")
+}
+
+// RAPPORT D'ACTIVITÉ (corrigé)
+model Bilan {
+  id              String        @id @default(cuid())
+  titre           String
+  type            TypeRapport
+  vagueId         String?
+  periode         String
+  dateGeneration  DateTime      @default(now())
+  generePar       String
+  statut          StatutRapport @default(GENERE)
+  taille          String?
+  resume          String?
+  inclusions      Json?
+  statistiques    Json?
+  
+  // Relations (corrigées)
+  vague           Vague?        @relation("VagueBilan", fields: [vagueId], references: [id])
+  user            User          @relation(fields: [generePar], references: [id], onDelete: Cascade)
+  
+  @@map("bilans")
+}
+
+// ENUMS
 enum UserRole {
   ADMIN
   CENSEUR
@@ -487,6 +737,8 @@ enum StatutInscription {
   REJETE
   PAYE_PARTIEL
   PAYE_COMPLET
+  COMPLET
+  PAYE
 }
 
 enum FraisStatut {
@@ -499,32 +751,43 @@ enum TypeFrais {
   AUTRES_FRAIS
 }
 
-// Ajoutez ce modèle à votre schema.prisma
-model Dossier {
-  id              String         @id @default(cuid())
-  inscriptionId   String         @unique
-  statut          StatutDossier  @default(EN_ATTENTE)
-  dateCreation    DateTime       @default(now())
-  dateMaj         DateTime       @updatedAt
-  
-  // Documents
-  photoIdentite   String?        // URL du fichier
-  acteNaissance   String?        // URL du fichier  
-  relevesNotes    String?        // URL du fichier
-  autresDocuments Json?          // Pour les documents supplémentaires
-  
-  // Relations
-  inscription     Inscription    @relation(fields: [inscriptionId], references: [id], onDelete: Cascade)
-  createdBy       String
-  user            User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  
-  @@map("dossiers")
-}
-
 enum StatutDossier {
   EN_ATTENTE
   COMPLET
   INCOMPLET
   VALIDE
   REJETE
+}
+
+enum StatutCarte {
+  ACTIVE
+  INACTIVE
+  EN_ATTENTE
+  EXPIREE
+}
+
+enum TypeImpression {
+  SIMPLE
+  LOT
+  RENOUVELLEMENT
+}
+
+enum FactureStatut {
+  generee
+  envoyee
+  annulee
+  payee
+}
+
+enum TypeRapport {
+  VAGUE
+  MENSUEL
+  ANNUEL
+  SPECIAL
+}
+
+enum StatutRapport {
+  EN_COURS
+  GENERE
+  ERREUR
 }

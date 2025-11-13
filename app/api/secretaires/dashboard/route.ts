@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 });
     }
 
-    // Récupérer les données réelles en parallèle
+    // Récupérer les données réelles en parallèle avec gestion d'erreurs
     const [
       pendingInscriptions,
       cardsToPrint,
@@ -32,48 +32,54 @@ export async function GET(request: NextRequest) {
       recentPayments
     ] = await Promise.all([
       // Inscriptions en attente (statut EN_ATTENTE)
-      prisma.inscription.count({
+      safePrismaCall(() => prisma.inscription.count({
         where: {
           statut: "EN_ATTENTE"
         }
-      }),
+      }), 0),
 
       // Cartes à imprimer (étudiants sans carte imprimée - approximation)
-      prisma.student.count({
+      safePrismaCall(() => prisma.student.count({
         where: {
           user: { isActive: true }
         }
-      }),
+      }), 0),
 
       // Événements à venir
-      prisma.event.count({
+      safePrismaCall(() => prisma.event.count({
         where: {
           date: {
             gte: new Date().toISOString().split('T')[0]
           }
         }
-      }),
+      }), 0),
 
       // Statistiques mensuelles
-      getMonthlyStats(),
+      safePrismaCall(getMonthlyStats, {
+        inscriptions: 0,
+        revenue: 0,
+        paiements: 0,
+        approvalRate: 0,
+        completionRate: 0
+      }),
 
       // Activités récentes
-      getRecentActivities(),
+      safePrismaCall(getRecentActivities, []),
 
       // Total des étudiants
-      prisma.student.count(),
+      safePrismaCall(() => prisma.student.count(), 0),
 
       // Total des inscriptions
-      prisma.inscription.count(),
+      safePrismaCall(() => prisma.inscription.count(), 0),
 
       // Paiements récents pour les messages
-      prisma.paiement.count({
+      safePrismaCall(() => prisma.paiement.count({
         where: {
           createdAt: {
             gte: new Date(new Date().setDate(new Date().getDate() - 1)) // Dernières 24h
           }
         }
-      })
+      }), 0)
     ]);
 
     const dashboardData = {
@@ -81,32 +87,79 @@ export async function GET(request: NextRequest) {
       pendingInscriptions,
       cardsToPrint,
       upcomingEvents,
-      unreadMessages: recentPayments, // Messages non lus = nouveaux paiements
+      unreadMessages: recentPayments,
       
       // Statistiques
       monthlyStats,
       
       // Activités
-      recentActivities,
+      recentActivities: recentActivities.length > 0 ? recentActivities : [],
       
       // Données supplémentaires pour les graphiques
       totalStudents,
       totalInscriptions,
       
       // Résumé financier
-      financialSummary: await getFinancialSummary()
+      financialSummary: await safePrismaCall(getFinancialSummary, {
+        totalRevenue: 0,
+        pendingRevenue: 0,
+        monthlyRevenue: 0,
+        totalTransactions: 0
+      }),
+      
+      // Métadonnées pour le frontend
+      metadata: {
+        hasData: totalInscriptions > 0 || totalStudents > 0,
+        lastUpdated: new Date().toISOString(),
+        dataStatus: "success" as const
+      }
     };
 
     return NextResponse.json(dashboardData);
   } catch (error) {
     console.error("Erreur API dashboard secrétaire:", error);
-    return NextResponse.json(
-      { 
-        error: "Erreur interne du serveur",
-        details: error instanceof Error ? error.message : "Unknown error"
+    
+    // Retourner des données vides en cas d'erreur
+    const errorData = {
+      pendingInscriptions: 0,
+      cardsToPrint: 0,
+      upcomingEvents: 0,
+      unreadMessages: 0,
+      monthlyStats: {
+        inscriptions: 0,
+        revenue: 0,
+        paiements: 0,
+        approvalRate: 0,
+        completionRate: 0
       },
-      { status: 500 }
-    );
+      recentActivities: [],
+      totalStudents: 0,
+      totalInscriptions: 0,
+      financialSummary: {
+        totalRevenue: 0,
+        pendingRevenue: 0,
+        monthlyRevenue: 0,
+        totalTransactions: 0
+      },
+      metadata: {
+        hasData: false,
+        lastUpdated: new Date().toISOString(),
+        dataStatus: "error" as const,
+        error: error instanceof Error ? error.message : "Erreur inconnue"
+      }
+    };
+
+    return NextResponse.json(errorData, { status: 500 });
+  }
+}
+
+// Fonction utilitaire pour gérer les erreurs Prisma
+async function safePrismaCall<T>(prismaCall: () => Promise<T>, defaultValue: T): Promise<T> {
+  try {
+    return await prismaCall();
+  } catch (error) {
+    console.error("Erreur Prisma:", error);
+    return defaultValue;
   }
 }
 
@@ -128,17 +181,17 @@ async function getMonthlyStats() {
       paiementsCount
     ] = await Promise.all([
       // Inscriptions ce mois
-      prisma.inscription.count({
+      safePrismaCall(() => prisma.inscription.count({
         where: {
           createdAt: {
             gte: startOfMonth,
             lte: endOfMonth
           }
         }
-      }),
+      }), 0),
 
       // Inscriptions approuvées ce mois
-      prisma.inscription.count({
+      safePrismaCall(() => prisma.inscription.count({
         where: {
           statut: "APPROUVE",
           createdAt: {
@@ -146,10 +199,10 @@ async function getMonthlyStats() {
             lte: endOfMonth
           }
         }
-      }),
+      }), 0),
 
       // Revenus ce mois (somme des paiements)
-      prisma.paiement.aggregate({
+      safePrismaCall(() => prisma.paiement.aggregate({
         where: {
           createdAt: {
             gte: startOfMonth,
@@ -159,17 +212,17 @@ async function getMonthlyStats() {
         _sum: {
           montant: true
         }
-      }),
+      }), { _sum: { montant: 0 } }),
 
       // Nombre de paiements ce mois
-      prisma.paiement.count({
+      safePrismaCall(() => prisma.paiement.count({
         where: {
           createdAt: {
             gte: startOfMonth,
             lte: endOfMonth
           }
         }
-      })
+      }), 0)
     ]);
 
     // Calcul du taux d'approbation
@@ -183,7 +236,7 @@ async function getMonthlyStats() {
 
     return {
       inscriptions: inscriptionsCount,
-      revenue: totalRevenue._sum.montant || 0,
+      revenue: totalRevenue._sum?.montant || 0,
       paiements: paiementsCount,
       approvalRate,
       completionRate
@@ -205,7 +258,7 @@ async function getRecentActivities() {
     // Récupérer les activités récentes : inscriptions + paiements
     const [recentInscriptions, recentPayments] = await Promise.all([
       // Dernières inscriptions
-      prisma.inscription.findMany({
+      safePrismaCall(() => prisma.inscription.findMany({
         take: 8,
         orderBy: { createdAt: 'desc' },
         include: {
@@ -213,10 +266,10 @@ async function getRecentActivities() {
             select: { nom: true }
           }
         }
-      }),
+      }), []),
 
       // Derniers paiements
-      prisma.paiement.findMany({
+      safePrismaCall(() => prisma.paiement.findMany({
         take: 8,
         orderBy: { createdAt: 'desc' },
         include: {
@@ -227,8 +280,13 @@ async function getRecentActivities() {
             }
           }
         }
-      })
+      }), [])
     ]);
+
+    // Si aucune donnée, retourner tableau vide
+    if (recentInscriptions.length === 0 && recentPayments.length === 0) {
+      return [];
+    }
 
     // Combiner et trier par date
     const allActivities = [
@@ -268,18 +326,7 @@ async function getRecentActivities() {
 
   } catch (error) {
     console.error("Erreur dans getRecentActivities:", error);
-    // Retourner des activités par défaut en cas d'erreur
-    return [
-      {
-        id: "default-1",
-        action: "Système initialisé",
-        description: "Dashboard chargé avec succès",
-        student: "Système",
-        time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-        type: "system" as const,
-        status: "completed" as const
-      }
-    ];
+    return [];
   }
 }
 
@@ -296,14 +343,14 @@ async function getFinancialSummary() {
       paiementsCount
     ] = await Promise.all([
       // Revenu total (tous les paiements)
-      prisma.paiement.aggregate({
+      safePrismaCall(() => prisma.paiement.aggregate({
         _sum: {
           montant: true
         }
-      }),
+      }), { _sum: { montant: 0 } }),
 
       // Revenu en attente (inscriptions non payées)
-      prisma.inscription.aggregate({
+      safePrismaCall(() => prisma.inscription.aggregate({
         where: {
           statut: {
             in: ["EN_ATTENTE", "APPROUVE"]
@@ -312,10 +359,10 @@ async function getFinancialSummary() {
         _sum: {
           fraisInscription: true
         }
-      }),
+      }), { _sum: { fraisInscription: 0 } }),
 
       // Revenu ce mois
-      prisma.paiement.aggregate({
+      safePrismaCall(() => prisma.paiement.aggregate({
         where: {
           createdAt: {
             gte: startOfMonth
@@ -324,16 +371,16 @@ async function getFinancialSummary() {
         _sum: {
           montant: true
         }
-      }),
+      }), { _sum: { montant: 0 } }),
 
       // Nombre total de paiements
-      prisma.paiement.count()
+      safePrismaCall(() => prisma.paiement.count(), 0)
     ]);
 
     return {
-      totalRevenue: totalRevenue._sum.montant || 0,
-      pendingRevenue: pendingRevenue._sum.fraisInscription || 0,
-      monthlyRevenue: monthlyRevenue._sum.montant || 0,
+      totalRevenue: totalRevenue._sum?.montant || 0,
+      pendingRevenue: pendingRevenue._sum?.fraisInscription || 0,
+      monthlyRevenue: monthlyRevenue._sum?.montant || 0,
       totalTransactions: paiementsCount
     };
   } catch (error) {

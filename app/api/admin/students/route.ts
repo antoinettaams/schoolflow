@@ -1,9 +1,18 @@
-// app/api/admin/students/route.ts - VERSION CORRIGÉE
+// app/api/admin/students/route.ts - VERSION COMPLÈTE CORRIGÉE AVEC TYPES
 import { NextRequest, NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import { PrismaClient, UserRole, Student, User, Filiere, Vague } from "@prisma/client"; 
+import { PrismaClient, UserRole, Student, User, Filiere, Vague } from "@prisma/client";
 
-const prisma = new PrismaClient();
+// Gestion robuste de la connexion Prisma
+let prisma: PrismaClient;
+
+try {
+  prisma = new PrismaClient();
+  console.log("✅ Prisma Client initialisé");
+} catch (error) {
+  console.error("❌ Erreur initialisation Prisma:", error);
+  prisma = new PrismaClient();
+}
 
 // Types pour les données formatées
 interface FormattedStudent {
@@ -60,7 +69,7 @@ function mapClerkRoleToPrismaRole(clerkRole: string): UserRole {
   }
 }
 
-// CORRECTION : Fonction pour récupérer TOUTES les données utilisateur depuis Clerk
+// Fonction pour récupérer les données utilisateur depuis Clerk
 function getClerkUserData(clerkUser: any) {
   const publicMetadata = clerkUser.publicMetadata || {};
   const unsafeMetadata = clerkUser.unsafeMetadata || {};
@@ -68,13 +77,13 @@ function getClerkUserData(clerkUser: any) {
   
   const metadata = { ...unsafeMetadata, ...privateMetadata, ...publicMetadata };
   
-  // CORRECTION : Récupération correcte du téléphone
+  // Récupération du téléphone
   const phone = metadata.phone as string || 
                (clerkUser.primaryPhoneNumberId ? 
                  clerkUser.phoneNumbers?.find((p: any) => p.id === clerkUser.primaryPhoneNumberId)?.phoneNumber : 
                  clerkUser.phoneNumbers?.[0]?.phoneNumber);
 
-  // CORRECTION : Récupération correcte de l'email
+  // Récupération de l'email
   const email = clerkUser.emailAddresses[0]?.emailAddress || 
                `${clerkUser.id}@no-email.com`;
 
@@ -107,7 +116,7 @@ function getClerkUserData(clerkUser: any) {
   };
 }
 
-// CORRECTION COMPLÈTE : Fonction de synchronisation avec gestion robuste des mises à jour
+// Fonction de synchronisation avec gestion robuste des mises à jour
 async function syncClerkUserWithPrisma(clerkUser: any) {
   try {
     console.log(`🔄 Synchronisation de: ${clerkUser.id} - ${clerkUser.firstName} ${clerkUser.lastName}`);
@@ -132,7 +141,7 @@ async function syncClerkUserWithPrisma(clerkUser: any) {
     if (existingUser) {
       console.log(`✅ Utilisateur déjà dans Prisma: ${existingUser.id}`);
       
-      // CORRECTION : Mise à jour avec gestion des conflits d'email
+      // Mise à jour avec gestion des conflits d'email
       const updateData: any = {};
       let needsUpdate = false;
 
@@ -309,7 +318,7 @@ async function syncClerkUserWithPrisma(clerkUser: any) {
   }
 }
 
-// CORRECTION : Fonction pour réparer les emails et téléphones manquants
+// Fonction pour réparer les emails et téléphones manquants
 async function repairMissingUserData() {
   try {
     console.log("🔧 Réparation des emails et téléphones manquants...");
@@ -350,7 +359,7 @@ async function repairMissingUserData() {
         const updateData: any = {};
         let needsUpdate = false;
 
-        // CORRECTION : Mettre à jour l'email si celui de Clerk est meilleur
+        // Mettre à jour l'email si celui de Clerk est meilleur
         if (userData.email && 
             !userData.email.includes("@no-email.com") && 
             !userData.email.includes("@clerk-user.com") &&
@@ -373,7 +382,7 @@ async function repairMissingUserData() {
           }
         }
 
-        // CORRECTION : Mettre à jour le téléphone si manquant ou différent
+        // Mettre à jour le téléphone si manquant ou différent
         if (userData.phone && userData.phone !== user.phone) {
           updateData.phone = userData.phone;
           needsUpdate = true;
@@ -417,7 +426,7 @@ async function repairMissingUserData() {
   }
 }
 
-// CORRECTION : Fonction pour FORCER la réparation des données problématiques
+// Fonction pour FORCER la réparation des données problématiques
 async function forceRepairProblematicData() {
   try {
     console.log("🚨 FORCE RÉPARATION des données problématiques...");
@@ -539,6 +548,21 @@ export async function GET(req: NextRequest) {
   try {
     console.log("🔍 Début API étudiants admin - VERSION FORCE RÉPARATION");
 
+    // TESTER LA CONNEXION PRISMA DÈS LE DÉBUT
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      console.log("✅ Connexion Prisma active");
+    } catch (dbError) {
+      console.error("❌ Base de données inaccessible:", dbError);
+      return NextResponse.json(
+        { 
+          error: "Base de données temporairement indisponible",
+          details: "Vérifiez votre connexion et le fichier .env"
+        }, 
+        { status: 503 }
+      );
+    }
+
     // AUTHENTIFICATION CLERK
     const { userId } = await auth();
     if (!userId) {
@@ -577,7 +601,7 @@ export async function GET(req: NextRequest) {
     let allClerkUsers = [];
     
     try {
-      // CORRECTION : Utilisation de la pagination correcte pour Clerk
+      // Utilisation de la pagination correcte pour Clerk
       let page = 0;
       const limit = 100;
       let hasMore = true;
@@ -590,7 +614,7 @@ export async function GET(req: NextRequest) {
         
         allClerkUsers.push(...usersBatch.data);
         
-        // CORRECTION : Vérifier s'il y a plus d'utilisateurs
+        // Vérifier s'il y a plus d'utilisateurs
         hasMore = usersBatch.data.length === limit;
         page++;
         
@@ -642,7 +666,7 @@ export async function GET(req: NextRequest) {
     
     console.log(`✅ ${successfulSyncs}/${studentClerkUsers.length} synchronisés`);
 
-    // CORRECTION : RÉPARATION DES EMAILS ET TÉLÉPHONES MANQUANTS
+    // RÉPARATION DES EMAILS ET TÉLÉPHONES MANQUANTS
     let repairCount = 0;
     let superRepairResult = { repaired: 0, skipped: 0 };
     
@@ -659,7 +683,7 @@ export async function GET(req: NextRequest) {
       console.log(`🔧 ${repairCount} emails/téléphones réparés`);
     }
 
-    // RÉCUPÉRATION FINALE DEPUIS PRISMA
+    // RÉCUPÉRATION FINALE DEPUIS PRISMA - CORRECTION DES TYPES
     console.log("🔍 Récupération finale depuis Prisma...");
     let prismaStudents: StudentWithRelations[] = [];
 
@@ -784,7 +808,7 @@ export async function GET(req: NextRequest) {
 
     console.log(`✅ ${filteredStudents.length} étudiants après filtrage`);
 
-    // FILTRES DISPONIBLES
+    // FILTRES DISPONIBLES - CORRECTION DES TYPES
     let toutesFilieres: Pick<Filiere, 'id' | 'nom'>[] = [];
     let toutesVagues: Pick<Vague, 'id' | 'nom'>[] = [];
 

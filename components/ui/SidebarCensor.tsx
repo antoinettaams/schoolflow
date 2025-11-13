@@ -85,7 +85,6 @@ const SidebarCenseur = () => {
     { label: "Événements Scolaires", href: "/dashboard/censor/events", icon: <FaCalendarCheck />, category: "ÉVÉNEMENTS" },
     
     { label: "Absences", href: "/dashboard/censor/absences", icon: <FaUserGraduate />, category: "SURVEILLANCE" },
-    { label: "Statistiques", href: "/dashboard/censor/statistiques", icon: <FaChartLine />, category: "ANALYSE" },
     { label: "Rapports Hebdomadaires", href: "/dashboard/censor/rapports", icon: <FaClipboardList />, category: "ANALYSE" },
   ];
 

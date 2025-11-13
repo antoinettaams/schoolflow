@@ -1,4 +1,4 @@
-// app/api/student/grades/route.ts - VERSION ÉTUDIANT
+// app/api/student/grades/route.ts - VERSION CORRIGÉE
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { PrismaClient } from "@prisma/client";
@@ -76,20 +76,20 @@ function mapGradeToFrontend(
   };
 }
 
-// Fonction pour calculer la moyenne générale
+// Fonction pour calculer la moyenne générale CORRIGÉE
 function calculateGeneralAverage(grades: GradeDetail[]): number {
   if (grades.length === 0) return 0;
 
   const moduleAverages: { [key: string]: { sum: number; count: number; coefficient: number } } = {};
 
-  // Calculer la moyenne par module
+  // Calculer la moyenne par module (uniquement les notes > 0)
   grades.forEach(grade => {
-    if (grade.grade > 0) { // Ne considérer que les notes existantes
+    if (grade.grade > 0) {
       if (!moduleAverages[grade.module]) {
         moduleAverages[grade.module] = { sum: 0, count: 0, coefficient: grade.coefficient };
       }
-      moduleAverages[grade.module].sum += grade.grade * grade.coefficient;
-      moduleAverages[grade.module].count += grade.coefficient;
+      moduleAverages[grade.module].sum += grade.grade;
+      moduleAverages[grade.module].count += 1;
     }
   });
 
@@ -97,24 +97,33 @@ function calculateGeneralAverage(grades: GradeDetail[]): number {
   let totalWeightedSum = 0;
   let totalCoefficients = 0;
 
-  Object.values(moduleAverages).forEach(module => {
+  Object.entries(moduleAverages).forEach(([moduleName, module]) => {
     if (module.count > 0) {
-      totalWeightedSum += (module.sum / module.count) * module.coefficient;
+      const moduleAverage = module.sum / module.count;
+      totalWeightedSum += moduleAverage * module.coefficient;
       totalCoefficients += module.coefficient;
+      console.log(`📊 Module ${moduleName}: moyenne=${moduleAverage.toFixed(2)}, coeff=${module.coefficient}`);
     }
   });
 
-  return totalCoefficients > 0 ? totalWeightedSum / totalCoefficients : 0;
+  const generalAverage = totalCoefficients > 0 ? totalWeightedSum / totalCoefficients : 0;
+  console.log(`🎯 Moyenne générale calculée: ${generalAverage.toFixed(2)}`);
+  
+  return generalAverage;
 }
 
-// Fonction pour générer le résumé des notes
+// Fonction pour générer le résumé des notes CORRIGÉE
 function generateGradesSummary(
   detailedGrades: GradeDetail[], 
   generalAverage: number,
   studentName: string,
   allModules: string[]
 ): GradeSummaryItem[] {
-  // Trouver la matière la plus faible
+  // Compter les notes existantes (grade > 0)
+  const existingGradesCount = detailedGrades.filter(grade => grade.grade > 0).length;
+  const modulesWithGrades = new Set(detailedGrades.filter(g => g.grade > 0).map(g => g.module)).size;
+
+  // Trouver la matière la plus faible (uniquement les notes > 0)
   const moduleAverages: { [key: string]: { sum: number; count: number } } = {};
   
   detailedGrades.forEach(grade => {
@@ -129,6 +138,8 @@ function generateGradesSummary(
 
   let weakestSubject = "Aucune";
   let weakestAverage = 20;
+  let strongestSubject = "Aucune";
+  let strongestAverage = 0;
 
   Object.entries(moduleAverages).forEach(([module, data]) => {
     const average = data.sum / data.count;
@@ -136,15 +147,14 @@ function generateGradesSummary(
       weakestAverage = average;
       weakestSubject = module;
     }
+    if (average > strongestAverage) {
+      strongestAverage = average;
+      strongestSubject = module;
+    }
   });
 
-  // Si aucune matière faible trouvée, prendre la première matière
-  if (weakestSubject === "Aucune" && allModules.length > 0) {
-    weakestSubject = allModules[0];
-  }
-
-  // Compter les modules avec au moins une note
-  const modulesWithGrades = new Set(detailedGrades.filter(g => g.grade > 0).map(g => g.module)).size;
+  // Calculer les modules restants à évaluer
+  const remainingModules = Math.max(0, allModules.length - modulesWithGrades);
 
   return [
     {
@@ -152,40 +162,62 @@ function generateGradesSummary(
       value: `${generalAverage.toFixed(1)} / 20`,
       icon: "FaAward",
       color: "text-green-600",
-      description: `Moyenne calculée sur ${modulesWithGrades} module(s)`,
+      description: `Basée sur ${modulesWithGrades} module(s) évalué(s)`,
     },
     {
-      title: "Modules Évalués",
-      value: `${modulesWithGrades} / ${allModules.length}`,
+      title: "Notes Saisies",
+      value: `${existingGradesCount} notes`,
       icon: "FaChartLine",
       color: "text-blue-600",
-      description: `Modules avec notes sur ${allModules.length} au total`,
+      description: `Réparties sur ${modulesWithGrades} module(s)`,
     },
     {
       title: "Matière la plus faible",
       value: weakestSubject,
       icon: "FaArrowDown",
       color: "text-red-600",
-      description: weakestSubject !== "Aucune" ? `Moyenne: ${weakestAverage.toFixed(2)}/20` : "Aucune note disponible",
+      description: weakestSubject !== "Aucune" ? `Moyenne: ${weakestAverage.toFixed(1)}/20` : "Aucune note disponible",
     },
     {
-      title: "Prochains Évaluations",
-      value: `${Math.min(3, allModules.length - modulesWithGrades)}`,
+      title: "Évaluations restantes",
+      value: `${remainingModules}`,
       icon: "FaClipboardList",
-      color: "text-blue-600",
-      description: "Modules restant à évaluer",
+      color: "text-orange-600",
+      description: remainingModules > 0 ? `${remainingModules} module(s) sans note` : "Tous modules évalués",
     },
   ];
 }
 
-// Fonction pour créer des notes vides pour tous les modules
-function createEmptyGradesForModules(modules: any[]): GradeDetail[] {
-  const emptyGrades: GradeDetail[] = [];
-  
+// Fonction pour créer des notes structurées par module CORRIGÉE
+function createStructuredGrades(modules: any[], existingGrades: any[]): GradeDetail[] {
+  const allDetailedGrades: GradeDetail[] = [];
+
   modules.forEach(module => {
     const semestre = module.semestre?.nom || "S1";
     
-    // Créer des entrées vides pour tous les types d'examens possibles
+    // Chercher si ce module a des notes existantes
+    const moduleGrades = existingGrades.find(g => g.moduleId === module.id);
+    
+    if (moduleGrades) {
+      // Ajouter les notes existantes
+      if (moduleGrades.interrogation1 !== null) {
+        allDetailedGrades.push(mapGradeToFrontend(moduleGrades, module, "Interrogation", "I1", semestre));
+      }
+      if (moduleGrades.interrogation2 !== null) {
+        allDetailedGrades.push(mapGradeToFrontend(moduleGrades, module, "Interrogation", "I2", semestre));
+      }
+      if (moduleGrades.interrogation3 !== null) {
+        allDetailedGrades.push(mapGradeToFrontend(moduleGrades, module, "Interrogation", "I3", semestre));
+      }
+      if (moduleGrades.devoir !== null) {
+        allDetailedGrades.push(mapGradeToFrontend(moduleGrades, module, "Devoir", "D1", semestre));
+      }
+      if (moduleGrades.composition !== null) {
+        allDetailedGrades.push(mapGradeToFrontend(moduleGrades, module, "Composition", "C1", semestre));
+      }
+    }
+    
+    // Ajouter les emplacements vides pour les notes manquantes
     const examTypes = [
       { type: "Interrogation" as const, keys: ["I1", "I2", "I3"] },
       { type: "Devoir" as const, keys: ["D1"] },
@@ -194,19 +226,28 @@ function createEmptyGradesForModules(modules: any[]): GradeDetail[] {
 
     examTypes.forEach(examType => {
       examType.keys.forEach(key => {
-        emptyGrades.push({
-          module: module.nom,
-          examType: examType.type,
-          grade: 0, // 0 signifie "pas de note"
-          coefficient: module.coefficient,
-          key,
-          semestre
-        });
+        // Vérifier si cette note n'existe pas déjà
+        const exists = allDetailedGrades.some(grade => 
+          grade.module === module.nom && 
+          grade.examType === examType.type && 
+          grade.key === key
+        );
+        
+        if (!exists) {
+          allDetailedGrades.push({
+            module: module.nom,
+            examType: examType.type,
+            grade: 0, // 0 signifie "pas de note"
+            coefficient: module.coefficient,
+            key,
+            semestre
+          });
+        }
       });
     });
   });
 
-  return emptyGrades;
+  return allDetailedGrades;
 }
 
 // Fonction pour obtenir les semestres uniques à partir des modules
@@ -235,16 +276,28 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    console.log(`📊 Récupération des notes pour l'étudiant: ${userId}`);
+    console.log(`📊 Récupération des notes pour l'utilisateur Clerk: ${userId}`);
 
-    // Récupérer le profil étudiant directement
+    // Récupérer le profil étudiant
     const studentData = await prisma.user.findUnique({
       where: { clerkUserId: userId },
       include: {
         student: {
           include: {
             filiere: true,
-            vague: true
+            vague: true,
+            grades: {
+              include: {
+                module: {
+                  include: {
+                    semestre: true
+                  }
+                }
+              },
+              orderBy: {
+                updatedAt: 'desc'
+              }
+            }
           }
         }
       }
@@ -263,6 +316,7 @@ export async function GET(req: NextRequest) {
 
     const student = studentData.student;
     console.log(`✅ Étudiant trouvé: ${studentData.firstName} ${studentData.lastName}`);
+    console.log(`📝 ${student.grades.length} notes trouvées dans l'étudiant`);
 
     // Récupérer tous les modules de la filière de l'étudiant avec leurs semestres
     const allModules = await prisma.module.findMany({
@@ -284,77 +338,20 @@ export async function GET(req: NextRequest) {
       ]
     });
 
-    // Récupérer les notes existantes de l'étudiant avec les modules et semestres
-    const existingGrades = await prisma.grade.findMany({
-      where: {
-        studentId: student.id
-      },
-      include: {
-        module: {
-          include: {
-            semestre: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-
-    console.log(`📝 ${existingGrades.length} notes trouvées pour l'étudiant`);
     console.log(`📚 ${allModules.length} modules trouvés dans la filière`);
 
-    // Obtenir les semestres uniques à partir des modules
+    // Obtenir les semestres uniques
     const allSemestres = getUniqueSemestresFromModules(allModules);
     console.log(`🎓 Semestres trouvés:`, allSemestres);
 
-    // Transformer les notes existantes en format frontend
-    const existingDetailedGrades: GradeDetail[] = [];
-
-    existingGrades.forEach(grade => {
-      const module = grade.module;
-      const semestre = module.semestre?.nom || "S1";
-
-      // Générer les entrées pour chaque type de note existante
-      if (grade.interrogation1 !== null && grade.interrogation1 !== undefined) {
-        existingDetailedGrades.push(mapGradeToFrontend(grade, module, "Interrogation", "I1", semestre));
-      }
-      if (grade.interrogation2 !== null && grade.interrogation2 !== undefined) {
-        existingDetailedGrades.push(mapGradeToFrontend(grade, module, "Interrogation", "I2", semestre));
-      }
-      if (grade.interrogation3 !== null && grade.interrogation3 !== undefined) {
-        existingDetailedGrades.push(mapGradeToFrontend(grade, module, "Interrogation", "I3", semestre));
-      }
-      if (grade.devoir !== null && grade.devoir !== undefined) {
-        existingDetailedGrades.push(mapGradeToFrontend(grade, module, "Devoir", "D1", semestre));
-      }
-      if (grade.composition !== null && grade.composition !== undefined) {
-        existingDetailedGrades.push(mapGradeToFrontend(grade, module, "Composition", "C1", semestre));
-      }
-    });
-
-    // Créer des notes vides pour tous les modules (même sans notes)
-    const emptyGrades = createEmptyGradesForModules(allModules);
-
-    // Fusionner les notes existantes avec les notes vides
-    // Les notes existantes écrasent les notes vides correspondantes
-    const allDetailedGrades = [...emptyGrades];
+    // Créer les notes structurées
+    const detailedGrades = createStructuredGrades(allModules, student.grades);
     
-    existingDetailedGrades.forEach(existingGrade => {
-      const index = allDetailedGrades.findIndex(emptyGrade => 
-        emptyGrade.module === existingGrade.module && 
-        emptyGrade.examType === existingGrade.examType && 
-        emptyGrade.key === existingGrade.key
-      );
-      
-      if (index !== -1) {
-        allDetailedGrades[index] = existingGrade;
-      }
-    });
-
-    // Calculer la moyenne générale (seulement sur les notes existantes)
-    const gradesForAverage = allDetailedGrades.filter(grade => grade.grade > 0);
-    const generalAverage = calculateGeneralAverage(gradesForAverage);
+    // Filtrer les notes existantes (grade > 0) pour le calcul de moyenne
+    const existingGradesForAverage = detailedGrades.filter(grade => grade.grade > 0);
+    
+    // Calculer la moyenne générale
+    const generalAverage = calculateGeneralAverage(existingGradesForAverage);
 
     // Données de l'étudiant
     const studentInfo: StudentData = {
@@ -368,7 +365,7 @@ export async function GET(req: NextRequest) {
     // Générer le résumé des notes
     const moduleNames = allModules.map(m => m.nom);
     const gradesSummary = generateGradesSummary(
-      gradesForAverage, 
+      detailedGrades, 
       generalAverage, 
       studentInfo.studentName,
       moduleNames
@@ -377,15 +374,16 @@ export async function GET(req: NextRequest) {
     const response: ApiResponse = {
       studentData: studentInfo,
       gradesSummary,
-      detailedGrades: allDetailedGrades,
+      detailedGrades,
       generalAverage,
       allSemestres: allSemestres,
       allModules: moduleNames,
       success: true
     };
 
-    console.log(`✅ Données préparées: ${allDetailedGrades.length} notes (dont ${gradesForAverage.length} avec notes)`);
-    console.log(`📊 Semestres disponibles:`, allSemestres);
+    console.log(`✅ Données préparées: ${detailedGrades.length} entrées de notes`);
+    console.log(`📊 Notes existantes: ${existingGradesForAverage.length}`);
+    console.log(`🎯 Moyenne générale: ${generalAverage.toFixed(2)}`);
 
     return NextResponse.json(response);
 

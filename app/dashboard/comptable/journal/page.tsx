@@ -3,15 +3,19 @@ import React, { useState, useEffect } from 'react';
 import { 
   Filter, Download, RefreshCw,
   Eye, Users, GraduationCap, CreditCard,
+  FileText, Table, FileDown, CheckCircle, XCircle, AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table as UITable, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import toast from 'react-hot-toast';
 
+// Types définis localement
 interface OperationAutomatique {
   id: string;
   numero: string;
@@ -34,84 +38,443 @@ interface OperationAutomatique {
   notes?: string;
 }
 
+interface JournalFilters {
+  dateDebut: string;
+  dateFin: string;
+  type: string;
+  search: string;
+}
+
+interface ExportMetadata {
+  title: string;
+  generatedAt: string;
+  totalOperations: number;
+  totalMontant: number;
+  filters: {
+    periode: string;
+    type: string;
+    search: string;
+  };
+}
+
+// Service API intégré
+class JournalService {
+  private static readonly API_URL = '/api/comptable/journal';
+
+  static async getOperations(filters: JournalFilters) {
+    const params = new URLSearchParams();
+    
+    if (filters.dateDebut) params.append('dateDebut', filters.dateDebut);
+    if (filters.dateFin) params.append('dateFin', filters.dateFin);
+    if (filters.type && filters.type !== 'all') params.append('type', filters.type);
+    if (filters.search) params.append('search', filters.search);
+
+    const response = await fetch(`${this.API_URL}?${params.toString()}`);
+    
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération des opérations');
+    }
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || 'Erreur inconnue');
+    }
+
+    return result;
+  }
+
+  static async exportOperations(filters: JournalFilters, exportType: 'pdf' | 'excel') {
+    const response = await fetch(this.API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'export',
+        type: exportType,
+        filters
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de l\'export');
+    }
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || 'Erreur lors de l\'export');
+    }
+
+    return result;
+  }
+
+  static async syncOperations() {
+    const response = await fetch(this.API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'sync'
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la synchronisation');
+    }
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || 'Erreur lors de la synchronisation');
+    }
+
+    return result;
+  }
+}
+
+// Service d'export amélioré avec toasts personnalisés
+class ExportService {
+  // Toast personnalisé pour le succès
+  private static showSuccessToast(message: string, filename: string) {
+    toast.custom(
+      (t) => (
+        <div className={`${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
+          <div className="flex-1 w-0 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 pt-0.5">
+                <CheckCircle className="h-6 w-6 text-green-500" />
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  Export réussi
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  {message}
+                </p>
+                <p className="text-xs text-gray-400">
+                  Fichier: {filename}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex border-l border-gray-200">
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500 focus:outline-none"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: 5000 }
+    );
+  }
+
+  // Toast personnalisé pour l'erreur
+  private static showErrorToast(message: string) {
+    toast.custom(
+      (t) => (
+        <div className={`${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-4 border-red-500`}>
+          <div className="flex-1 w-0 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 pt-0.5">
+                <XCircle className="h-6 w-6 text-red-500" />
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  Erreur d'export
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  {message}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex border-l border-gray-200">
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500 focus:outline-none"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: 6000 }
+    );
+  }
+
+  // Toast personnalisé pour l'export en cours
+  private static showLoadingToast(exportType: 'pdf' | 'excel') {
+    const toastId = toast.custom(
+      (t) => (
+        <div className={`${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-4 border-blue-500`}>
+          <div className="flex-1 w-0 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 pt-0.5">
+                <RefreshCw className="h-6 w-6 text-blue-500 animate-spin" />
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  Préparation de l'export
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  Génération du fichier {exportType.toUpperCase()} en cours...
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ),
+      { duration: Infinity }
+    );
+    return toastId;
+  }
+
+  static async exportToPDF(data: { operations: any[]; metadata: ExportMetadata }, filename: string) {
+    const toastId = this.showLoadingToast('pdf');
+    
+    try {
+      // Simulation d'un délai pour l'export PDF
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Générer le contenu PDF formaté
+      const content = this.generatePDFContent(data);
+      const blob = new Blob([content], { type: 'application/pdf' });
+      this.downloadFile(blob, filename);
+      
+      toast.dismiss(toastId);
+      this.showSuccessToast(
+        `Votre journal a été exporté en PDF avec ${data.metadata.totalOperations} opérations`,
+        filename
+      );
+      
+    } catch (error) {
+      toast.dismiss(toastId);
+      this.showErrorToast('Erreur lors de la génération du PDF');
+      throw error;
+    }
+  }
+
+  static async exportToExcel(data: { operations: any[]; metadata: ExportMetadata }, filename: string) {
+    const toastId = this.showLoadingToast('excel');
+    
+    try {
+      // Simulation d'un délai pour l'export Excel
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Générer le contenu Excel formaté
+      const content = this.generateExcelContent(data);
+      const blob = new Blob([content], { type: 'application/vnd.ms-excel' });
+      this.downloadFile(blob, filename);
+      
+      toast.dismiss(toastId);
+      this.showSuccessToast(
+        `Votre journal a été exporté en Excel avec ${data.metadata.totalOperations} opérations`,
+        filename
+      );
+      
+    } catch (error) {
+      toast.dismiss(toastId);
+      this.showErrorToast('Erreur lors de la génération du fichier Excel');
+      throw error;
+    }
+  }
+
+  private static generatePDFContent(data: { operations: any[]; metadata: ExportMetadata }): string {
+    const { operations, metadata } = data;
+    
+    return `JOURNAL DES OPÉRATIONS COMPTABLES
+========================================
+
+${metadata.title}
+Période: ${metadata.filters.periode}
+Généré le: ${metadata.generatedAt}
+
+INFORMATIONS GÉNÉRALES
+----------------------
+Total des opérations: ${metadata.totalOperations}
+Montant total: ${this.formatMoney(metadata.totalMontant)} XOF
+Type: ${metadata.filters.type}
+Recherche: ${metadata.filters.search || 'Aucune'}
+
+DÉTAIL DES OPÉRATIONS
+---------------------
+${operations.map((op, index) => 
+`${index + 1}. ${op.numero}
+   Date: ${op.date}
+   Élève: ${op.eleve}
+   Filière: ${op.filiere || 'N/A'}
+   Vague: ${op.vague || 'N/A'}
+   Libellé: ${op.libelle}
+   Montant: ${this.formatMoney(op.montant)} XOF
+   Référence: ${op.reference}
+   Mode paiement: ${op.modePaiement}
+   Statut: ${op.statut}
+   Source: ${op.source}
+   ${'-'.repeat(50)}`
+).join('\n')}
+
+FIN DU RAPPORT
+==============`;
+  }
+
+  private static generateExcelContent(data: { operations: any[]; metadata: ExportMetadata }): string {
+    const { operations, metadata } = data;
+    
+    const headers = [
+      'Numéro', 
+      'Date', 
+      'Élève', 
+      'Filière', 
+      'Vague', 
+      'Libellé', 
+      'Montant (XOF)', 
+      'Référence', 
+      'Mode Paiement', 
+      'Statut', 
+      'Source'
+    ];
+    
+    const rows = operations.map(op => [
+      op.numero,
+      op.date,
+      op.eleve,
+      op.filiere || 'N/A',
+      op.vague || 'N/A',
+      op.libelle,
+      op.montant,
+      op.reference,
+      op.modePaiement,
+      op.statut,
+      op.source
+    ]);
+    
+    // Ajouter les métadonnées en en-tête
+    const metaLines = [
+      [`Journal des Opérations Comptables - ${metadata.title}`],
+      [`Période: ${metadata.filters.periode}`],
+      [`Généré le: ${metadata.generatedAt}`],
+      [`Total opérations: ${metadata.totalOperations}`],
+      [`Montant total: ${this.formatMoney(metadata.totalMontant)} XOF`],
+      [`Type: ${metadata.filters.type}`],
+      [`Recherche: ${metadata.filters.search || 'Aucune'}`],
+      [''], // Ligne vide
+      headers
+    ];
+    
+    return [...metaLines, ...rows].map(row => 
+      row.map(cell => `"${cell}"`).join(',')
+    ).join('\n');
+  }
+
+  private static formatMoney(amount: number): string {
+    return new Intl.NumberFormat('fr-FR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  }
+
+  private static downloadFile(blob: Blob, filename: string) {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
+}
+
 export default function JournalOperationsPage() {
   const [operations, setOperations] = useState<OperationAutomatique[]>([]);
   const [filteredOperations, setFilteredOperations] = useState<OperationAutomatique[]>([]);
   const [selectedType, setSelectedType] = useState<string>('all');
-  const [dateDebut, setDateDebut] = useState<string>('2024-01-01');
-  const [dateFin, setDateFin] = useState<string>('2024-01-31');
+  
+  // Dates par défaut - dernier mois
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  
+  const [dateDebut, setDateDebut] = useState<string>(firstDayOfMonth.toISOString().split('T')[0]);
+  const [dateFin, setDateFin] = useState<string>(today.toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOperation, setSelectedOperation] = useState<OperationAutomatique | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // Charger les opérations
+  const loadOperations = async () => {
+    const loadingToast = toast.custom(
+      (t) => (
+        <div className={`${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-4 border-blue-500`}>
+          <div className="flex-1 w-0 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 pt-0.5">
+                <RefreshCw className="h-6 w-6 text-blue-500 animate-spin" />
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  Chargement en cours
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  Récupération des opérations...
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ),
+      { duration: Infinity }
+    );
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const filters: JournalFilters = {
+        dateDebut,
+        dateFin,
+        type: selectedType,
+        search: searchTerm
+      };
+      
+      const result = await JournalService.getOperations(filters);
+      setOperations(result.data.operations);
+      setFilteredOperations(result.data.operations);
+
+      toast.dismiss(loadingToast);
+      toast.success(`✅ ${result.data.operations.length} opérations chargées avec succès`);
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des opérations';
+      setError(errorMessage);
+      
+      toast.dismiss(loadingToast);
+      toast.error(`❌ ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Chargement initial
   useEffect(() => {
-    const mockOperationsAutomatiques: OperationAutomatique[] = [
-      {
-        id: '1',
-        numero: 'JOU-2024-001',
-        date: '2024-01-05',
-        type: 'paiement_inscription',
-        studentId: 's1',
-        studentName: 'Marie Dupont',
-        parentName: 'M. Dupont',
-        filiere: 'Développement Web',
-        vague: 'Vague Janvier 2024',
-        compteDebit: '101',
-        compteCredit: '702',
-        libelle: 'Inscription - Marie Dupont - Paiement espèces',
-        montant: 50000,
-        reference: 'INSC-001',
-        statut: 'comptabilise',
-        modePaiement: 'especes',
-        source: 'paiement_auto',
-        dateComptabilisation: '2024-01-05',
-        notes: 'Paiement en espèces enregistré automatiquement'
-      },
-      {
-        id: '2',
-        numero: 'JOU-2024-002',
-        date: '2024-01-05',
-        type: 'paiement_scolarite',
-        studentId: 's2',
-        studentName: 'Pierre Martin',
-        parentName: 'Mme. Martin',
-        filiere: 'Data Science',
-        vague: 'Vague Janvier 2024',
-        compteDebit: '102',
-        compteCredit: '701',
-        libelle: 'Scolarité - Pierre Martin - Virement bancaire',
-        montant: 300000,
-        reference: 'FACT-001',
-        statut: 'comptabilise',
-        modePaiement: 'virement',
-        source: 'paiement_auto',
-        dateComptabilisation: '2024-01-05'
-      },
-      {
-        id: '3',
-        numero: 'JOU-2024-003',
-        date: '2024-01-10',
-        type: 'paiement_inscription',
-        studentId: 's3',
-        studentName: 'Sophie Bernard',
-        parentName: 'M. Bernard',
-        filiere: 'Design Graphique',
-        vague: 'Vague Janvier 2024',
-        compteDebit: '102',
-        compteCredit: '702',
-        libelle: 'Inscription - Sophie Bernard - Mobile Money',
-        montant: 50000,
-        reference: 'INSC-002',
-        statut: 'comptabilise',
-        modePaiement: 'mobile_money',
-        source: 'paiement_auto',
-        dateComptabilisation: '2024-01-10'
-      }
-    ];
-    setOperations(mockOperationsAutomatiques);
-    setFilteredOperations(mockOperationsAutomatiques);
+    loadOperations();
   }, []);
 
+  // Filtrage côté client
   useEffect(() => {
     const filtered = operations.filter(op => 
       op.date >= dateDebut &&
@@ -163,6 +526,137 @@ export default function JournalOperationsPage() {
     setIsDetailModalOpen(true);
   };
 
+  const handleExport = async (exportType: 'pdf' | 'excel') => {
+    try {
+      setExportLoading(true);
+      setIsExportDialogOpen(false);
+
+      const filters: JournalFilters = {
+        dateDebut,
+        dateFin,
+        type: selectedType,
+        search: searchTerm
+      };
+
+      const result = await JournalService.exportOperations(filters, exportType);
+
+      // Utiliser le service d'export frontend amélioré
+      const filename = `journal-operations-${dateDebut}-${dateFin}.${exportType === 'pdf' ? 'pdf' : 'xlsx'}`;
+      
+      if (exportType === 'pdf') {
+        await ExportService.exportToPDF(result.data, filename);
+      } else {
+        await ExportService.exportToExcel(result.data, filename);
+      }
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de l\'export';
+      // L'erreur est déjà gérée par ExportService.showErrorToast()
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleSync = async () => {
+    const syncToast = toast.custom(
+      (t) => (
+        <div className={`${
+          t.visible ? 'animate-enter' : 'animate-leave'
+        } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-4 border-purple-500`}>
+          <div className="flex-1 w-0 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 pt-0.5">
+                <RefreshCw className="h-6 w-6 text-purple-500 animate-spin" />
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  Synchronisation en cours
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  Recherche des nouvelles opérations...
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ),
+      { duration: Infinity }
+    );
+
+    try {
+      setLoading(true);
+      const result = await JournalService.syncOperations();
+      
+      toast.dismiss(syncToast);
+      toast.success(`🔄 ${result.message} - ${result.data.nouvellesOperations} nouvelles opérations`);
+
+      // Recharger les données après synchronisation
+      await loadOperations();
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la synchronisation';
+      toast.dismiss(syncToast);
+      toast.error(`❌ ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openExportDialog = () => {
+    if (filteredOperations.length === 0) {
+      toast.custom(
+        (t) => (
+          <div className={`${
+            t.visible ? 'animate-enter' : 'animate-leave'
+          } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-4 border-orange-500`}>
+            <div className="flex-1 w-0 p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 pt-0.5">
+                  <AlertCircle className="h-6 w-6 text-orange-500" />
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-sm font-medium text-gray-900">
+                    Aucune donnée à exporter
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Il n'y a aucune opération à exporter avec les filtres actuels
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex border-l border-gray-200">
+              <button
+                onClick={() => toast.dismiss(t.id)}
+                className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-600 hover:text-gray-500 focus:outline-none"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        ),
+        { duration: 4000 }
+      );
+      return;
+    }
+    setIsExportDialogOpen(true);
+  };
+
+  // Skeleton Loader
+  const SkeletonRow = () => (
+    <TableRow>
+      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+      <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+      <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+      <TableCell><Skeleton className="h-8 w-8 rounded" /></TableCell>
+    </TableRow>
+  );
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       {/* Header */}
@@ -172,14 +666,18 @@ export default function JournalOperationsPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Journal des Opérations</h1>
             <p className="text-gray-600 mt-1">Opérations comptables liées aux inscriptions et scolarités</p>
           </div>
-          <div className="flex gap-3 mt-4 sm:mt-0 flex flex-col">
-            <Button variant="outline" onClick={() => alert('Export PDF en cours')}>
+          <div className="flex gap-3 mt-4 sm:mt-0 flex-wrap">
+            <Button variant="outline" onClick={openExportDialog} disabled={loading || exportLoading}>
               <Download className="h-4 w-4 mr-2" />
-              Exporter PDF
+              Exporter
             </Button>
-            <Button variant="outline" onClick={() => alert('Synchronisation en cours')}>
-              <RefreshCw className="h-4 w-4 mr-2" />
+            <Button variant="outline" onClick={handleSync} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Synchroniser
+            </Button>
+            <Button onClick={loadOperations} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Actualiser
             </Button>
           </div>
         </div>
@@ -190,32 +688,61 @@ export default function JournalOperationsPage() {
         <div className="p-6 space-y-6 max-w-7xl mx-auto">
           {/* Stat cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader><CardTitle>Total Opérations</CardTitle></CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{operations.length}</div>
-                <p className="text-xs text-gray-600 mt-1">Opérations liées inscr./scolarité</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle>Encaissements</CardTitle></CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{formatMoney(operations.reduce((a, op) => ['paiement_inscription', 'paiement_scolarite'].includes(op.type) ? a + op.montant : a, 0))}</div>
-                <p className="text-xs text-gray-600 mt-1">Scolarité & Inscriptions</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle>Opérations Paiement Auto</CardTitle></CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">{operations.filter(op => op.source === 'paiement_auto').length}</div>
-                <p className="text-xs text-gray-600 mt-1">Depuis paiements automatique</p>
-              </CardContent>
-            </Card>
+            {loading ? (
+              <>
+                {[...Array(4)].map((_, i) => (
+                  <Card key={i}>
+                    <CardHeader><Skeleton className="h-4 w-24" /></CardHeader>
+                    <CardContent>
+                      <Skeleton className="h-6 w-16" />
+                      <Skeleton className="h-3 w-32 mt-2" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </>
+            ) : (
+              <>
+                <Card>
+                  <CardHeader><CardTitle>Total Opérations</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-blue-600">{operations.length}</div>
+                    <p className="text-xs text-gray-600 mt-1">Opérations liées inscr./scolarité</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader><CardTitle>Encaissements</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {formatMoney(operations.reduce((a, op) => ['paiement_inscription', 'paiement_scolarite'].includes(op.type) ? a + op.montant : a, 0))}
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">Scolarité & Inscriptions</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader><CardTitle>Opérations Paiement Auto</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {operations.filter(op => op.source === 'paiement_auto').length}
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">Depuis paiements automatique</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader><CardTitle>Période</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="text-lg font-bold text-orange-600">
+                      {new Date(dateDebut).toLocaleDateString('fr-FR')}
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">au {new Date(dateFin).toLocaleDateString('fr-FR')}</p>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
 
           {/* Filters */}
           <Card>
-            <CardContent>
+            <CardContent className="p-4">
               <div className="flex flex-col sm:flex-row gap-4">
                 <Input 
                   placeholder="Rechercher par libellé, référence, élève..."
@@ -237,6 +764,10 @@ export default function JournalOperationsPage() {
                 </Select>
                 <Input type="date" value={dateDebut} onChange={e => setDateDebut(e.target.value)} />
                 <Input type="date" value={dateFin} onChange={e => setDateFin(e.target.value)} />
+                <Button onClick={loadOperations} disabled={loading}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Appliquer
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -245,10 +776,16 @@ export default function JournalOperationsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Journal des Opérations Automatiques</CardTitle>
-              <CardDescription>{filteredOperations.length} opération(s) trouvée(s)</CardDescription>
+              <CardDescription>
+                {loading ? (
+                  <Skeleton className="h-4 w-32" />
+                ) : (
+                  `${filteredOperations.length} opération(s) trouvée(s) - Total: ${formatMoney(filteredOperations.reduce((sum, op) => sum + op.montant, 0))}`
+                )}
+              </CardDescription>
             </CardHeader>
             <CardContent className="overflow-x-auto">
-              <Table>
+              <UITable>
                 <TableHeader>
                   <TableRow>
                     <TableHead>N° Opération</TableHead>
@@ -264,9 +801,22 @@ export default function JournalOperationsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredOperations.length === 0 ? (
+                  {loading ? (
+                    [...Array(5)].map((_, i) => <SkeletonRow key={i} />)
+                  ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-gray-500">Aucune opération trouvée</TableCell>
+                      <TableCell colSpan={10} className="text-center py-8 text-red-500">
+                        {error}
+                        <Button variant="outline" className="ml-4" onClick={loadOperations}>
+                          Réessayer
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredOperations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                        Aucune opération trouvée avec les critères actuels
+                      </TableCell>
                     </TableRow>
                   ) : (
                     filteredOperations.map(op => (
@@ -295,7 +845,7 @@ export default function JournalOperationsPage() {
                     ))
                   )}
                 </TableBody>
-              </Table>
+              </UITable>
             </CardContent>
           </Card>
         </div>
@@ -331,6 +881,54 @@ export default function JournalOperationsPage() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Exporter le journal</DialogTitle>
+            <DialogDescription>
+              Choisissez le format d&apos;export pour {filteredOperations.length} opérations
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => handleExport('pdf')}
+              disabled={exportLoading}
+              className="h-20 flex-col hover:bg-red-50 hover:border-red-200 transition-colors"
+            >
+              <FileText className="h-8 w-8 mb-2 text-red-600" />
+              <span className="font-medium">PDF</span>
+              <span className="text-xs text-gray-500 mt-1">Format document</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => handleExport('excel')}
+              disabled={exportLoading}
+              className="h-20 flex-col hover:bg-green-50 hover:border-green-200 transition-colors"
+            >
+              <Table className="h-8 w-8 mb-2 text-green-600" />
+              <span className="font-medium">Excel</span>
+              <span className="text-xs text-gray-500 mt-1">Format tableur</span>
+            </Button>
+          </div>
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-start gap-2">
+              <FileDown className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-blue-900">Informations d'export</p>
+                <p className="text-xs text-blue-700 mt-1">
+                  Période: {new Date(dateDebut).toLocaleDateString('fr-FR')} au {new Date(dateFin).toLocaleDateString('fr-FR')}
+                </p>
+                <p className="text-xs text-blue-700">
+                  {filteredOperations.length} opérations - {formatMoney(filteredOperations.reduce((sum, op) => sum + op.montant, 0))}
+                </p>
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

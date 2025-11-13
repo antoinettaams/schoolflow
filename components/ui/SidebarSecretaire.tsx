@@ -107,7 +107,6 @@ const SidebarSecretaire = () => {
     { label: "Événements", href: "/dashboard/secretaire/evenements", icon: <FaCalendarAlt />, category: "ÉVÉNEMENTS" },
     
     // === RAPPORTS ===
-    { label: "Statistiques", href: "/dashboard/secretaire/statistiques", icon: <FaChartLine />, category: "RAPPORTS" },
     { label: "Rapports Mensuels", href: "/dashboard/secretaire/rapports", icon: <FaClipboardList />, category: "RAPPORTS" },
   ];
 

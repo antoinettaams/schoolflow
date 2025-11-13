@@ -1,4 +1,3 @@
-// app/api/censor/grades/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { PrismaClient } from "@prisma/client";
@@ -45,6 +44,10 @@ interface GradeData {
   formulaUsed: string | null;
   createdAt: string;
   updatedAt: string;
+  semestreId: number | null;
+  semestreNom: string | null;
+  moyenneModule: number | null;
+  appreciation: string | null;
 }
 
 // Interface pour la réponse de l'API
@@ -66,28 +69,44 @@ interface ApiResponse {
   };
 }
 
-// Fonction pour calculer la moyenne d'un grade
+// ⭐ FONCTION CORRIGÉE : Calcul de la moyenne
 function calculateGradeAverage(grade: any): number | null {
-  const notes = [
-    grade.interrogation1,
-    grade.interrogation2, 
-    grade.interrogation3,
-    grade.devoir,
-    grade.composition
-  ].filter(note => note !== null) as number[];
+  try {
+    const notes = [
+      grade.interrogation1,
+      grade.interrogation2, 
+      grade.interrogation3,
+      grade.devoir,
+      grade.composition
+    ].filter(note => note !== null && note !== undefined && !isNaN(note)) as number[];
 
-  if (notes.length === 0) {
+    if (notes.length === 0) {
+      return null;
+    }
+
+    let moyenne: number;
+
+    // Si composition existe, elle a plus de poids (50%)
+    if (grade.composition !== null && grade.composition !== undefined && !isNaN(grade.composition)) {
+      const autresNotes = notes.filter(note => note !== grade.composition);
+      
+      if (autresNotes.length > 0) {
+        const moyenneAutres = autresNotes.reduce((acc, note) => acc + note, 0) / autresNotes.length;
+        moyenne = (grade.composition * 0.5) + (moyenneAutres * 0.5);
+      } else {
+        moyenne = grade.composition;
+      }
+    } else {
+      // Moyenne simple de toutes les notes
+      moyenne = notes.reduce((acc, note) => acc + note, 0) / notes.length;
+    }
+
+    // Arrondi à 2 décimales
+    return Math.round(moyenne * 100) / 100;
+  } catch (error) {
+    console.error("❌ Erreur calcul moyenne:", error);
     return null;
   }
-
-  // Si composition existe, elle a plus de poids
-  if (grade.composition !== null) {
-    return grade.composition;
-  }
-
-  // Calcul de moyenne simple
-  const sum = notes.reduce((acc, note) => acc + note, 0);
-  return Math.round((sum / notes.length) * 10) / 10;
 }
 
 // Fonction pour synchroniser l'utilisateur Clerk avec la base de données
@@ -95,38 +114,30 @@ async function syncUserWithDatabase(clerkUserId: string) {
   try {
     console.log("🔄 Synchronisation de l'utilisateur:", clerkUserId);
     
-    // Récupérer les infos de l'utilisateur depuis Clerk
     const { userId, sessionClaims } = await auth();
     
     if (!userId) {
       throw new Error("Utilisateur Clerk non trouvé");
     }
 
-    // Vérifier si l'utilisateur existe déjà dans la base
     const existingUser = await prisma.user.findFirst({
       where: { clerkUserId },
       select: { id: true, role: true, email: true }
     });
 
     if (existingUser) {
-      console.log("✅ Utilisateur déjà synchronisé:", existingUser);
       return existingUser;
     }
 
-    // Créer un nouvel utilisateur dans la base
     const email = sessionClaims?.email as string || `${clerkUserId}@schoolflow.com`;
     const firstName = sessionClaims?.firstName as string || "Utilisateur";
     const lastName = sessionClaims?.lastName as string || "Clerk";
     const metadata = sessionClaims?.metadata as any;
 
-    // Déterminer le rôle depuis les métadonnées Clerk
     let role: string = "CENSEUR";
-
     if (metadata?.role) {
       role = metadata.role;
     }
-
-    console.log("🎯 Tentative de création d'utilisateur avec rôle:", role);
 
     const newUser = await prisma.user.create({
       data: {
@@ -140,16 +151,12 @@ async function syncUserWithDatabase(clerkUserId: string) {
       select: { id: true, role: true, email: true }
     });
 
-    console.log("✅ Nouvel utilisateur créé:", newUser);
     return newUser;
 
   } catch (error) {
     console.error("❌ Erreur synchronisation utilisateur:", error);
     
-    // En cas d'erreur, essayez avec un rôle CENSEUR par défaut
     try {
-      console.log("🔄 Tentative avec rôle CENSEUR par défaut...");
-      
       const { userId, sessionClaims } = await auth();
       const email = sessionClaims?.email as string || `${clerkUserId}@schoolflow.com`;
       const firstName = sessionClaims?.firstName as string || "Utilisateur";
@@ -167,11 +174,8 @@ async function syncUserWithDatabase(clerkUserId: string) {
         select: { id: true, role: true, email: true }
       });
 
-      console.log("✅ Utilisateur créé avec rôle CENSEUR par défaut:", fallbackUser);
       return fallbackUser;
-
     } catch (fallbackError) {
-      console.error("❌ Erreur même avec rôle CENSEUR:", fallbackError);
       throw error;
     }
   }
@@ -181,22 +185,17 @@ async function syncUserWithDatabase(clerkUserId: string) {
 async function authenticateUser() {
   try {
     const { userId } = await auth();
-    console.log("🔐 UserId from Clerk:", userId);
-
+    
     if (!userId) {
       return { error: "Non authentifié", status: 401 };
     }
 
-    // Synchroniser l'utilisateur avec la base de données
     const user = await syncUserWithDatabase(userId);
     
     if (!user) {
       return { error: "Erreur de synchronisation utilisateur", status: 500 };
     }
-
-    console.log("🎭 Rôle de l'utilisateur:", user.role);
     
-    // Vérifier les autorisations
     if (user.role !== "CENSEUR" && user.role !== "ADMIN") {
       return { 
         error: `Accès non autorisé. Rôle: ${user.role}. Rôles requis: CENSEUR ou ADMIN`, 
@@ -215,7 +214,6 @@ async function authenticateUser() {
 // GET - Récupérer les grades
 export async function GET(request: NextRequest) {
   try {
-    // Authentification
     const authResult = await authenticateUser();
     if (authResult.error) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
@@ -223,21 +221,19 @@ export async function GET(request: NextRequest) {
 
     console.log("🔍 Récupération des grades pour le censeur...");
 
-    // Récupération des paramètres de filtre
     const { searchParams } = new URL(request.url);
     const filiereId = searchParams.get("filiere");
     const vagueId = searchParams.get("vague");
     const moduleId = searchParams.get("module");
     const studentId = searchParams.get("student");
 
-    // Construction du filtre
     const whereClause: any = {};
-    if (filiereId) whereClause.filiereId = parseInt(filiereId);
-    if (vagueId) whereClause.vagueId = vagueId;
-    if (moduleId) whereClause.moduleId = parseInt(moduleId);
-    if (studentId) whereClause.studentId = studentId;
+    if (filiereId && filiereId !== "all") whereClause.filiereId = parseInt(filiereId);
+    if (vagueId && vagueId !== "all") whereClause.vagueId = vagueId;
+    if (moduleId && moduleId !== "all") whereClause.moduleId = parseInt(moduleId);
+    if (studentId && studentId !== "all") whereClause.studentId = studentId;
 
-    // Récupération des grades avec toutes les relations
+    // ⭐ CORRECTION : Inclure le semestre dans la requête
     const grades = await prisma.grade.findMany({
       where: whereClause,
       include: {
@@ -280,6 +276,12 @@ export async function GET(request: NextRequest) {
               }
             }
           }
+        },
+        semestre: {
+          select: {
+            id: true,
+            nom: true,
+          }
         }
       },
       orderBy: [
@@ -292,9 +294,10 @@ export async function GET(request: NextRequest) {
 
     console.log(`📊 ${grades.length} grades trouvés`);
 
-    // Formatage des données avec calcul des moyennes
+    // ⭐ CORRECTION : Formatage amélioré avec utilisation de moyenneModule
     const formattedGrades: GradeData[] = grades.map(grade => {
-      const moyenne = calculateGradeAverage(grade);
+      // Utiliser moyenneModule si elle existe, sinon calculer
+      const moyenne = grade.moyenneModule !== null ? grade.moyenneModule : calculateGradeAverage(grade);
 
       return {
         id: grade.id,
@@ -335,39 +338,31 @@ export async function GET(request: NextRequest) {
         formulaUsed: grade.formulaUsed,
         createdAt: grade.createdAt.toISOString(),
         updatedAt: grade.updatedAt.toISOString(),
+        semestreId: grade.semestreId,
+        semestreNom: grade.semestre?.nom || null,
+        moyenneModule: grade.moyenneModule,
+        appreciation: grade.appreciation
       };
     });
 
     // Calcul des statistiques
-    const allAverages = formattedGrades
-      .map(g => g.moyenne)
-      .filter(avg => avg !== null) as number[];
-
-    const averageGeneral = allAverages.length > 0 
-      ? Math.round((allAverages.reduce((a, b) => a + b, 0) / allAverages.length) * 10) / 10
+    const validGrades = formattedGrades.filter(g => g.moyenne !== null && g.moyenne !== undefined);
+    const averageGeneral = validGrades.length > 0 
+      ? Math.round((validGrades.reduce((sum, g) => sum + (g.moyenne || 0), 0) / validGrades.length) * 100) / 100
       : 0;
 
-    // Statistiques par filière
     const gradesByFiliere = formattedGrades.reduce((acc, grade) => {
       const filiereName = grade.filiere.nom;
-      if (!acc[filiereName]) {
-        acc[filiereName] = 0;
-      }
-      acc[filiereName]++;
+      acc[filiereName] = (acc[filiereName] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Statistiques par vague
     const gradesByVague = formattedGrades.reduce((acc, grade) => {
       const vagueName = grade.vague.nom;
-      if (!acc[vagueName]) {
-        acc[vagueName] = 0;
-      }
-      acc[vagueName]++;
+      acc[vagueName] = (acc[vagueName] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Récupération des filtres disponibles
     const [filieres, vagues, modules, students] = await Promise.all([
       prisma.filiere.findMany({
         select: { id: true, nom: true },
@@ -465,10 +460,11 @@ export async function POST(request: NextRequest) {
       devoir,
       composition,
       rang,
-      formulaUsed
+      formulaUsed,
+      appreciation,
+      moyenneModule
     } = body;
 
-    // Validation des données requises
     if (!studentId || !moduleId || !filiereId || !vagueId || !teacherId) {
       return NextResponse.json(
         { error: "Données manquantes pour la sauvegarde" },
@@ -476,31 +472,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Calculer la moyenne si elle n'est pas fournie
+    const notesData = {
+      interrogation1: interrogation1 !== undefined ? parseFloat(interrogation1) : null,
+      interrogation2: interrogation2 !== undefined ? parseFloat(interrogation2) : null,
+      interrogation3: interrogation3 !== undefined ? parseFloat(interrogation3) : null,
+      devoir: devoir !== undefined ? parseFloat(devoir) : null,
+      composition: composition !== undefined ? parseFloat(composition) : null,
+    };
+
+    const calculatedMoyenne = calculateGradeAverage(notesData);
+    const finalMoyenne = moyenneModule !== undefined ? parseFloat(moyenneModule) : calculatedMoyenne;
+
     // Vérifier si le grade existe déjà
-    const existingGrade = await prisma.grade.findUnique({
+    const existingGrade = await prisma.grade.findFirst({
       where: {
-        studentId_moduleId_filiereId_vagueId: {
-          studentId,
-          moduleId: parseInt(moduleId),
-          filiereId: parseInt(filiereId),
-          vagueId
-        }
+        studentId,
+        moduleId: parseInt(moduleId),
+        filiereId: parseInt(filiereId),
+        vagueId
       }
     });
 
     let grade;
     if (existingGrade) {
-      // Mise à jour du grade existant
       grade = await prisma.grade.update({
         where: { id: existingGrade.id },
         data: {
-          interrogation1: interrogation1 !== undefined ? parseFloat(interrogation1) : null,
-          interrogation2: interrogation2 !== undefined ? parseFloat(interrogation2) : null,
-          interrogation3: interrogation3 !== undefined ? parseFloat(interrogation3) : null,
-          devoir: devoir !== undefined ? parseFloat(devoir) : null,
-          composition: composition !== undefined ? parseFloat(composition) : null,
+          ...notesData,
           rang: rang !== undefined ? parseInt(rang) : null,
           formulaUsed: formulaUsed || null,
+          appreciation: appreciation || null,
+          moyenneModule: finalMoyenne,
         },
         include: {
           student: {
@@ -511,12 +514,12 @@ export async function POST(request: NextRequest) {
           vague: true,
           teacher: {
             include: { user: { select: { firstName: true, lastName: true } } }
-          }
+          },
+          semestre: true
         }
       });
       console.log("✅ Grade mis à jour:", grade.id);
     } else {
-      // Création d'un nouveau grade
       grade = await prisma.grade.create({
         data: {
           studentId,
@@ -524,13 +527,11 @@ export async function POST(request: NextRequest) {
           filiereId: parseInt(filiereId),
           vagueId,
           teacherId,
-          interrogation1: interrogation1 !== undefined ? parseFloat(interrogation1) : null,
-          interrogation2: interrogation2 !== undefined ? parseFloat(interrogation2) : null,
-          interrogation3: interrogation3 !== undefined ? parseFloat(interrogation3) : null,
-          devoir: devoir !== undefined ? parseFloat(devoir) : null,
-          composition: composition !== undefined ? parseFloat(composition) : null,
+          ...notesData,
           rang: rang !== undefined ? parseInt(rang) : null,
           formulaUsed: formulaUsed || null,
+          appreciation: appreciation || null,
+          moyenneModule: finalMoyenne,
         },
         include: {
           student: {
@@ -541,7 +542,8 @@ export async function POST(request: NextRequest) {
           vague: true,
           teacher: {
             include: { user: { select: { firstName: true, lastName: true } } }
-          }
+          },
+          semestre: true
         }
       });
       console.log("✅ Nouveau grade créé:", grade.id);
@@ -557,51 +559,6 @@ export async function POST(request: NextRequest) {
     console.error("❌ Erreur création/mise à jour grade:", error);
     return NextResponse.json(
       { error: "Erreur lors de la sauvegarde du grade" },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE - Supprimer un grade
-export async function DELETE(request: NextRequest) {
-  try {
-    const authResult = await authenticateUser();
-    if (authResult.error) {
-      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json({ error: "ID du grade manquant" }, { status: 400 });
-    }
-
-    // Vérifier que le grade existe
-    const existingGrade = await prisma.grade.findUnique({
-      where: { id }
-    });
-
-    if (!existingGrade) {
-      return NextResponse.json({ error: "Grade non trouvé" }, { status: 404 });
-    }
-
-    // Supprimer le grade
-    await prisma.grade.delete({
-      where: { id }
-    });
-
-    console.log("✅ Grade supprimé:", id);
-    
-    return NextResponse.json({ 
-      success: true,
-      message: "Grade supprimé avec succès"
-    });
-
-  } catch (error) {
-    console.error("❌ Erreur suppression grade:", error);
-    return NextResponse.json(
-      { error: "Erreur lors de la suppression du grade" },
       { status: 500 }
     );
   }
@@ -626,14 +583,15 @@ export async function PUT(request: NextRequest) {
       devoir,
       composition,
       rang,
-      formulaUsed
+      formulaUsed,
+      appreciation,
+      moyenneModule
     } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID du grade manquant" }, { status: 400 });
     }
 
-    // Vérifier que le grade existe
     const existingGrade = await prisma.grade.findUnique({
       where: { id }
     });
@@ -642,17 +600,29 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Grade non trouvé" }, { status: 404 });
     }
 
-    // Mise à jour du grade
+    // Calculer la moyenne si elle n'est pas fournie
+    const notesData = {
+      interrogation1: interrogation1 !== undefined ? parseFloat(interrogation1) : existingGrade.interrogation1,
+      interrogation2: interrogation2 !== undefined ? parseFloat(interrogation2) : existingGrade.interrogation2,
+      interrogation3: interrogation3 !== undefined ? parseFloat(interrogation3) : existingGrade.interrogation3,
+      devoir: devoir !== undefined ? parseFloat(devoir) : existingGrade.devoir,
+      composition: composition !== undefined ? parseFloat(composition) : existingGrade.composition,
+    };
+
+    const calculatedMoyenne = calculateGradeAverage({
+      ...existingGrade,
+      ...notesData
+    });
+    const finalMoyenne = moyenneModule !== undefined ? parseFloat(moyenneModule) : calculatedMoyenne;
+
     const updatedGrade = await prisma.grade.update({
       where: { id },
       data: {
-        interrogation1: interrogation1 !== undefined ? parseFloat(interrogation1) : null,
-        interrogation2: interrogation2 !== undefined ? parseFloat(interrogation2) : null,
-        interrogation3: interrogation3 !== undefined ? parseFloat(interrogation3) : null,
-        devoir: devoir !== undefined ? parseFloat(devoir) : null,
-        composition: composition !== undefined ? parseFloat(composition) : null,
-        rang: rang !== undefined ? parseInt(rang) : null,
-        formulaUsed: formulaUsed || null,
+        ...notesData,
+        rang: rang !== undefined ? parseInt(rang) : existingGrade.rang,
+        formulaUsed: formulaUsed || existingGrade.formulaUsed,
+        appreciation: appreciation || existingGrade.appreciation,
+        moyenneModule: finalMoyenne,
       },
       include: {
         student: {
@@ -663,7 +633,8 @@ export async function PUT(request: NextRequest) {
         vague: true,
         teacher: {
           include: { user: { select: { firstName: true, lastName: true } } }
-        }
+        },
+        semestre: true
       }
     });
 
@@ -679,6 +650,49 @@ export async function PUT(request: NextRequest) {
     console.error("❌ Erreur mise à jour grade:", error);
     return NextResponse.json(
       { error: "Erreur lors de la mise à jour du grade" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Supprimer un grade
+export async function DELETE(request: NextRequest) {
+  try {
+    const authResult = await authenticateUser();
+    if (authResult.error) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: "ID du grade manquant" }, { status: 400 });
+    }
+
+    const existingGrade = await prisma.grade.findUnique({
+      where: { id }
+    });
+
+    if (!existingGrade) {
+      return NextResponse.json({ error: "Grade non trouvé" }, { status: 404 });
+    }
+
+    await prisma.grade.delete({
+      where: { id }
+    });
+
+    console.log("✅ Grade supprimé:", id);
+    
+    return NextResponse.json({ 
+      success: true,
+      message: "Grade supprimé avec succès"
+    });
+
+  } catch (error) {
+    console.error("❌ Erreur suppression grade:", error);
+    return NextResponse.json(
+      { error: "Erreur lors de la suppression du grade" },
       { status: 500 }
     );
   }

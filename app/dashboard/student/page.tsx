@@ -6,16 +6,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
   FaCalendarAlt, 
-  FaBookOpen, 
-  FaFileAlt, 
-  FaGraduationCap, 
+  FaBookOpen,
   FaClipboardList, 
   FaArrowRight,
-  FaChartLine,
-  FaExclamationTriangle,
-  FaUserCheck,
+   FaUserCheck,
+   FaExclamationTriangle,
   FaClock,
-  FaSync
 } from "react-icons/fa";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -371,69 +367,6 @@ const StudentDashboard = () => {
                 <Link href="/dashboard/student/exams" passHref>
                   <Button variant="outline" className="w-full border-blue-600 hover:bg-blue-600/10 text-blue-600 text-sm">
                     Accéder au Tableau des Examens
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* DEUXIÈME LIGNE - 3 COLONNES SUR DESKTOP */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-          
-          {/* --- Bulletins --- */}
-          <Card className="hover:shadow-lg transition-all duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Bulletins de Notes</CardTitle>
-              <FaFileAlt className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent className="pt-4 space-y-3">
-              {latestBulletin ? (
-                <div className="space-y-2">
-                  <p className="text-gray-700 text-sm truncate">{latestBulletin.name}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-gray-900">{latestBulletin.average}</span>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                      Très bien
-                    </Badge>
-                  </div>
-                  <Progress value={71} className="h-2" />
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500 text-center py-4">Aucun bulletin disponible</p>
-              )}
-              <Link href="/dashboard/student/grades" passHref>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm">
-                  Télécharger le PDF
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* --- Évènements Scolaires --- */}
-          <Card className="md:col-span-2 hover:shadow-lg transition-all duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Évènements de Formation</CardTitle>
-              <FaGraduationCap className="h-4 w-4 text-indigo-600" />
-            </CardHeader>
-            <CardContent className="pt-4">
-              <div className="space-y-3 text-sm">
-                {events.length > 0 ? events.map((event, index) => (
-                  <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 border-b pb-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <FaChartLine className="h-3 w-3 text-blue-500 flex-shrink-0" />
-                      <span className="font-semibold truncate">{event.title}</span>
-                    </div>
-                    <Badge variant="outline" className="text-xs w-fit">{event.date}</Badge>
-                  </div>
-                )) : (
-                  <p className="text-sm text-gray-500 text-center py-4">Aucun événement à venir</p>
-                )}
-              </div>
-              <div className="pt-3">
-                <Link href="/dashboard/student/events" passHref>
-                  <Button variant="link" className="p-0 h-auto text-blue-600 text-xs font-medium">
-                    Voir le calendrier complet <FaArrowRight className="ml-1 h-3 w-3" />
                   </Button>
                 </Link>
               </div>

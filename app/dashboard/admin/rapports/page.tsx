@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Download, DollarSign, CreditCard, Wallet, TrendingUpIcon, FileText, BarChart3, Users, BookOpen,TrendingUp, TrendingDown, Minus, Calendar, School, UserCheck } from 'lucide-react';
 
-type TimeRange = 'week' | 'month' | 'quarter' | 'year';
+type TimeRange = 'week' | 'month' | 'quarter' | 'year'; 
 
 export default function RapportsPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>('month');
@@ -106,6 +106,7 @@ export default function RapportsPage() {
     { module: 'Cloud Computing', completion: 75, average: 13.1, progression: '+1%', formateur: 'M. Kane' },
   ];
 
+  // CORRECTION: Données pour le PieChart
   const certificationData = [
     { status: 'Certifiés', value: 65, color: '#00C49F' },
     { status: 'En cours', value: 25, color: '#0088FE' },
@@ -188,15 +189,6 @@ export default function RapportsPage() {
     },
   ];
 
-  const teacherPerformanceData = [
-    { formateur: 'M. Diallo', filiere: 'Développement Web', satisfaction: 4.2, progression: '+5%', assiduite: 92, notes: 14.2 },
-    { formateur: 'M. Ndiaye', filiere: 'Réseaux & Sécurité', satisfaction: 3.8, progression: '-3%', assiduite: 85, notes: 12.1 },
-    { formateur: 'Mme. Traoré', filiere: 'Data Science', satisfaction: 4.5, progression: '+8%', assiduite: 94, notes: 15.1 },
-    { formateur: 'M. Kane', filiere: 'Cloud Computing', satisfaction: 4.0, progression: '+1%', assiduite: 88, notes: 13.4 },
-    { formateur: 'M. Ba', filiere: 'Cyber Sécurité', satisfaction: 3.2, progression: '-5%', assiduite: 79, notes: 11.2 },
-    { formateur: 'Mme. Sy', filiere: 'Mobile Development', satisfaction: 4.7, progression: '+7%', assiduite: 96, notes: 15.8 },
-  ];
-
   // Fonctions utilitaires
   const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
     switch (trend) {
@@ -235,6 +227,29 @@ export default function RapportsPage() {
   const handleExport = async (format: 'pdf' | 'excel') => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     console.log(`Exporting as ${format}`);
+  };
+
+  // CORRECTION: Fonction de rendu simplifiée pour les labels du PieChart
+  const renderCustomizedLabel = (props: any) => {
+    const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props;
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text 
+        x={x} 
+        y={y} 
+        fill="white" 
+        textAnchor={x > cx ? 'start' : 'end'} 
+        dominantBaseline="central"
+        fontSize={12}
+        fontWeight="bold"
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
   };
 
   return (
@@ -450,7 +465,7 @@ export default function RapportsPage() {
               </CardContent>
             </Card>
 
-            {/* Statut de Certification */}
+            {/* Statut de Certification - CORRIGÉ */}
             <Card className="bg-white border-gray-200">
               <CardHeader>
                 <CardTitle className="text-gray-900">Statut de Certification</CardTitle>
@@ -467,7 +482,7 @@ export default function RapportsPage() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ label, percentage }) => `${label}\n${percentage}%`}
+                        label={renderCustomizedLabel}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
@@ -477,12 +492,14 @@ export default function RapportsPage() {
                         ))}
                       </Pie>
                       <Tooltip 
+                        formatter={(value, name) => [`${value} apprenants`, name]}
                         contentStyle={{ 
                           backgroundColor: 'white', 
                           border: '1px solid #e5e5e5',
                           borderRadius: '8px'
                         }} 
                       />
+                      <Legend />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>

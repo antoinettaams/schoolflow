@@ -1,4 +1,3 @@
-// app/parent/attendance/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -18,6 +17,7 @@ interface StudentData {
 }
 
 interface AttendanceRecord {
+  id: string;
   date: string;
   day: string;
   subject: string;
@@ -29,6 +29,24 @@ interface AttendanceRecord {
   semestre: string;
   module: string;
   vague: string;
+}
+
+interface ApiResponse {
+  student: StudentData;
+  attendance: AttendanceRecord[];
+  stats: {
+    totalClasses: number;
+    present: number;
+    absent: number;
+    justifiedAbsences: number;
+    unjustifiedAbsences: number;
+    attendanceRate: number;
+  };
+  filters: {
+    vagues: string[];
+    modules: string[];
+    semestres: string[];
+  };
 }
 
 // --- Composant Skeleton pour le chargement ---
@@ -79,7 +97,6 @@ const AttendanceSkeleton = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {/* En-tête du tableau skeleton */}
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -109,27 +126,12 @@ const AttendanceSkeleton = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Skeleton pour la légende */}
-      <Card className="mt-6 bg-gray-100 border-gray-200">
-        <CardContent className="p-4">
-          <div className="h-5 w-24 bg-gray-200 rounded animate-pulse mb-3"></div>
-          <div className="flex flex-wrap gap-6">
-            {[1, 2, 3].map((legend) => (
-              <div key={legend} className="flex items-center gap-2">
-                <div className="h-4 w-4 bg-gray-300 rounded animate-pulse"></div>
-                <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
 
 export default function ParentAttendancePage() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const router = useRouter();
   const [sortField, setSortField] = useState("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -137,51 +139,59 @@ export default function ParentAttendancePage() {
   const [selectedModule, setSelectedModule] = useState<string>("all");
   const [selectedSemestre, setSelectedSemestre] = useState<string>("all");
   const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
+  const [stats, setStats] = useState({
+    totalClasses: 0,
+    present: 0,
+    absent: 0,
+    justifiedAbsences: 0,
+    unjustifiedAbsences: 0,
+    attendanceRate: 0
+  });
+  const [filters, setFilters] = useState({
+    vagues: [] as string[],
+    modules: [] as string[],
+    semestres: [] as string[]
+  });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Données d'assiduité avec les matières de l'emploi du temps et les vrais noms de professeurs
-  const attendanceData: AttendanceRecord[] = [
-    { date: "15/12/2024", day: "Lundi", subject: "Programmation Web Frontend", time: "08:00-09:30", teacher: "M. Martin", status: "absent", justified: false, reason: "", semestre: "Semestre 1", module: "Programmation Web Frontend", vague: "Vague Janvier 2024" },
-    { date: "12/12/2024", day: "Vendredi", subject: "Base de Données", time: "10:00-11:30", teacher: "Mme. Dubois", status: "present", justified: true, reason: "", semestre: "Semestre 1", module: "Base de Données", vague: "Vague Janvier 2024" },
-    { date: "10/12/2024", day: "Mercredi", subject: "UI/UX Design", time: "13:30-15:00", teacher: "M. Leroy", status: "absent", justified: true, reason: "Maladie avec certificat médical", semestre: "Semestre 1", module: "UI/UX Design", vague: "Vague Janvier 2024" },
-    { date: "08/12/2024", day: "Lundi", subject: "JavaScript Avancé", time: "15:30-17:00", teacher: "Mme. Bernard", status: "present", justified: true, reason: "", semestre: "Semestre 1", module: "JavaScript Avancé", vague: "Vague Janvier 2024" },
-    { date: "05/12/2024", day: "Vendredi", subject: "Développement Mobile", time: "09:00-10:30", teacher: "Mme. Johnson", status: "absent", justified: false, reason: "", semestre: "Semestre 1", module: "Développement Mobile", vague: "Vague Janvier 2024" },
-    { date: "03/12/2024", day: "Mercredi", subject: "Projet Full Stack", time: "14:00-15:30", teacher: "M. Garcia", status: "present", justified: true, reason: "", semestre: "Semestre 2", module: "Projet Full Stack", vague: "Vague Septembre 2024" },
-    { date: "28/11/2024", day: "Jeudi", subject: "Architecture Web", time: "16:00-17:30", teacher: "M. Moreau", status: "absent", justified: true, reason: "Rendez-vous médical", semestre: "Semestre 2", module: "Architecture Web", vague: "Vague Septembre 2024" },
-    { date: "25/11/2024", day: "Lundi", subject: "Programmation Web Frontend", time: "08:00-09:30", teacher: "M. Martin", status: "present", justified: true, reason: "", semestre: "Semestre 2", module: "Programmation Web Frontend", vague: "Vague Septembre 2024" },
-    { date: "22/11/2024", day: "Vendredi", subject: "Base de Données", time: "10:00-11:30", teacher: "Mme. Dubois", status: "absent", justified: true, reason: "Problème de transport", semestre: "Semestre 2", module: "Base de Données", vague: "Vague Septembre 2024" },
-    { date: "20/11/2024", day: "Mercredi", subject: "UI/UX Design", time: "13:30-15:00", teacher: "M. Leroy", status: "present", justified: true, reason: "", semestre: "Semestre 2", module: "UI/UX Design", vague: "Vague Septembre 2024" },
-  ];
-
-  // Charger les données de l'enfant depuis localStorage
-  useEffect(() => {
-    const loadStudentData = () => {
-      try {
-        const savedData = localStorage.getItem('parent_student_data');
-        if (savedData) {
-          const data = JSON.parse(savedData);
-          setStudentData({
-            studentName: data.studentName,
-            studentClass: data.studentClass,
-            studentStatus: data.studentStatus,
-            filiere: data.filiere,
-            vague: data.vague
-          });
-          // Définir la vague de l'enfant comme filtre par défaut
-          setSelectedVague(data.vague);
-        }
-      } catch (error) {
-        console.error("Erreur lors du chargement des données élève:", error);
+  // Charger les données depuis l'API
+  const fetchAttendanceData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/parents/attendance');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Erreur lors du chargement des données');
       }
-    };
-
-    const timer = setTimeout(() => {
-      loadStudentData();
+      
+      const data: ApiResponse = await response.json();
+      
+      setStudentData(data.student);
+      setAttendanceData(data.attendance);
+      setStats(data.stats);
+      setFilters(data.filters);
+      
+      // Définir la vague de l'enfant comme filtre par défaut
+      setSelectedVague(data.student.vague);
+      
+    } catch (error) {
+      console.error("Erreur lors du chargement des données:", error);
+      setError(error instanceof Error ? error.message : "Impossible de charger les données d'assiduité");
+    } finally {
       setIsLoading(false);
-    }, 1500); // Augmenté à 1.5s pour mieux voir le skeleton
+    }
+  };
 
-    return () => clearTimeout(timer);
-  }, []);
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      fetchAttendanceData();
+    }
+  }, [isLoaded, isSignedIn]);
 
   // Redirection si non connecté
   useEffect(() => {
@@ -190,11 +200,6 @@ export default function ParentAttendancePage() {
     }
   }, [isLoaded, isSignedIn, router]);
 
-  // Obtenir les options de filtre uniques
-  const vagues = Array.from(new Set(attendanceData.map(item => item.vague)));
-  const modules = Array.from(new Set(attendanceData.map(item => item.module)));
-  const semestres = Array.from(new Set(attendanceData.map(item => item.semestre)));
-
   // Filtrer les données
   const filteredData = attendanceData.filter(item => {
     const vagueMatch = selectedVague === "all" || item.vague === selectedVague;
@@ -202,15 +207,6 @@ export default function ParentAttendancePage() {
     const semestreMatch = selectedSemestre === "all" || item.semestre === selectedSemestre;
     return vagueMatch && moduleMatch && semestreMatch;
   });
-
-  // Statistiques basées sur les données filtrées
-  const stats = {
-    totalClasses: filteredData.length,
-    present: filteredData.filter(item => item.status === "present").length,
-    absent: filteredData.filter(item => item.status === "absent").length,
-    justifiedAbsences: filteredData.filter(item => item.status === "absent" && item.justified).length,
-    unjustifiedAbsences: filteredData.filter(item => item.status === "absent" && !item.justified).length,
-  };
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -253,7 +249,6 @@ export default function ParentAttendancePage() {
       <div className="flex-1 flex flex-col min-h-0 bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
         <div className="flex-1 overflow-y-auto">
           <div className="p-6 max-w-6xl mx-auto">
-            {/* Skeleton pour le titre */}
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
               <div className="space-y-2">
                 <div className="h-8 w-48 bg-gray-200 rounded animate-pulse"></div>
@@ -261,8 +256,39 @@ export default function ParentAttendancePage() {
               </div>
               <div className="h-6 w-32 bg-gray-200 rounded-full animate-pulse"></div>
             </div>
-            
             <AttendanceSkeleton />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col min-h-0 bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 max-w-6xl mx-auto">
+            <div className="text-center py-12">
+              <FaExclamationTriangle className="text-5xl text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Erreur de chargement
+              </h3>
+              <p className="text-gray-500 mb-4">{error}</p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={fetchAttendanceData}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Réessayer
+                </button>
+                <button
+                  onClick={() => router.push('/parent')}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Retour au tableau de bord
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -301,7 +327,7 @@ export default function ParentAttendancePage() {
                   Taux de Présence
                 </CardTitle>
                 <p className="text-3xl font-bold text-blue-600">
-                  {stats.totalClasses > 0 ? Math.round((stats.present / stats.totalClasses) * 100) : 0}%
+                  {stats.attendanceRate}%
                 </p>
                 <p className="text-sm text-gray-500 mt-1">{stats.present}/{stats.totalClasses} cours</p>
               </CardContent>
@@ -356,7 +382,7 @@ export default function ParentAttendancePage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Toutes les vagues</SelectItem>
-                      {vagues.map(vague => (
+                      {filters.vagues.map(vague => (
                         <SelectItem key={vague} value={vague}>
                           {vague}
                         </SelectItem>
@@ -373,7 +399,7 @@ export default function ParentAttendancePage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Tous les modules</SelectItem>
-                      {modules.map(module => (
+                      {filters.modules.map(module => (
                         <SelectItem key={module} value={module}>
                           {module}
                         </SelectItem>
@@ -390,7 +416,7 @@ export default function ParentAttendancePage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Tous les semestres</SelectItem>
-                      {semestres.map(semestre => (
+                      {filters.semestres.map(semestre => (
                         <SelectItem key={semestre} value={semestre}>
                           {semestre}
                         </SelectItem>
@@ -411,7 +437,7 @@ export default function ParentAttendancePage() {
                   Détail de l&apos;Assiduité
                 </CardTitle>
                 <div className="text-sm text-gray-500">
-                  {sortedData.length} cours enregistré(s)
+                  {sortedData.length} cours sur {attendanceData.length} total
                 </div>
               </div>
             </CardHeader>
@@ -445,8 +471,8 @@ export default function ParentAttendancePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedData.map((item, index) => (
-                      <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    {sortedData.map((item) => (
+                      <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                         <td className="py-4 px-4">
                           <div className="font-medium text-gray-900">{item.date}</div>
                           <div className="text-sm text-gray-500">{item.day}</div>
@@ -485,14 +511,26 @@ export default function ParentAttendancePage() {
                 </table>
               </div>
 
-              {sortedData.length === 0 && (
+              {sortedData.length === 0 && attendanceData.length > 0 && (
+                <div className="text-center py-12">
+                  <FaCalendarTimes className="text-5xl text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Aucun résultat
+                  </h3>
+                  <p className="text-gray-500">
+                    Aucune information d&apos;assiduité ne correspond aux filtres sélectionnés.
+                  </p>
+                </div>
+              )}
+
+              {attendanceData.length === 0 && (
                 <div className="text-center py-12">
                   <FaCalendarTimes className="text-5xl text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     Aucune donnée d&apos;assiduité
                   </h3>
                   <p className="text-gray-500">
-                    Aucune information d&apos;assiduité n&apos;est disponible pour les filtres sélectionnés.
+                    Aucune information d&apos;assiduité n&apos;est disponible pour cet étudiant.
                   </p>
                 </div>
               )}

@@ -38,6 +38,59 @@ interface StudentPaymentSummary {
   currentSemester: string;
 }
 
+// Fonction pour obtenir un utilisateur COMPTABLE valide
+async function getComptableUserId(): Promise<string> {
+  try {
+    // Chercher d'abord un utilisateur COMPTABLE existant
+    const comptableUser = await prisma.user.findFirst({
+      where: {
+        role: 'COMPTABLE',
+        isActive: true
+      },
+      select: { id: true }
+    });
+
+    if (comptableUser) {
+      console.log('✅ Utilisateur comptable trouvé:', comptableUser.id);
+      return comptableUser.id;
+    }
+
+    // Si aucun comptable n'existe, chercher un ADMIN
+    const adminUser = await prisma.user.findFirst({
+      where: {
+        role: 'ADMIN',
+        isActive: true
+      },
+      select: { id: true }
+    });
+
+    if (adminUser) {
+      console.log('✅ Utilisateur admin trouvé:', adminUser.id);
+      return adminUser.id;
+    }
+
+    // Si aucun utilisateur approprié n'existe, créer un utilisateur système
+    console.log('⚠️ Aucun utilisateur trouvé, création utilisateur système...');
+    const systemUser = await prisma.user.create({
+      data: {
+        clerkUserId: `system_comptable_${Date.now()}`,
+        email: `system-comptable-${Date.now()}@schoolflow.com`,
+        role: 'COMPTABLE',
+        firstName: 'Système',
+        lastName: 'Comptable',
+        isActive: true
+      }
+    });
+
+    console.log('✅ Utilisateur système créé:', systemUser.id);
+    return systemUser.id;
+
+  } catch (error) {
+    console.error('❌ Erreur récupération utilisateur:', error);
+    throw new Error('Impossible de trouver un utilisateur valide pour créer le paiement');
+  }
+}
+
 // GET - Récupérer tous les paiements avec filtres
 export async function GET(request: Request) {
   try {
@@ -87,7 +140,9 @@ export async function GET(request: Request) {
         reference: payment.reference || `REF-${payment.id}`,
         notes: payment.reference,
         description: `Paiement ${mapPaymentType(payment.modePaiement)} - ${payment.inscription.nom}`,
-        createdBy: `${payment.createdBy.firstName} ${payment.createdBy.lastName}`
+        createdBy: payment.createdBy ? 
+          `${payment.createdBy.firstName} ${payment.createdBy.lastName}` : 
+          'Système'
       };
 
       return NextResponse.json({
@@ -151,7 +206,9 @@ export async function GET(request: Request) {
       reference: payment.reference || `REF-${payment.id}`,
       notes: payment.reference,
       description: `Paiement ${mapPaymentType(payment.modePaiement)} - ${payment.inscription.nom}`,
-      createdBy: `${payment.createdBy.firstName} ${payment.createdBy.lastName}`
+      createdBy: payment.createdBy ? 
+        `${payment.createdBy.firstName} ${payment.createdBy.lastName}` : 
+        'Système'
     }));
 
     // Statistiques
@@ -196,7 +253,12 @@ export async function POST(request: Request) {
       reference,
       notes,
       semester,
-      description
+      description,
+      banque,
+      numeroCheque,
+      numeroCompte,
+      operateurMobile,
+      numeroTelephone
     } = body;
 
     console.log('📥 Création paiement manuel:', body);
@@ -210,78 +272,69 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Vérifier que l'étudiant existe dans le modèle Student
-    const student = await prisma.student.findUnique({
+    // Vérifier que l'inscription existe AVEC les bonnes relations
+    const inscription = await prisma.inscription.findUnique({
       where: { id: studentId },
       include: {
-        user: true,
         filiere: true,
-        vague: true
+        vague: true,
+        paiements: true
       }
     });
 
-    if (!student) {
+    if (!inscription) {
+      console.error('❌ Élève non trouvé avec ID:', studentId);
       return NextResponse.json({
         success: false,
         error: 'Élève non trouvé',
-        message: 'Aucun étudiant ne correspond à cet identifiant.'
+        message: 'Aucune inscription ne correspond à cet identifiant.'
       }, { status: 404 });
     }
 
-    // Récupérer les frais réels pour cette filière et vague
-    const fraisConfig = await getFraisConfiguration(student.filiereId, student.vagueId);
-    
-    // Générer une référence si non fournie
-    const paymentReference = reference || `${type.toUpperCase().substring(0, 3)}-${Date.now()}`;
+    console.log('✅ Élève trouvé:', `${inscription.prenom} ${inscription.nom}`);
 
-    // Créer ou trouver une inscription pour cet étudiant
-    let inscriptionId = studentId;
-    
-    const existingInscription = await prisma.inscription.findFirst({
-      where: { 
-        OR: [
-          { email: student.user.email },
-          { 
-            AND: [
-              { nom: student.user.lastName },
-              { prenom: student.user.firstName }
-            ]
-          }
-        ]
-      }
-    });
-
-    if (existingInscription) {
-      inscriptionId = existingInscription.id;
-      console.log(`✅ Inscription existante trouvée: ${inscriptionId}`);
-    } else {
-      // Créer une inscription automatiquement avec les frais réels
-      const nouvelleInscription = await prisma.inscription.create({
-        data: {
-          nom: student.user.lastName,
-          prenom: student.user.firstName,
-          email: student.user.email,
-          telephone: student.user.phone || '',
-          fraisInscription: fraisConfig.fraisInscription,
-          filiereId: student.filiereId,
-          vagueId: student.vagueId,
-          statut: 'APPROUVE',
-          createdById: 'default-user-id'
-        }
+    // VÉRIFICATION: Si l'étudiant a déjà payé l'inscription, empêcher un nouveau paiement
+    if (type === 'inscription') {
+      const hasAlreadyPaidInscription = inscription.paiements.some(payment => {
+        const paymentType = mapPaymentType(payment.modePaiement);
+        return paymentType === 'inscription' && payment.reference?.includes('APP');
       });
-      inscriptionId = nouvelleInscription.id;
-      console.log(`✅ Nouvelle inscription créée: ${inscriptionId}`);
+
+      if (hasAlreadyPaidInscription) {
+        return NextResponse.json({
+          success: false,
+          error: 'Paiement déjà effectué',
+          message: 'Cet étudiant a déjà payé ses frais d\'inscription.'
+        }, { status: 400 });
+      }
     }
 
-    // Créer le paiement
+    // CORRECTION: Obtenir un ID utilisateur valide
+    let createdById: string;
+    try {
+      createdById = await getComptableUserId();
+      console.log('✅ ID utilisateur pour createdById:', createdById);
+    } catch (userError) {
+      console.error('❌ Erreur récupération utilisateur:', userError);
+      return NextResponse.json({
+        success: false,
+        error: 'Erreur système',
+        message: 'Impossible de trouver un utilisateur valide pour créer le paiement.'
+      }, { status: 500 });
+    }
+
+    // Générer une référence si non fournie
+    const paymentReference = reference || `MAN-${type.toUpperCase().substring(0, 3)}-${Date.now()}`;
+
+    // Créer le paiement avec l'ID utilisateur valide
     const nouveauPaiement = await prisma.paiement.create({
       data: {
-        inscriptionId: inscriptionId,
+        inscriptionId: studentId,
         montant: parseInt(montant.toString()),
         datePaiement: new Date(date),
         modePaiement: methode,
         reference: paymentReference,
-        createdById: 'default-user-id'
+        createdById: createdById
       },
       include: {
         inscription: {
@@ -298,10 +351,10 @@ export async function POST(request: Request) {
     const formattedPayment = {
       id: nouveauPaiement.id,
       studentId: studentId,
-      studentName: `${student.user.firstName} ${student.user.lastName}`,
-      parentName: student.user.lastName,
-      filiere: student.filiere?.nom || 'Non assigné',
-      vague: student.vague?.nom || 'Non assigné',
+      studentName: `${inscription.prenom} ${inscription.nom}`,
+      parentName: inscription.nom,
+      filiere: inscription.filiere?.nom || 'Non assigné',
+      vague: inscription.vague?.nom || 'Non assigné',
       montant: nouveauPaiement.montant,
       type: type as any,
       methode: methode as any,
@@ -310,9 +363,14 @@ export async function POST(request: Request) {
       reference: nouveauPaiement.reference,
       notes: notes,
       semester: semester,
-      description: description || `Paiement ${type} - ${student.user.firstName} ${student.user.lastName}`,
-      createdBy: `${nouveauPaiement.createdBy.firstName} ${nouveauPaiement.createdBy.lastName}`
+      description: description || `Paiement ${type} - ${inscription.prenom} ${inscription.nom}`,
+      createdBy: nouveauPaiement.createdBy ? 
+        `${nouveauPaiement.createdBy.firstName} ${nouveauPaiement.createdBy.lastName}` : 
+        'Système'
     };
+
+    // Mettre à jour le statut de l'inscription si nécessaire
+    await updateInscriptionStatus(inscription.id);
 
     return NextResponse.json({
       success: true,
@@ -324,6 +382,13 @@ export async function POST(request: Request) {
     console.error('❌ Erreur création paiement:', error);
 
     if (error.code === 'P2003') {
+      if (error.meta?.field_name?.includes('createdById')) {
+        return NextResponse.json({
+          success: false,
+          error: 'Erreur utilisateur',
+          message: 'Problème avec l\'utilisateur créateur du paiement.'
+        }, { status: 500 });
+      }
       return NextResponse.json({
         success: false,
         error: 'Élève non trouvé',
@@ -374,7 +439,6 @@ export async function PUT(request: Request) {
       }, { status: 404 });
     }
 
-    let updatedPayment;
     let newReference = '';
 
     if (action === 'approve') {
@@ -390,7 +454,7 @@ export async function PUT(request: Request) {
     }
 
     // Mettre à jour le paiement
-    updatedPayment = await prisma.paiement.update({
+    const updatedPayment = await prisma.paiement.update({
       where: { id },
       data: {
         reference: newReference
@@ -405,6 +469,9 @@ export async function PUT(request: Request) {
         createdBy: { select: { firstName: true, lastName: true } }
       }
     });
+
+    // Mettre à jour le statut de l'inscription
+    await updateInscriptionStatus(updatedPayment.inscriptionId);
 
     // Formater la réponse
     const formattedPayment = {
@@ -421,7 +488,9 @@ export async function PUT(request: Request) {
       datePaiement: updatedPayment.datePaiement.toISOString().split('T')[0],
       reference: updatedPayment.reference,
       description: `Paiement ${mapPaymentType(updatedPayment.modePaiement)} - ${updatedPayment.inscription.nom}`,
-      createdBy: `${updatedPayment.createdBy.firstName} ${updatedPayment.createdBy.lastName}`
+      createdBy: updatedPayment.createdBy ? 
+        `${updatedPayment.createdBy.firstName} ${updatedPayment.createdBy.lastName}` : 
+        'Système'
     };
 
     return NextResponse.json({
@@ -440,136 +509,163 @@ export async function PUT(request: Request) {
   }
 }
 
-// PATCH - Récupérer le résumé des étudiants RÉELS depuis le modèle Student
+// PATCH - Récupérer les inscriptions (étudiants)
 export async function PATCH(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const studentId = searchParams.get('studentId');
 
-    console.log('🔍 Récupération des étudiants réels depuis le modèle Student:', { studentId });
+    console.log('🔍 Récupération des inscriptions:', { studentId });
 
     if (studentId) {
-      // Résumé d'un étudiant spécifique
-      const student = await prisma.student.findUnique({
+      // Une inscription spécifique
+      const inscription = await prisma.inscription.findUnique({
         where: { id: studentId },
         include: {
-          user: true,
           filiere: true,
           vague: true,
+          paiements: true
         }
       });
 
-      if (!student) {
+      if (!inscription) {
         return NextResponse.json({
           success: false,
-          error: 'Élève non trouvé',
-          message: 'Aucun étudiant ne correspond à cet identifiant.'
+          error: 'Inscription non trouvée',
+          message: 'Aucune inscription ne correspond à cet identifiant.'
         }, { status: 404 });
       }
 
-      const studentSummary = await getStudentPaymentSummary(student);
+      const studentSummary = await getInscriptionPaymentSummary(inscription);
 
       return NextResponse.json({
         success: true,
         data: studentSummary,
-        message: 'Résumé étudiant récupéré avec succès'
+        message: 'Inscription récupérée avec succès'
       });
     } else {
-      // Résumé de TOUS les étudiants existants dans le modèle Student
-      const students = await prisma.student.findMany({
+      // Toutes les inscriptions
+      const inscriptions = await prisma.inscription.findMany({
+        where: {
+          statut: {
+            in: ['APPROUVE', 'PAYE_PARTIEL', 'PAYE_COMPLET']
+          }
+        },
         include: {
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true,
-              phone: true
-            }
-          },
           filiere: true,
           vague: true,
+          paiements: true
         },
         orderBy: { createdAt: 'desc' }
       });
 
-      console.log(`📊 ${students.length} étudiant(s) réel(s) trouvé(s) dans le modèle Student`);
+      console.log(`📊 ${inscriptions.length} inscription(s) trouvée(s)`);
 
-      if (students.length === 0) {
+      if (inscriptions.length === 0) {
         return NextResponse.json({
           success: true,
           data: [],
-          message: 'Aucun étudiant trouvé dans la base de données'
+          message: 'Aucune inscription trouvée dans la base de données'
         });
       }
 
       const studentsSummary = await Promise.all(
-        students.map(student => getStudentPaymentSummary(student))
+        inscriptions.map(inscription => getInscriptionPaymentSummary(inscription))
       );
 
-      console.log(`✅ ${studentsSummary.length} étudiant(s) réel(s) traité(s)`);
+      console.log(`✅ ${studentsSummary.length} inscription(s) traitée(s)`);
 
       return NextResponse.json({
         success: true,
         data: studentsSummary,
-        message: `${studentsSummary.length} étudiant(s) réel(s) récupéré(s) avec succès`
+        message: `${studentsSummary.length} inscription(s) récupérée(s) avec succès`
       });
     }
 
   } catch (error) {
-    console.error('❌ Erreur résumé étudiants:', error);
+    console.error('❌ Erreur récupération inscriptions:', error);
     return NextResponse.json({
       success: false,
       error: 'Erreur de chargement',
-      message: 'Impossible de charger les étudiants depuis la base de données.',
+      message: 'Impossible de charger les inscriptions.',
       data: []
     }, { status: 500 });
   }
 }
 
-// Fonction pour le résumé étudiant avec données RÉELLES depuis le modèle Student
-async function getStudentPaymentSummary(student: any): Promise<StudentPaymentSummary> {
+// Fonction pour mettre à jour le statut de l'inscription
+async function updateInscriptionStatus(inscriptionId: string) {
   try {
-    // Récupérer les frais RÉELS pour cette filière et vague
-    const fraisConfig = await getFraisConfiguration(student.filiereId, student.vagueId);
-    const fraisInscription = fraisConfig.fraisInscription;
-    const fraisScolarite = fraisConfig.fraisScolarite;
-    
-    // CORRECTION : Le total des frais est seulement inscription + scolarité
-    const totalFrais = fraisInscription + fraisScolarite;
-
-    // Récupérer TOUS les paiements pour cet étudiant
-    const inscriptionsEtudiant = await prisma.inscription.findMany({
-      where: {
-        OR: [
-          { email: student.user.email },
-          { 
-            AND: [
-              { nom: student.user.lastName },
-              { prenom: student.user.firstName }
-            ]
-          }
-        ]
-      },
+    const inscription = await prisma.inscription.findUnique({
+      where: { id: inscriptionId },
       include: {
-        paiements: true
+        paiements: true,
+        filiere: true,
+        vague: true
       }
     });
 
-    // Calculer le total payé depuis tous les paiements
-    let totalPaye = 0;
-    inscriptionsEtudiant.forEach(inscription => {
-      totalPaye += inscription.paiements.reduce((sum: number, p: any) => sum + p.montant, 0);
+    if (!inscription) return;
+
+    // Récupérer les frais réels
+    const fraisConfig = await getFraisConfiguration(inscription.filiereId, inscription.vagueId);
+    const totalFrais = fraisConfig.fraisInscription + fraisConfig.fraisScolarite;
+
+    // Calculer le total payé
+    const totalPaye = inscription.paiements
+      .filter(p => p.reference?.includes('APP')) // Seulement les paiements approuvés
+      .reduce((sum, p) => sum + p.montant, 0);
+
+    // Déterminer le nouveau statut
+    let nouveauStatut = inscription.statut;
+
+    if (totalPaye >= totalFrais) {
+      nouveauStatut = 'PAYE_COMPLET';
+    } else if (totalPaye > 0) {
+      nouveauStatut = 'PAYE_PARTIEL';
+    } else {
+      nouveauStatut = 'APPROUVE';
+    }
+
+    // Mettre à jour l'inscription
+    await prisma.inscription.update({
+      where: { id: inscriptionId },
+      data: {
+        statut: nouveauStatut,
+        fraisPayes: totalPaye
+      }
     });
 
-    // CORRECTION : Calcul des semestres payés - SEULEMENT pour la scolarité
+    console.log(`✅ Statut inscription ${inscriptionId} mis à jour: ${nouveauStatut}`);
+
+  } catch (error) {
+    console.error('❌ Erreur mise à jour statut inscription:', error);
+  }
+}
+
+// Fonction pour le résumé d'inscription
+async function getInscriptionPaymentSummary(inscription: any): Promise<StudentPaymentSummary> {
+  try {
+    // Récupérer les frais RÉELS pour cette filière et vague
+    const fraisConfig = await getFraisConfiguration(inscription.filiereId, inscription.vagueId);
+    const fraisInscription = fraisConfig.fraisInscription;
+    const fraisScolarite = fraisConfig.fraisScolarite;
+    
+    // Total des frais
+    const totalFrais = fraisInscription + fraisScolarite;
+
+    // Calculer le total payé (seulement les paiements approuvés)
+    const totalPaye = inscription.paiements
+      .filter((p: any) => p.reference?.includes('APP'))
+      .reduce((sum: number, p: any) => sum + p.montant, 0);
+
+    // Calcul des semestres payés
     const semestres = ['Semestre 1', 'Semestre 2', 'Semestre 3'];
     const montantParSemestre = Math.round(fraisScolarite / 3);
     
     let paidSemesters: string[] = [];
     let pendingSemesters: string[] = [...semestres];
     
-    // CORRECTION : Calcul plus précis des semestres payés
-    // On sépare l'inscription de la scolarité
     const montantInscriptionPaye = Math.min(totalPaye, fraisInscription);
     const montantScolaritePaye = Math.max(0, totalPaye - fraisInscription);
     
@@ -581,9 +677,9 @@ async function getStudentPaymentSummary(student: any): Promise<StudentPaymentSum
 
     const remainingAmount = Math.max(0, totalFrais - totalPaye);
 
-    console.log(`💰 Étudiant ${student.user.firstName} ${student.user.lastName}:`);
-    console.log(`   - Filière: ${student.filiere?.nom}`);
-    console.log(`   - Vague: ${student.vague?.nom}`);
+    console.log(`💰 Inscription ${inscription.prenom} ${inscription.nom}:`);
+    console.log(`   - Filière: ${inscription.filiere?.nom}`);
+    console.log(`   - Vague: ${inscription.vague?.nom}`);
     console.log(`   - Frais inscription: ${fraisInscription} FCFA`);
     console.log(`   - Frais scolarité: ${fraisScolarite} FCFA`);
     console.log(`   - Total frais: ${totalFrais} FCFA`);
@@ -593,11 +689,11 @@ async function getStudentPaymentSummary(student: any): Promise<StudentPaymentSum
     console.log(`   - Semestres en attente: ${pendingSemesters.join(', ')}`);
 
     return {
-      id: student.id,
-      name: `${student.user.firstName} ${student.user.lastName}`,
-      filiere: student.filiere?.nom || 'Non assigné',
-      vague: student.vague?.nom || 'Non assigné',
-      parentName: student.user.lastName,
+      id: inscription.id,
+      name: `${inscription.prenom} ${inscription.nom}`,
+      filiere: inscription.filiere?.nom || 'Non assigné',
+      vague: inscription.vague?.nom || 'Non assigné',
+      parentName: inscription.nom,
       registrationFee: fraisInscription,
       tuitionFee: fraisScolarite,
       paidAmount: totalPaye,
@@ -608,18 +704,18 @@ async function getStudentPaymentSummary(student: any): Promise<StudentPaymentSum
       currentSemester: pendingSemesters[0] || 'Terminé'
     };
   } catch (error) {
-    console.error('❌ Erreur calcul résumé étudiant pour:', student.id, error);
+    console.error('❌ Erreur calcul résumé inscription pour:', inscription.id, error);
     // En cas d'erreur, retourner un résumé basé uniquement sur les données disponibles
     return {
-      id: student.id,
-      name: `${student.user.firstName} ${student.user.lastName}`,
-      filiere: student.filiere?.nom || 'Non assigné',
-      vague: student.vague?.nom || 'Non assigné',
-      parentName: student.user.lastName,
+      id: inscription.id,
+      name: `${inscription.prenom} ${inscription.nom}`,
+      filiere: inscription.filiere?.nom || 'Non assigné',
+      vague: inscription.vague?.nom || 'Non assigné',
+      parentName: inscription.nom,
       registrationFee: 50000,
       tuitionFee: 885000,
-      paidAmount: 0,
-      remainingAmount: 935000,
+      paidAmount: inscription.fraisPayes || 0,
+      remainingAmount: 935000 - (inscription.fraisPayes || 0),
       totalSchoolFees: 935000,
       paidSemesters: [],
       pendingSemesters: ['Semestre 1', 'Semestre 2', 'Semestre 3'],
@@ -639,7 +735,7 @@ async function getFraisConfiguration(filiereId: number | null, vagueId: string |
   try {
     // 1. Récupérer le frais d'inscription universel RÉEL
     const fraisInscriptionConfig = await prisma.fraisConfiguration.findUnique({
-      where: { type: 'INSCRIPTION_UNIVERSEL' }
+      where: { type: 'INSCRIPTION_UNIVERSEL' as any }
     });
 
     if (fraisInscriptionConfig) {
@@ -647,18 +743,6 @@ async function getFraisConfiguration(filiereId: number | null, vagueId: string |
       console.log(`✅ Frais inscription récupéré: ${fraisInscription} FCFA`);
     } else {
       console.log('⚠️ Frais inscription non trouvé, utilisation valeur par défaut: 50,000 FCFA');
-      
-      // Essayer de récupérer depuis une autre source si disponible
-      const autreFraisConfig = await prisma.fraisConfiguration.findFirst({
-        where: {
-          type: { contains: 'INSCRIPTION' }
-        }
-      });
-      
-      if (autreFraisConfig) {
-        fraisInscription = autreFraisConfig.montant;
-        console.log(`✅ Frais inscription alternatif récupéré: ${fraisInscription} FCFA`);
-      }
     }
 
     // 2. Récupérer les frais de scolarité RÉELS depuis FraisFormation
@@ -676,16 +760,6 @@ async function getFraisConfiguration(filiereId: number | null, vagueId: string |
         console.log(`✅ Frais scolarité récupéré: ${fraisScolarite} FCFA pour filière ${filiereId}, vague ${vagueId}`);
       } else {
         console.log(`⚠️ Frais formation non trouvé pour filière ${filiereId}, vague ${vagueId}`);
-        
-        // Essayer de récupérer depuis la table Filiere si elle a un champ frais
-        const filiere = await prisma.filiere.findUnique({
-          where: { id: filiereId }
-        });
-        
-        if (filiere) {
-          console.log(`ℹ️ Filière trouvée: ${filiere.nom}, mais pas de frais spécifique`);
-        }
-        
         console.log(`ℹ️ Utilisation frais scolarité par défaut: ${fraisScolarite} FCFA`);
       }
     } else {

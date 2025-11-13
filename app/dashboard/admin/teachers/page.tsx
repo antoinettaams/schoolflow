@@ -1,9 +1,10 @@
 // app/dashboard/admin/teachers/page.tsx
 "use client";
  
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   FaChalkboardTeacher,
   FaEye,
@@ -282,10 +283,12 @@ const TeachersManagement = () => {
               <FaSync className="mr-2" />
               Actualiser
             </Button>
-            <Button className="bg-blue-600 text-white hover:bg-blue-700">
-              <FaPlus className="mr-2" />
-              Ajouter un professeur
-            </Button>
+            <Link href="/auth/signup">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                <FaPlus className="mr-2 h-4 w-4" />
+                Ajouter un Élève
+              </Button>
+            </Link>
           </div>
         </div>
 

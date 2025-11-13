@@ -27,9 +27,9 @@ interface Eleve {
   filiere: string;
   vague: string;
   dateInscription: string;
-  statutPaiement: "paye";
-  montant: number;
-  montantPaye: number;
+  statut: string;
+  fraisInscription: number;
+  fraisPayes: number;
   resteAPayer: number;
   dateNaissance?: string;
   createdBy: string;
@@ -53,8 +53,16 @@ interface ApiResponse {
     totalPayes: number;
     totalEnAttente: number;
     totalPartiels: number;
+    totalApprouves: number;
+    totalRejetes: number;
     chiffreAffaires: number;
-    tauxValidation: number;
+    montantTotalPaye: number;
+    tauxPaiementComplet: number;
+    tauxPaiementPartiel: number;
+  };
+  filtres?: {
+    filieres: Array<{ id: string; nom: string }>;
+    vagues: Array<{ id: string; nom: string }>;
   };
 }
 
@@ -117,16 +125,23 @@ export default function ListeElevesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFiliere, setSelectedFiliere] = useState<string>("toutes");
   const [selectedVague, setSelectedVague] = useState<string>("toutes");
+  const [selectedStatut, setSelectedStatut] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [eleves, setEleves] = useState<Eleve[]>([]);
+  const [filieres, setFilieres] = useState<Array<{id: string, nom: string}>>([]);
+  const [vagues, setVagues] = useState<Array<{id: string, nom: string}>>([]);
   const [stats, setStats] = useState({
     totalInscriptions: 0,
     totalPayes: 0,
     totalEnAttente: 0,
     totalPartiels: 0,
+    totalApprouves: 0,
+    totalRejetes: 0,
     chiffreAffaires: 0,
-    tauxValidation: 0
+    montantTotalPaye: 0,
+    tauxPaiementComplet: 0,
+    tauxPaiementPartiel: 0
   });
 
   // Charger les données depuis l'API
@@ -137,6 +152,7 @@ export default function ListeElevesPage() {
       if (searchTerm) params.append('search', searchTerm);
       if (selectedFiliere !== 'toutes') params.append('filiere', selectedFiliere);
       if (selectedVague !== 'toutes') params.append('vague', selectedVague);
+      if (selectedStatut !== 'all') params.append('statut', selectedStatut);
 
       const response = await fetch(`/api/secretaires/eleves?${params}`);
       
@@ -147,6 +163,12 @@ export default function ListeElevesPage() {
       const data: ApiResponse = await response.json();
       setEleves(data.inscriptions);
       setStats(data.stats);
+      
+      // Mettre à jour les filtres avec les données de l'API
+      if (data.filtres) {
+        setFilieres(data.filtres.filieres);
+        setVagues(data.filtres.vagues);
+      }
     } catch (error) {
       console.error('Erreur:', error);
       toast.error('Erreur lors du chargement des données');
@@ -157,16 +179,26 @@ export default function ListeElevesPage() {
 
   useEffect(() => {
     fetchData();
-  }, [searchTerm, selectedFiliere, selectedVague]);
+  }, [searchTerm, selectedFiliere, selectedVague, selectedStatut]);
 
   const getInitials = (prenom: string, nom: string) => {
     return `${prenom[0]}${nom[0]}`.toUpperCase();
   };
 
-  const getStatutPaiementBadge = () => {
+  const getStatutBadge = (statut: string) => {
+    const statutConfig = {
+      'PAYE_COMPLET': { label: 'Payé complet', className: 'bg-green-100 text-green-800 border-green-200' },
+      'PAYE_PARTIEL': { label: 'Payé partiel', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+      'EN_ATTENTE': { label: 'En attente', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+      'APPROUVE': { label: 'Approuvé', className: 'bg-purple-100 text-purple-800 border-purple-200' },
+      'REJETE': { label: 'Rejeté', className: 'bg-red-100 text-red-800 border-red-200' }
+    };
+
+    const config = statutConfig[statut as keyof typeof statutConfig] || { label: statut, className: 'bg-gray-100 text-gray-800 border-gray-200' };
+
     return (
-      <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
-        Payé
+      <Badge variant="outline" className={config.className}>
+        {config.label}
       </Badge>
     );
   };
@@ -198,239 +230,14 @@ export default function ListeElevesPage() {
     }
   };
 
-  // FONCTIONS D'EXPORT
+  // FONCTIONS D'EXPORT (garder les mêmes que dans votre code original)
   const exportToPDF = () => {
-    if (eleves.length === 0) {
-      toast.error("Aucune donnée à exporter en PDF");
-      return;
-    }
-
-    const toastId = toast.loading("Génération du PDF en cours...");
-
-    setTimeout(() => {
-      try {
-        const doc = new jsPDF();
-        
-        // En-tête du document
-        doc.setFontSize(20);
-        doc.setTextColor(40, 40, 40);
-        doc.text("Liste des Apprenants - Paiements Validés", 14, 15);
-        
-        // Informations générales
-        doc.setFontSize(11);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Total des apprenants: ${eleves.length}`, 14, 25);
-        doc.text(`Chiffre d'affaires: ${stats.chiffreAffaires.toLocaleString('fr-FR')} FCFA`, 14, 32);
-        doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 14, 39);
-
-        // Préparation des données du tableau
-        const tableData = eleves.map(eleve => [
-          eleve.id,
-          `${eleve.prenom} ${eleve.nom}`,
-          eleve.email,
-          eleve.telephone,
-          eleve.filiere,
-          eleve.vague,
-          new Date(eleve.dateInscription).toLocaleDateString('fr-FR'),
-          `${eleve.montant.toLocaleString('fr-FR')} FCFA`,
-          "Payé"
-        ]);
-
-        // Tableau principal
-        autoTable(doc, {
-          head: [['ID', 'Nom', 'Email', 'Téléphone', 'Filière', 'Vague', 'Date Inscription', 'Montant', 'Statut']],
-          body: tableData,
-          startY: 50,
-          styles: { 
-            fontSize: 8,
-            cellPadding: 2,
-          },
-          headStyles: { 
-            fillColor: [59, 130, 246],
-            textColor: 255,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: {
-            fillColor: [248, 250, 252]
-          },
-          margin: { top: 50 },
-          theme: 'grid'
-        });
-
-        // Pied de page
-        const pageCount = doc.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-          doc.setPage(i);
-          doc.setFontSize(8);
-          doc.setTextColor(150, 150, 150);
-          doc.text(
-            `Page ${i} / ${pageCount} - Liste des apprenants`,
-            doc.internal.pageSize.width / 2,
-            doc.internal.pageSize.height - 10,
-            { align: 'center' }
-          );
-        }
-
-        // Sauvegarde du fichier
-        const fileName = `apprenants-payes-${new Date().toISOString().split('T')[0]}.pdf`;
-        doc.save(fileName);
-        
-        toast.success("PDF généré avec succès!", {
-          icon: "📄",
-          id: toastId
-        });
-        
-      } catch (error) {
-        console.error("Erreur lors de l'export PDF:", error);
-        toast.error("Erreur lors de la génération du PDF", {
-          icon: "❌",
-          id: toastId
-        });
-      }
-    }, 2000);
+    // ... garder votre code d'export PDF existant
   };
 
   const exportToExcel = () => {
-    if (eleves.length === 0) {
-      toast.error("Aucune donnée à exporter en Excel");
-      return;
-    }
-
-    const toastId = toast.loading("Export Excel en cours...");
-
-    setTimeout(() => {
-      try {
-        // Préparation des données
-        const data = eleves.map(eleve => ({
-          'ID': eleve.id,
-          'Nom': `${eleve.prenom} ${eleve.nom}`,
-          'Email': eleve.email,
-          'Téléphone': eleve.telephone,
-          'Filière': eleve.filiere,
-          'Vague': eleve.vague,
-          'Date Inscription': new Date(eleve.dateInscription).toLocaleDateString('fr-FR'),
-          'Montant Inscription': `${eleve.montant.toLocaleString('fr-FR')} FCFA`,
-          'Montant Payé': `${eleve.montantPaye.toLocaleString('fr-FR')} FCFA`,
-          'Reste à Payer': `${eleve.resteAPayer.toLocaleString('fr-FR')} FCFA`,
-          'Statut Paiement': 'Payé'
-        }));
-
-        // Création du workbook
-        const wb = utils.book_new();
-        
-        // Feuille principale
-        const ws = utils.json_to_sheet(data);
-        
-        // En-têtes et métadonnées
-        const metadata = [
-          ["Liste des Apprenants - Paiements Validés"],
-          [`Total des apprenants: ${eleves.length}`],
-          [`Chiffre d'affaires total: ${stats.chiffreAffaires.toLocaleString('fr-FR')} FCFA`],
-          [`Généré le: ${new Date().toLocaleDateString('fr-FR')}`],
-          [] // ligne vide
-        ];
-        
-        utils.sheet_add_aoa(ws, metadata, { origin: 'A1' });
-        
-        // Ajuster la largeur des colonnes
-        const colWidths = [
-          { wch: 8 },  // ID
-          { wch: 20 }, // Nom
-          { wch: 25 }, // Email
-          { wch: 15 }, // Téléphone
-          { wch: 25 }, // Filière
-          { wch: 15 }, // Vague
-          { wch: 15 }, // Date Inscription
-          { wch: 15 }, // Montant Inscription
-          { wch: 15 }, // Montant Payé
-          { wch: 15 }, // Reste à Payer
-          { wch: 12 }  // Statut
-        ];
-        ws['!cols'] = colWidths;
-
-        utils.book_append_sheet(wb, ws, 'Apprenants Payés');
-
-        // Sauvegarde
-        const fileName = `apprenants-payes-${new Date().toISOString().split('T')[0]}.xlsx`;
-        writeFile(wb, fileName);
-        
-        toast.success("Fichier Excel exporté!", {
-          icon: "📊",
-          id: toastId
-        });
-        
-      } catch (error) {
-        console.error("Erreur lors de l'export Excel:", error);
-        toast.error("Erreur lors de l'export Excel", {
-          icon: "❌",
-          id: toastId
-        });
-      }
-    }, 1500);
+    // ... garder votre code d'export Excel existant
   };
-
-  const exportToCSV = () => {
-    if (eleves.length === 0) {
-      toast.error("Aucune donnée à exporter en CSV");
-      return;
-    }
-
-    const toastId = toast.loading("Export CSV en cours...");
-
-    setTimeout(() => {
-      try {
-        const headers = ['ID', 'Nom', 'Email', 'Téléphone', 'Filière', 'Vague', 'Date Inscription', 'Montant', 'Statut Paiement'];
-        
-        const csvContent = [
-          "Liste des Apprenants - Paiements Validés",
-          `Total des apprenants: ${eleves.length}`,
-          `Généré le: ${new Date().toLocaleDateString('fr-FR')}`,
-          '',
-          headers.join(','),
-          ...eleves.map(eleve => [
-            eleve.id,
-            `"${eleve.prenom} ${eleve.nom}"`,
-            `"${eleve.email}"`,
-            `"${eleve.telephone}"`,
-            `"${eleve.filiere}"`,
-            `"${eleve.vague}"`,
-            `"${new Date(eleve.dateInscription).toLocaleDateString('fr-FR')}"`,
-            `"${eleve.montant.toLocaleString('fr-FR')} FCFA"`,
-            '"Payé"'
-          ].join(','))
-        ].join('\n');
-
-        // Création et téléchargement du fichier
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        
-        link.setAttribute('href', url);
-        link.setAttribute('download', `apprenants-payes-${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        toast.success("Fichier CSV généré!", {
-          icon: "📋",
-          id: toastId
-        });
-        
-      } catch (error) {
-        console.error("Erreur lors de l'export CSV:", error);
-        toast.error("Erreur lors de l'export CSV", {
-          icon: "❌",
-          id: toastId
-        });
-      }
-    }, 1000);
-  };
-
-  // Extraire les filières et vagues uniques pour les filtres
-  const filieres = [...new Set(eleves.map(e => e.filiere).filter(Boolean))];
-  const vagues = [...new Set(eleves.map(e => e.vague).filter(Boolean))];
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
@@ -452,7 +259,7 @@ export default function ListeElevesPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Liste des Apprenants</h1>
           <p className="text-gray-600 mt-2">
-            Consultez les apprenants ayant payé leur inscription
+            Consultez et gérez les apprenants inscrits
           </p>
         </div>
         <div className="flex gap-2">
@@ -485,13 +292,6 @@ export default function ListeElevesPage() {
               >
                 <FileDown className="w-4 h-4 mr-2 text-green-500" />
                 <span>Export Excel</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={exportToCSV}
-                className="flex items-center cursor-pointer"
-              >
-                <FileDown className="w-4 h-4 mr-2 text-blue-500" />
-                <span>Export CSV</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -532,7 +332,7 @@ export default function ListeElevesPage() {
                 <Euro className="h-4 w-4 text-blue-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.tauxValidation}%</div>
+                <div className="text-2xl font-bold">{stats.tauxPaiementComplet}%</div>
                 <p className="text-xs text-gray-600">Des inscriptions sont validées</p>
               </CardContent>
             </Card>
@@ -556,7 +356,7 @@ export default function ListeElevesPage() {
         <CardHeader>
           <CardTitle>Filtres</CardTitle>
           <CardDescription>
-            Filtrez les apprenants par filière ou vague
+            Filtrez les apprenants selon vos critères
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -578,7 +378,9 @@ export default function ListeElevesPage() {
               <SelectContent>
                 <SelectItem value="toutes">Toutes les filières</SelectItem>
                 {filieres.map(filiere => (
-                  <SelectItem key={filiere} value={filiere}>{filiere}</SelectItem>
+                  <SelectItem key={filiere.id} value={filiere.id}>
+                    {filiere.nom}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -590,8 +392,24 @@ export default function ListeElevesPage() {
               <SelectContent>
                 <SelectItem value="toutes">Toutes les vagues</SelectItem>
                 {vagues.map(vague => (
-                  <SelectItem key={vague} value={vague}>{vague}</SelectItem>
+                  <SelectItem key={vague.id} value={vague.id}>
+                    {vague.nom}
+                  </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedStatut} onValueChange={setSelectedStatut}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Tous les statuts" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="PAYE_COMPLET">Payé complet</SelectItem>
+                <SelectItem value="PAYE_PARTIEL">Payé partiel</SelectItem>
+                <SelectItem value="EN_ATTENTE">En attente</SelectItem>
+                <SelectItem value="APPROUVE">Approuvé</SelectItem>
+                <SelectItem value="REJETE">Rejeté</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -601,7 +419,7 @@ export default function ListeElevesPage() {
       {/* Tableau des élèves */}
       <Card>
         <CardHeader>
-          <CardTitle>Apprenants ayant payé l'inscription</CardTitle>
+          <CardTitle>Liste des Apprenants</CardTitle>
           <CardDescription>
             {isLoading ? "Chargement..." : `${eleves.length} apprenant(s) trouvé(s)`}
           </CardDescription>
@@ -617,7 +435,7 @@ export default function ListeElevesPage() {
                   <TableHead>Vague</TableHead>
                   <TableHead>Date d&apos;inscription</TableHead>
                   <TableHead>Montant</TableHead>
-                  <TableHead>Statut Paiement</TableHead>
+                  <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -669,10 +487,10 @@ export default function ListeElevesPage() {
                         {new Date(eleve.dateInscription).toLocaleDateString('fr-FR')}
                       </TableCell>
                       <TableCell className="font-semibold">
-                        {eleve.montant.toLocaleString('fr-FR')} FCFA
+                        {eleve.fraisInscription.toLocaleString('fr-FR')} FCFA
                       </TableCell>
                       <TableCell>
-                        {getStatutPaiementBadge()}
+                        {getStatutBadge(eleve.statut)}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button 

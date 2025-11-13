@@ -1,4 +1,3 @@
-// app/dashboard/notes/student/[id]/page.tsx
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -33,6 +32,9 @@ interface Filiere {
   modules: {
     semestre: string;
     matieres: Matiere[];
+    moyenneSemestre: number;
+    creditsObtenus: number;
+    creditsTotaux: number;
   }[];
 }
 
@@ -51,6 +53,114 @@ interface Student {
   filiereDetails: Filiere;
 }
 
+// Composant Skeleton pour le chargement
+const StudentDetailsSkeleton = () => {
+  return (
+    <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+      <ScrollArea className="h-screen">
+        <div className="p-6 space-y-6 max-w-7xl mx-auto">
+          
+          {/* Header Skeleton */}
+          <div className="flex flex-col">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-gray-200 rounded-lg animate-pulse"></div>
+              <div className="space-y-2">
+                <div className="h-8 w-64 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+            <div className="mt-4 h-10 w-48 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+
+          {/* Cartes de statistiques Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-8 w-20 bg-gray-200 rounded animate-pulse mb-2"></div>
+                  <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Contenu principal Skeleton */}
+          <Card>
+            <CardHeader>
+              <div className="space-y-2">
+                <div className="h-6 w-64 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-96 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Tabs Skeleton */}
+                <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+                
+                {/* Tableau Skeleton */}
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex items-center space-x-4">
+                      <div className="h-4 flex-1 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Statistiques Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[...Array(3)].map((_, i) => (
+                    <Card key={i}>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
+                        <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Graphique Skeleton */}
+          <Card>
+            <CardHeader>
+              <div className="space-y-2">
+                <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-64 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="flex-1 bg-gray-200 rounded-full h-3 animate-pulse"></div>
+                    </div>
+                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+};
+
 export default function StudentNotesDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -58,142 +168,48 @@ export default function StudentNotesDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSemestre, setSelectedSemestre] = useState<string>('S1');
 
-  // Déplacer loadStudentData dans un useCallback pour éviter les recréations
-  const loadStudentData = useCallback(() => {
-    // Données simulées
-    const mockStudent: Student = {
-      id: params.id as string,
-      nom: 'Dupont',
-      prenom: 'Marie',
-      email: 'marie.dupont@email.com',
-      filiere: 'Informatique',
-      vagueName: 'Vague Janvier-Juin 2024',
-      moyenneGenerale: 16.5,
-      rang: 1,
-      presence: 95,
-      creditsObtenus: 45,
-      creditsTotaux: 60,
-      filiereDetails: {
-        id: 'info',
-        nom: 'Informatique',
-        modules: [
-          {
-            semestre: 'S1',
-            matieres: [
-              {
-                id: 'm1',
-                nom: 'Algorithmique et Programmation',
-                coefficient: 4,
-                note: 18,
-                appreciation: 'Excellent',
-                professeur: 'Dr. Martin',
-                credit: 6,
-                statut: 'valide'
-              },
-              {
-                id: 'm2',
-                nom: 'Base de Données',
-                coefficient: 3,
-                note: 17,
-                appreciation: 'Très bien',
-                professeur: 'Prof. Bernard',
-                credit: 4,
-                statut: 'valide'
-              },
-              {
-                id: 'm3',
-                nom: 'Mathématiques pour l\'Informatique',
-                coefficient: 3,
-                note: 15,
-                appreciation: 'Bien',
-                professeur: 'Dr. Moreau',
-                credit: 5,
-                statut: 'valide'
-              },
-              {
-                id: 'm4',
-                nom: 'Systèmes d\'Exploitation',
-                coefficient: 2,
-                note: 16,
-                appreciation: 'Très bien',
-                professeur: 'Prof. Dubois',
-                credit: 3,
-                statut: 'valide'
-              },
-              {
-                id: 'm5',
-                nom: 'Architecture des Ordinateurs',
-                coefficient: 2,
-                note: 14,
-                appreciation: 'Assez bien',
-                professeur: 'Prof. Leroy',
-                credit: 3,
-                statut: 'valide'
-              }
-            ]
-          },
-          {
-            semestre: 'S2',
-            matieres: [
-              {
-                id: 'm6',
-                nom: 'Développement Web',
-                coefficient: 4,
-                note: 17.5,
-                appreciation: 'Très bien',
-                professeur: 'Dr. Laurent',
-                credit: 6,
-                statut: 'valide'
-              },
-              {
-                id: 'm7',
-                nom: 'Réseaux et Télécommunications',
-                coefficient: 3,
-                note: 15,
-                appreciation: 'Bien',
-                professeur: 'Prof. Girard',
-                credit: 4,
-                statut: 'valide'
-              },
-              {
-                id: 'm8',
-                nom: 'Intelligence Artificielle',
-                coefficient: 3,
-                note: 16,
-                appreciation: 'Très bien',
-                professeur: 'Dr. Petit',
-                credit: 5,
-                statut: 'valide'
-              },
-              {
-                id: 'm9',
-                nom: 'Gestion de Projet Informatique',
-                coefficient: 2,
-                note: 14,
-                appreciation: 'Assez bien',
-                professeur: 'Prof. Roux',
-                credit: 3,
-                statut: 'valide'
-              },
-              {
-                id: 'm10',
-                nom: 'Sécurité Informatique',
-                coefficient: 2,
-                note: 13,
-                appreciation: 'Assez bien',
-                professeur: 'Dr. Blanc',
-                credit: 3,
-                statut: 'valide'
-              }
-            ]
-          }
-        ]
+ const loadStudentData = useCallback(async () => {
+  try {
+    setIsLoading(true);
+    console.log('Chargement des données pour l\'étudiant ID:', params.id);
+    
+    // CORRECTION : Route dynamique [id] - sans "id/" supplémentaire
+    const response = await fetch(`/api/admin/bilan-academiques/student/${params.id}`);
+    
+    console.log('Response status:', response.status);
+    console.log('URL appelée:', `/api/admin/bilan-academiques/student/${params.id}`);
+    
+    if (!response.ok) {
+      // Vérifier si c'est du HTML (404)
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/html')) {
+        const text = await response.text();
+        console.error('Page 404 reçue au lieu de JSON');
+        throw new Error('Route API non trouvée - Vérifiez le chemin');
       }
-    };
-
-    setStudent(mockStudent);
+      
+      try {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Erreur ${response.status}`);
+      } catch (e) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+    }
+    
+    const studentData = await response.json();
+    console.log('✅ Données reçues avec succès');
+    setStudent(studentData);
+    
+    if (studentData.filiereDetails?.modules?.[0]) {
+      setSelectedSemestre(studentData.filiereDetails.modules[0].semestre);
+    }
+  } catch (error) {
+    console.error('❌ Erreur lors du chargement des données:', error);
+    setStudent(null);
+  } finally {
     setIsLoading(false);
-  }, [params.id]); 
+  }
+}, [params.id]);
 
   useEffect(() => {
     loadStudentData();
@@ -218,72 +234,38 @@ export default function StudentNotesDetailsPage() {
     return 'bg-red-100';
   };
 
-  // Fonctions corrigées pour les variants Badge
-
-const getStatusVariant = (statut: Matiere['statut']): "default" | "secondary" | "destructive" => {
-  const config: Record<Matiere['statut'], "default" | "secondary" | "destructive"> = {
-    valide: 'default',
-    echec: 'destructive',
-    en_cours: 'secondary'
-  };
-  return config[statut];
-};
-
-const getStatusText = (statut: Matiere['statut']): string => {
-  const config: Record<Matiere['statut'], string> = {
-    valide: 'Validé',
-    echec: 'Échec',
-    en_cours: 'En cours'
-  };
-  return config[statut];
-};
-
-const getAppreciationVariant = (appreciation: string): "default" | "secondary" | "destructive" | "outline" => {
-  const config: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-    'Excellent': 'default',
-    'Très bien': 'default',
-    'Bien': 'secondary',
-    'Assez bien': 'secondary',
-    'Passable': 'outline',
-    'Insuffisant': 'destructive'
-  };
-  return config[appreciation] || 'outline';
-};
-
-  const calculateMoyenneSemestre = (semestre: string) => {
-    if (!student) return 0;
-    const semestreData = student.filiereDetails.modules.find(m => m.semestre === semestre);
-    if (!semestreData) return 0;
-
-    const totalNotes = semestreData.matieres.reduce((sum, matiere) => sum + (matiere.note * matiere.coefficient), 0);
-    const totalCoefficients = semestreData.matieres.reduce((sum, matiere) => sum + matiere.coefficient, 0);
-    
-    return totalCoefficients > 0 ? totalNotes / totalCoefficients : 0;
+  const getStatusVariant = (statut: Matiere['statut']): "default" | "secondary" | "destructive" => {
+    const config: Record<Matiere['statut'], "default" | "secondary" | "destructive"> = {
+      valide: 'default',
+      echec: 'destructive',
+      en_cours: 'secondary'
+    };
+    return config[statut];
   };
 
-  const calculateCreditsSemestre = (semestre: string) => {
-    if (!student) return { obtenus: 0, totaux: 0 };
-    const semestreData = student.filiereDetails.modules.find(m => m.semestre === semestre);
-    if (!semestreData) return { obtenus: 0, totaux: 0 };
+  const getStatusText = (statut: Matiere['statut']): string => {
+    const config: Record<Matiere['statut'], string> = {
+      valide: 'Validé',
+      echec: 'Échec',
+      en_cours: 'En cours'
+    };
+    return config[statut];
+  };
 
-    const obtenus = semestreData.matieres
-      .filter(m => m.statut === 'valide')
-      .reduce((sum, matiere) => sum + matiere.credit, 0);
-    
-    const totaux = semestreData.matieres.reduce((sum, matiere) => sum + matiere.credit, 0);
-
-    return { obtenus, totaux };
+  const getAppreciationVariant = (appreciation: string): "default" | "secondary" | "destructive" | "outline" => {
+    const config: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      'Excellent': 'default',
+      'Très bien': 'default',
+      'Bien': 'secondary',
+      'Assez bien': 'secondary',
+      'Passable': 'outline',
+      'Insuffisant': 'destructive'
+    };
+    return config[appreciation] || 'outline';
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement des détails académiques...</p>
-        </div>
-      </div>
-    );
+    return <StudentDetailsSkeleton />;
   }
 
   if (!student) {
@@ -298,7 +280,7 @@ const getAppreciationVariant = (appreciation: string): "default" | "secondary" |
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       <ScrollArea className="h-screen">
@@ -306,7 +288,7 @@ const getAppreciationVariant = (appreciation: string): "default" | "secondary" |
           
           {/* Header */}
           <div className="flex flex-col">
-            <div className="flex  items-center gap-4">
+            <div className="flex items-center gap-4">
               <Button variant="outline" size="icon" onClick={() => router.back()}>
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -314,6 +296,7 @@ const getAppreciationVariant = (appreciation: string): "default" | "secondary" |
                 <h1 className="text-3xl font-bold tracking-tight">
                   {student.prenom} {student.nom}
                 </h1>
+                <p className="text-gray-600">{student.email}</p>
               </div>
             </div>
             <Button className="mt-4 w-48">
@@ -435,14 +418,13 @@ const getAppreciationVariant = (appreciation: string): "default" | "secondary" |
                         <div>
                           <h3 className="text-lg font-semibold">Semestre {module.semestre}</h3>
                           <p className="text-sm text-muted-foreground">
-                            {module.matieres.length} matières - Moyenne: {calculateMoyenneSemestre(module.semestre).toFixed(2)}/20
+                            {module.matieres.length} matières - Moyenne: {module.moyenneSemestre.toFixed(2)}/20
                           </p>
                         </div>
                         <div className="text-right">
                           <div className="text-sm font-medium">Crédits</div>
                           <div className="text-lg font-bold">
-                            {calculateCreditsSemestre(module.semestre).obtenus}/
-                            {calculateCreditsSemestre(module.semestre).totaux}
+                            {module.creditsObtenus}/{module.creditsTotaux}
                           </div>
                         </div>
                       </div>
@@ -474,7 +456,7 @@ const getAppreciationVariant = (appreciation: string): "default" | "secondary" |
                               <TableCell>
                                 <div className={`flex items-center gap-2 ${getNoteColor(matiere.note)}`}>
                                   <div className={`w-3 h-3 rounded-full ${getNoteBgColor(matiere.note)}`}></div>
-                                  <span className="font-bold">{matiere.note}/20</span>
+                                  <span className="font-bold">{matiere.note.toFixed(2)}/20</span>
                                 </div>
                               </TableCell>
                               <TableCell>
@@ -517,7 +499,7 @@ const getAppreciationVariant = (appreciation: string): "default" | "secondary" |
                         </CardHeader>
                         <CardContent>
                           <div className="text-2xl font-bold text-purple-600">
-                            {Math.max(...module.matieres.map(m => m.note))}/20
+                            {Math.max(...module.matieres.map(m => m.note)).toFixed(2)}/20
                           </div>
                           <p className="text-xs text-muted-foreground">
                             Performance maximale
@@ -557,7 +539,7 @@ const getAppreciationVariant = (appreciation: string): "default" | "secondary" |
             <CardContent>
               <div className="space-y-4">
                 {student.filiereDetails.modules.map(module => {
-                  const moyenne = calculateMoyenneSemestre(module.semestre);
+                  const moyenne = module.moyenneSemestre;
                   return (
                     <div key={module.semestre} className="flex items-center justify-between">
                       <div className="flex items-center gap-4 flex-1">
