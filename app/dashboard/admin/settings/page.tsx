@@ -14,7 +14,6 @@ import {
   Save,
   Key, 
   AlertTriangle,
-  Sun,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +22,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import toast from "react-hot-toast";
 
 // Interface pour typer les erreurs Clerk
@@ -469,39 +467,6 @@ const AdminSettingsPage = () => {
                       </form>
                     </div>
                   )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Section Apparence */}
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader className="p-4 sm:p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="dark:text-white text-base sm:text-lg">Apparence</CardTitle>
-                  <CardDescription className="dark:text-gray-400 text-xs sm:text-sm">Personnalisez l&apos;apparence de votre interface</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="space-y-4 sm:space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5 min-w-0 flex-1">
-                    <Label htmlFor="dark-mode" className="dark:text-white text-sm sm:text-base">Mode sombre</Label>
-                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
-                      {darkMode ? "Interface en mode sombre" : "Interface en mode clair"}
-                    </p>
-                  </div>
-                  <Switch
-                    id="dark-mode"
-                    checked={darkMode}
-                    onCheckedChange={setDarkMode}
-                    className="flex-shrink-0"
-                  />
                 </div>
               </div>
             </CardContent>

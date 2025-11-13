@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import {
-  Sun,
   Lock,
   Eye,
   EyeOff,
@@ -500,44 +499,6 @@ const StudentSettingsPage = () => {
                       </form>
                     </div>
                   )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Section Apparence */}
-          <Card className="border-0 shadow-lg overflow-hidden">
-            <CardHeader className="pb-4 sm:pb-6">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2 bg-blue-50 rounded-lg flex-shrink-0">
-                  <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 break-words">
-                    Apparence
-                  </CardTitle>
-                  <CardDescription className="text-sm sm:text-base text-gray-500 break-words">
-                    Personnalisez l&apos;apparence de votre interface
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-4 sm:space-y-6">
-                <div className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg min-w-0">
-                  <div className="space-y-0.5 min-w-0 flex-1 mr-4">
-                    <Label htmlFor="dark-mode" className="text-sm sm:text-base font-medium block break-words">
-                      Mode sombre
-                    </Label>
-                    <p className="text-xs sm:text-sm text-gray-500 break-words">
-                      {darkMode ? "Interface en mode sombre" : "Interface en mode clair"}
-                    </p>
-                  </div>
-                  <Switch
-                    id="dark-mode"
-                    checked={darkMode}
-                    onCheckedChange={setDarkMode}
-                  />
                 </div>
               </div>
             </CardContent>

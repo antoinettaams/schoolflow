@@ -11,7 +11,7 @@ const mockData = {
     filiere: "Sciences",
     vague: "Vague 2024"
   },
-  attendance: [
+  attendance: [ 
     {
       id: "1",
       date: "15/01/2024",

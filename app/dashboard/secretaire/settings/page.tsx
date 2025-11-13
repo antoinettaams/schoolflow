@@ -5,7 +5,6 @@ import React, { useState, useEffect } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import {
-  Sun,
   Lock,
   Eye,
   EyeOff,
@@ -521,39 +520,6 @@ const SecretaireSettingsPage = () => {
                       </form>
                     </div>
                   )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Section Apparence */}
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-pink-50 rounded-lg">
-                  <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="text-base sm:text-lg">Apparence</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Personnalisez l&apos;apparence de votre interface</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="space-y-4 sm:space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5 min-w-0 flex-1">
-                    <Label htmlFor="dark-mode" className="text-sm sm:text-base">Mode sombre</Label>
-                    <p className="text-xs sm:text-sm text-gray-500 truncate">
-                      {darkMode ? "Interface en mode sombre" : "Interface en mode clair"}
-                    </p>
-                  </div>
-                  <Switch
-                    id="dark-mode"
-                    checked={darkMode}
-                    onCheckedChange={setDarkMode}
-                    className="flex-shrink-0"
-                  />
                 </div>
               </div>
             </CardContent>

@@ -15,9 +15,9 @@ interface StudentData {
   studentStatus: "inscrit" | "non-inscrit";
   filiere: string;
   vague: string;
-}
+} 
 
-interface AttendanceRecord {
+interface AttendanceRecord { 
   id: string;
   date: string;
   day: string;
