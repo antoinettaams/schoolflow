@@ -1,4 +1,4 @@
-// app/dashboard/admin/students/page.tsx - VERSION CORRIGÉE
+// app/dashboard/admin/students/page.tsx - VERSION AVEC SKELETON
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Types pour les données - CORRIGÉS
 interface Module {
@@ -49,8 +50,8 @@ interface Student {
   phone: string;
   studentNumber: string;
   filiere: string;
-  vagueNumber: string; // CORRECTION: string au lieu de number
-  vagueId: string; // AJOUT: ID de la vague pour le filtrage
+  vagueNumber: string;
+  vagueId: string;
   averageGrade: number;
   attendanceRate: number;
   status: "actif" | "inactif" | "suspendu";
@@ -61,7 +62,7 @@ interface Student {
   totalStudents: number;
   anneeScolaire: string;
   clerkUserId: string;
-  filiereId: string; // AJOUT: ID de la filière
+  filiereId: string;
 }
 
 interface ApiResponse {
@@ -80,6 +81,89 @@ interface ApiResponse {
     vagues: Array<{ id: string; name: string }>;
   };
 }
+
+// Composant Skeleton pour les statistiques
+const StatsSkeleton: React.FC = () => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {[...Array(2)].map((_, index) => (
+        <Card key={index}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-4 rounded" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-7 w-12 mb-1" />
+            <Skeleton className="h-3 w-24" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+// Composant Skeleton pour les filtres
+const FiltersSkeleton: React.FC = () => {
+  return (
+    <Card>
+      <CardHeader>
+        <Skeleton className="h-6 w-40" />
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <Skeleton className="h-10 md:col-span-2" />
+          <Skeleton className="h-10" />
+          <Skeleton className="h-10" />
+          <Skeleton className="h-10" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Composant Skeleton pour les lignes du tableau
+const TableRowSkeleton: React.FC = () => {
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-col items-center space-y-2">
+          <Skeleton className="h-6 w-16 rounded-full" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-6 w-20 rounded-full" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-6 w-16 rounded-full" />
+      </TableCell>
+      <TableCell>
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-8 rounded" />
+          <Skeleton className="h-8 w-8 rounded" />
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+};
 
 const AdminStudentsPage = () => {
   const { user, isLoaded, isSignedIn } = useUser();
@@ -257,10 +341,56 @@ const AdminStudentsPage = () => {
       return 0;
     });
 
-  if (!isLoaded) {
+  // État de chargement avec skeleton
+  if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Chargement de vos informations...</div>
+      <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
+        <div className="p-6 space-y-6">
+          
+          {/* HEADER SKELETON */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-40" />
+            </div>
+          </div>
+
+          {/* STATISTIQUES SKELETON */}
+          <StatsSkeleton />
+
+          {/* FILTRES SKELETON */}
+          <FiltersSkeleton />
+
+          {/* TABLEAU SKELETON */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {[...Array(7)].map((_, index) => (
+                      <TableHead key={index}>
+                        <Skeleton className="h-4 w-20" />
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, index) => (
+                    <TableRowSkeleton key={index} />
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -306,7 +436,7 @@ const AdminStudentsPage = () => {
               {loading ? "Chargement..." : `${stats.total || 0} élève(s) trouvé(s)`}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex sm:flex flex-cols gap-2">
             <Button 
               variant="outline" 
               onClick={fetchStudents}
@@ -433,12 +563,7 @@ const AdminStudentsPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-gray-600">Chargement des étudiants...</p>
-              </div>
-            ) : filteredStudents.length === 0 ? (
+            {filteredStudents.length === 0 ? (
               <div className="text-center py-8">
                 <FaUserGraduate className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-4 text-lg font-medium text-gray-900">Aucun étudiant trouvé</h3>
@@ -516,7 +641,6 @@ const AdminStudentsPage = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {/* CORRECTION: Utiliser vagueNumber qui contient le nom de la vague */}
                           <Badge variant="secondary" className="text-xs">
                             {student.vagueNumber || "Non assigné"}
                           </Badge>
@@ -637,7 +761,6 @@ const AdminStudentsPage = () => {
                       <div>
                         <p className="text-sm font-medium mb-2">Vague</p>
                         <div className="flex flex-wrap gap-1">
-                          {/* CORRECTION: Utiliser vagueNumber qui contient le nom */}
                           <Badge variant="secondary" className="text-xs">
                             {selectedStudent.vagueNumber || "Non assigné"}
                           </Badge>

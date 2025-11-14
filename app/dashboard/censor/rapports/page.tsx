@@ -1578,7 +1578,7 @@ export default function RapportsPersonnelsPage() {
                   {rapports.length === 0 && (
                     <Button 
                       onClick={() => setIsNewRapportOpen(true)}
-                      className="mt-4"
+                      className="mt-4 w-60"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Créer le premier rapport
@@ -1781,10 +1781,10 @@ export default function RapportsPersonnelsPage() {
                   onChange={(e) => setCommentaire(e.target.value)}
                   className="min-h-[100px] bg-white"
                 />
-                <div className="flex justify-end">
+                <div className="flex justify-end mt-4 w-60">
                   <Button disabled={!commentaire.trim()}>
                     <MessageSquare className="h-4 w-4 mr-2" />
-                    Enregistrer le Commentaire
+                    Enregistrer 
                   </Button>
                 </div>
               </div>

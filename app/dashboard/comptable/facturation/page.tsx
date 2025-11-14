@@ -970,50 +970,52 @@ export default function FacturationsPage() {
 
             {/* Filtres et recherche */}
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        placeholder="Rechercher par élève, parent, n° facture ou filière..."
-                        className="pl-10 bg-white border-gray-300"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-3">
-                    <Select value={selectedStatut} onValueChange={setSelectedStatut}>
-                      <SelectTrigger className="w-[150px] bg-white border-gray-300">
-                        <Filter className="h-4 w-4 mr-2" />
-                        <SelectValue placeholder="Tous statuts" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tous statuts</SelectItem>
-                        <SelectItem value="generee">Générée</SelectItem>
-                        <SelectItem value="envoyee">Envoyée</SelectItem>
-                        <SelectItem value="annulee">Annulée</SelectItem>
-                      </SelectContent>
-                    </Select>
+  <CardContent className="pt-6">
+    <div className="flex flex-col sm:flex-row gap-4">
+      {/* Barre de recherche - pleine largeur sur mobile */}
+      <div className="flex-1">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Rechercher par élève, parent, n° facture ou filière..."
+            className="pl-10 bg-white border-gray-300 w-full"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+      
+      {/* Filtres - en colonne sur mobile, en ligne sur ordi */}
+      <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+        <Select value={selectedStatut} onValueChange={setSelectedStatut}>
+          <SelectTrigger className="w-full sm:w-[150px] bg-white border-gray-300">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Tous statuts" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous statuts</SelectItem>
+            <SelectItem value="generee">Générée</SelectItem>
+            <SelectItem value="envoyee">Envoyée</SelectItem>
+            <SelectItem value="annulee">Annulée</SelectItem>
+          </SelectContent>
+        </Select>
 
-                    <Select value={selectedType} onValueChange={setSelectedType}>
-                      <SelectTrigger className="w-[150px] bg-white border-gray-300">
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        <SelectValue placeholder="Tous types" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tous types</SelectItem>
-                        <SelectItem value="inscription">Inscription</SelectItem>
-                        <SelectItem value="scolarite">Scolarité</SelectItem>
-                        <SelectItem value="frais_divers">Frais divers</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        <Select value={selectedType} onValueChange={setSelectedType}>
+          <SelectTrigger className="w-full sm:w-[150px] bg-white border-gray-300">
+            <CreditCard className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Tous types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous types</SelectItem>
+            <SelectItem value="inscription">Inscription</SelectItem>
+            <SelectItem value="scolarite">Scolarité</SelectItem>
+            <SelectItem value="frais_divers">Frais divers</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  </CardContent>
+</Card>
 
             {/* Tableau des factures */}
             <Card>

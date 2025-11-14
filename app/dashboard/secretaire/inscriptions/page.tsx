@@ -531,252 +531,256 @@ export default function InscriptionsPage() {
                     </p>
                   </div>
                   
-                  <div className="flex items-center gap-4">
-                    <Card className="bg-orange-50 border-orange-200">
-                      <CardContent className="p-3">
-                        <div className="flex items-center gap-2">
-                          <Euro className="w-4 h-4 text-orange-600" />
-                          <span className="text-sm font-semibold text-orange-800">
-                            Inscription: {safeToLocaleString(fraisInscription)} FCFA
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
+                 <div className="flex flex-col sm:flex-row items-center gap-4">
+  {/* Carte des frais */}
+  <Card className="bg-orange-50 border-orange-200 w-full sm:w-auto">
+    <CardContent className="p-3">
+      <div className="flex items-center gap-2 justify-center sm:justify-start">
+        <Euro className="w-4 h-4 text-orange-600" />
+        <span className="text-sm font-semibold text-orange-800">
+          Inscription: {safeToLocaleString(fraisInscription)} FCFA
+        </span>
+      </div>
+    </CardContent>
+  </Card>
 
-                    {/* Bouton de configuration des frais */}
-                    <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline">
-                          <Settings className="w-4 h-4 mr-2" />
-                          Configurer les Frais
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-h-[80vh] overflow-y-auto max-w-md bg-white">
-                        <DialogHeader>
-                          <DialogTitle>Configuration des Frais d&apos;Inscription</DialogTitle>
-                          <DialogDescription>
-                            Définissez le montant universel des frais d&apos;inscription
-                          </DialogDescription>
-                        </DialogHeader>
+  {/* Boutons en ligne sur mobile, en colonne sur ordi */}
+  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+    {/* Bouton de configuration des frais */}
+    <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="w-full sm:w-auto justify-center">
+          <Settings className="w-4 h-4 mr-2" />
+          Configurer les Frais
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[80vh] overflow-y-auto max-w-md bg-white">
+        <DialogHeader>
+          <DialogTitle>Configuration des Frais d&apos;Inscription</DialogTitle>
+          <DialogDescription>
+            Définissez le montant universel des frais d&apos;inscription
+          </DialogDescription>
+        </DialogHeader>
 
-                        <div className="space-y-4 py-4">
-                          <Card>
-                            <CardContent className="p-4">
-                              <div className="space-y-4">
-                                <div>
-                                  <Label htmlFor="frais" className="text-sm font-medium text-gray-700">
-                                    Frais d&apos;Inscription Universel (FCFA)
-                                  </Label>
-                                  <p className="text-sm text-gray-600 mb-2">
-                                    Ce montant s&apos;applique à toutes les filières
-                                  </p>
-                                  <Input
-                                    id="frais"
-                                    type="number"
-                                    placeholder="15000"
-                                    value={fraisInscription}
-                                    onChange={(e) => setFraisInscription(parseInt(e.target.value) || 15000)}
-                                    className="text-lg font-semibold"
-                                  />
-                                </div>
-                                
-                                <div className="p-3 bg-blue-50 rounded-lg">
-                                  <div className="text-sm font-medium text-blue-900">Nouveau montant:</div>
-                                  <div className="text-2xl font-bold text-blue-900 mt-1">
-                                    {safeToLocaleString(fraisInscription)} FCFA
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-
-                        <div className="flex justify-end gap-3 pt-4 border-t">
-                          <Button variant="outline" onClick={() => setIsConfigDialogOpen(false)}>
-                            Annuler
-                          </Button>
-                          <Button 
-                            onClick={handleUpdateFrais}
-                            disabled={actionLoading}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            Sauvegarder
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-
-                    {/* Dialog nouvelle inscription */}
-                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button className="bg-blue-600 hover:bg-blue-700">
-                          <UserPlus className="w-4 h-4 mr-2" />
-                          Nouvelle Inscription
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Nouvelle Inscription</DialogTitle>
-                          <DialogDescription>
-                            Remplissez les informations du nouvel apprenant
-                          </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="space-y-6 py-4">
-                          {/* Information sur les frais */}
-                          <Card className="bg-blue-50 border-blue-200">
-                            <CardContent className="p-4">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h4 className="font-semibold text-blue-900">Frais d&apos;Inscription Universel</h4>
-                                  <p className="text-blue-700 text-sm">
-                                    Applicable à toutes les filières
-                                  </p>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-2xl font-bold text-blue-900">
-                                    {safeToLocaleString(fraisInscription)} FCFA
-                                  </div>
-                                  <div className="text-sm text-blue-600">TTC</div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-
-                          {/* Formulaire */}
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <div className="space-y-2">
-                              <Label htmlFor="prenom">Prénom *</Label>
-                              <Input
-                                id="prenom"
-                                placeholder="Prénom de l'apprenant"
-                                value={nouvelleInscription.prenom}
-                                onChange={(e) => setNouvelleInscription({ ...nouvelleInscription, prenom: e.target.value })}
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="nom">Nom *</Label>
-                              <Input
-                                id="nom"
-                                placeholder="Nom de l'apprenant"
-                                value={nouvelleInscription.nom}
-                                onChange={(e) => setNouvelleInscription({ ...nouvelleInscription, nom: e.target.value })}
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="email">Email *</Label>
-                              <Input
-                                id="email"
-                                type="email"
-                                placeholder="email@exemple.com"
-                                value={nouvelleInscription.email}
-                                onChange={(e) => setNouvelleInscription({ ...nouvelleInscription, email: e.target.value })}
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="telephone">Téléphone *</Label>
-                              <Input
-                                id="telephone"
-                                placeholder="+229 01 23 45 67"
-                                value={nouvelleInscription.telephone}
-                                onChange={(e) => setNouvelleInscription({ ...nouvelleInscription, telephone: e.target.value })}
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="dateNaissance">Date de Naissance</Label>
-                              <Input
-                                id="dateNaissance"
-                                type="date"
-                                value={nouvelleInscription.dateNaissance}
-                                onChange={(e) => setNouvelleInscription({ ...nouvelleInscription, dateNaissance: e.target.value })}
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="filiere">Filière *</Label>
-                              <Select
-                                value={nouvelleInscription.filiere}
-                                onValueChange={(value) => setNouvelleInscription({ ...nouvelleInscription, filiere: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionnez une filière" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {filieres.map((filiere) => (
-                                    <SelectItem key={filiere.value} value={filiere.value}>
-                                      {filiere.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="vague">Vague *</Label>
-                              <Select
-                                value={nouvelleInscription.vague}
-                                onValueChange={(value) => setNouvelleInscription({ ...nouvelleInscription, vague: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionnez une vague" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {vagues.map((vague) => (
-                                    <SelectItem key={vague.value} value={vague.value}>
-                                      {vague.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          {/* Récapitulatif */}
-                          <Card>
-                            <CardHeader>
-                              <CardTitle className="text-lg">Récapitulatif</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                              <div className="flex justify-between items-center py-2 border-b">
-                                <span className="text-gray-600">Frais d&apos;inscription:</span>
-                                <span className="font-semibold">{safeToLocaleString(fraisInscription)} FCFA</span>
-                              </div>
-                              <div className="flex justify-between items-center py-2 border-b">
-                                <span className="text-gray-600">Statut:</span>
-                                <Badge variant="secondary">En attente de paiement</Badge>
-                              </div>
-                              <div className="flex justify-between items-center py-2">
-                                <span className="text-lg font-semibold">Total à payer:</span>
-                                <span className="text-lg font-bold text-blue-600">
-                                  {safeToLocaleString(fraisInscription)} FCFA
-                                </span>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-
-                        <div className="flex justify-end gap-3 pt-4 border-t">
-                          <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                            Annuler
-                          </Button>
-                          <Button 
-                            onClick={handleNouvelleInscription}
-                            disabled={!nouvelleInscription.nom || !nouvelleInscription.prenom || !nouvelleInscription.email || !nouvelleInscription.telephone || !nouvelleInscription.filiere || !nouvelleInscription.vague || actionLoading}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            <UserPlus className="w-4 h-4 mr-2" />
-                            Créer l&apos;inscription
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+        <div className="space-y-4 py-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="frais" className="text-sm font-medium text-gray-700">
+                    Frais d&apos;Inscription Universel (FCFA)
+                  </Label>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Ce montant s&apos;applique à toutes les filières
+                  </p>
+                  <Input
+                    id="frais"
+                    type="number"
+                    placeholder="15000"
+                    value={fraisInscription}
+                    onChange={(e) => setFraisInscription(parseInt(e.target.value) || 15000)}
+                    className="text-lg font-semibold"
+                  />
+                </div>
+                
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <div className="text-sm font-medium text-blue-900">Nouveau montant:</div>
+                  <div className="text-2xl font-bold text-blue-900 mt-1">
+                    {safeToLocaleString(fraisInscription)} FCFA
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <Button variant="outline" onClick={() => setIsConfigDialogOpen(false)}>
+            Annuler
+          </Button>
+          <Button 
+            onClick={handleUpdateFrais}
+            disabled={actionLoading}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Sauvegarder
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Dialog nouvelle inscription */}
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogTrigger asChild>
+        <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto justify-center">
+          <UserPlus className="w-4 h-4 mr-2" />
+          Nouvelle Inscription
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Nouvelle Inscription</DialogTitle>
+          <DialogDescription>
+            Remplissez les informations du nouvel apprenant
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          {/* Information sur les frais */}
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-blue-900">Frais d&apos;Inscription Universel</h4>
+                  <p className="text-blue-700 text-sm">
+                    Applicable à toutes les filières
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-blue-900">
+                    {safeToLocaleString(fraisInscription)} FCFA
+                  </div>
+                  <div className="text-sm text-blue-600">TTC</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Formulaire */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="prenom">Prénom *</Label>
+              <Input
+                id="prenom"
+                placeholder="Prénom de l'apprenant"
+                value={nouvelleInscription.prenom}
+                onChange={(e) => setNouvelleInscription({ ...nouvelleInscription, prenom: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="nom">Nom *</Label>
+              <Input
+                id="nom"
+                placeholder="Nom de l'apprenant"
+                value={nouvelleInscription.nom}
+                onChange={(e) => setNouvelleInscription({ ...nouvelleInscription, nom: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@exemple.com"
+                value={nouvelleInscription.email}
+                onChange={(e) => setNouvelleInscription({ ...nouvelleInscription, email: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="telephone">Téléphone *</Label>
+              <Input
+                id="telephone"
+                placeholder="+229 01 23 45 67"
+                value={nouvelleInscription.telephone}
+                onChange={(e) => setNouvelleInscription({ ...nouvelleInscription, telephone: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="dateNaissance">Date de Naissance</Label>
+              <Input
+                id="dateNaissance"
+                type="date"
+                value={nouvelleInscription.dateNaissance}
+                onChange={(e) => setNouvelleInscription({ ...nouvelleInscription, dateNaissance: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="filiere">Filière *</Label>
+              <Select
+                value={nouvelleInscription.filiere}
+                onValueChange={(value) => setNouvelleInscription({ ...nouvelleInscription, filiere: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez une filière" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filieres.map((filiere) => (
+                    <SelectItem key={filiere.value} value={filiere.value}>
+                      {filiere.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="vague">Vague *</Label>
+              <Select
+                value={nouvelleInscription.vague}
+                onValueChange={(value) => setNouvelleInscription({ ...nouvelleInscription, vague: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez une vague" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vagues.map((vague) => (
+                    <SelectItem key={vague.value} value={vague.value}>
+                      {vague.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Récapitulatif */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Récapitulatif</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-gray-600">Frais d&apos;inscription:</span>
+                <span className="font-semibold">{safeToLocaleString(fraisInscription)} FCFA</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-gray-600">Statut:</span>
+                <Badge variant="secondary">En attente de paiement</Badge>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-lg font-semibold">Total à payer:</span>
+                <span className="text-lg font-bold text-blue-600">
+                  {safeToLocaleString(fraisInscription)} FCFA
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            Annuler
+          </Button>
+          <Button 
+            onClick={handleNouvelleInscription}
+            disabled={!nouvelleInscription.nom || !nouvelleInscription.prenom || !nouvelleInscription.email || !nouvelleInscription.telephone || !nouvelleInscription.filiere || !nouvelleInscription.vague || actionLoading}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            <UserPlus className="w-4 h-4 mr-2" />
+            Créer l&apos;inscription
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  </div>
+</div>
                 </div>
               </div>
             )}

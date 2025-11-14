@@ -12,12 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface StudentData {
   studentName: string;
   studentClass: string;
-  studentStatus: "inscrit" | "non-inscrit";
+  studentStatus: "inscrit" | "non_trouve" | "non_associe";
   filiere: string;
   vague: string;
-} 
+  studentNumber?: string;
+}
 
-interface AttendanceRecord { 
+interface AttendanceRecord {
   id: string;
   date: string;
   day: string;
@@ -32,17 +33,8 @@ interface AttendanceRecord {
   vague: string;
 }
 
-// NOUVELLE INTERFACE POUR LES ERREURS
-interface ApiError {
-  error?: string;
-  message?: string;
-  details?: any;
-  step?: number;
-  timestamp?: string;
-}
-
-// INTERFACE PRINCIPALE CORRIGÉE
 interface ApiResponse {
+  success: boolean;
   student: StudentData;
   attendance: AttendanceRecord[];
   stats: {
@@ -58,7 +50,12 @@ interface ApiResponse {
     modules: string[];
     semestres: string[];
   };
-  // Propriétés optionnelles pour les erreurs
+  metadata?: {
+    parentName?: string;
+    enfantName?: string;
+    generatedAt?: string;
+    dataSource?: string;
+  };
   error?: string;
   message?: string;
 }
@@ -67,35 +64,44 @@ interface ApiResponse {
 const AttendanceSkeleton = () => {
   return (
     <div className="space-y-6">
+      {/* Skeleton pour le header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
+        <div className="space-y-2">
+          <div className="h-8 w-48 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-4 w-64 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+        <div className="h-6 w-32 bg-gray-200 rounded-full animate-pulse"></div>
+      </div>
+
       {/* Skeleton pour les cartes de statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         {[1, 2, 3, 4].map((card) => (
-          <Card key={card}>
+          <Card key={card} className="animate-pulse">
             <CardContent className="p-6 text-center">
               <div className="flex items-center justify-center gap-3 mb-3">
-                <div className="p-3 bg-gray-200 rounded-lg animate-pulse">
+                <div className="p-3 bg-gray-200 rounded-lg">
                   <div className="w-6 h-6 bg-gray-300 rounded"></div>
                 </div>
               </div>
-              <div className="h-6 w-32 bg-gray-200 rounded animate-pulse mx-auto mb-3"></div>
-              <div className="h-10 w-16 bg-gray-200 rounded animate-pulse mx-auto mb-2"></div>
-              <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mx-auto"></div>
+              <div className="h-6 w-32 bg-gray-200 rounded mx-auto mb-3"></div>
+              <div className="h-10 w-16 bg-gray-200 rounded mx-auto mb-2"></div>
+              <div className="h-4 w-24 bg-gray-200 rounded mx-auto"></div>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Skeleton pour les filtres */}
-      <Card className="mb-6">
+      <Card className="mb-6 animate-pulse">
         <CardHeader>
-          <div className="h-6 w-24 bg-gray-200 rounded animate-pulse mb-2"></div>
+          <div className="h-6 w-24 bg-gray-200 rounded mb-2"></div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[1, 2, 3].map((filter) => (
               <div key={filter}>
-                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
-                <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-16 bg-gray-200 rounded mb-2"></div>
+                <div className="h-10 w-full bg-gray-200 rounded"></div>
               </div>
             ))}
           </div>
@@ -103,11 +109,11 @@ const AttendanceSkeleton = () => {
       </Card>
 
       {/* Skeleton pour le tableau */}
-      <Card>
+      <Card className="animate-pulse">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-6 w-40 bg-gray-200 rounded"></div>
+            <div className="h-4 w-24 bg-gray-200 rounded"></div>
           </div>
         </CardHeader>
         <CardContent>
@@ -117,7 +123,7 @@ const AttendanceSkeleton = () => {
                 <tr className="border-b border-gray-200">
                   {[1, 2, 3, 4, 5, 6].map((header) => (
                     <th key={header} className="text-left py-3 px-4">
-                      <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-4 w-20 bg-gray-200 rounded"></div>
                     </th>
                   ))}
                 </tr>
@@ -128,8 +134,8 @@ const AttendanceSkeleton = () => {
                     {[1, 2, 3, 4, 5, 6].map((cell) => (
                       <td key={cell} className="py-4 px-4">
                         <div className="space-y-2">
-                          <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
-                          {cell === 1 && <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>}
+                          <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                          {cell === 1 && <div className="h-3 w-12 bg-gray-200 rounded"></div>}
                         </div>
                       </td>
                     ))}
@@ -144,6 +150,7 @@ const AttendanceSkeleton = () => {
   );
 };
 
+// --- Composant principal ---
 export default function ParentAttendancePage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const router = useRouter();
@@ -170,7 +177,7 @@ export default function ParentAttendancePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Charger les données depuis l'API - VERSION CORRIGÉE
+  // Charger les données depuis l'API
   const fetchAttendanceData = async () => {
     try {
       setIsLoading(true);
@@ -178,7 +185,7 @@ export default function ParentAttendancePage() {
       
       console.log('🔄 Début du chargement des données...');
       
-      const response = await fetch('/api/parents/attendance', {
+      const response = await fetch('/api/attendance', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -188,55 +195,42 @@ export default function ParentAttendancePage() {
       
       console.log('📡 Statut HTTP:', response.status, response.statusText);
       
-      // Vérifier si la réponse est vide
-      const responseText = await response.text();
-      console.log('📄 Longueur réponse:', responseText.length);
-      
-      if (!responseText || responseText.trim() === '') {
-        throw new Error('Le serveur a retourné une réponse vide');
-      }
-      
-      // Parser le JSON avec type sécurisé
-      let data: ApiResponse | ApiError;
-      try {
-        data = JSON.parse(responseText);
-        console.log('✅ JSON parsé avec succès');
-      } catch (parseError) {
-        console.error('❌ Erreur parsing JSON:', parseError);
-        console.error('📋 Contenu reçu:', responseText);
-        throw new Error('Format de réponse invalide du serveur');
-      }
-      
-      // Vérifier si c'est une erreur API
       if (!response.ok) {
-        const errorData = data as ApiError;
-        throw new Error(errorData.error || errorData.message || `Erreur ${response.status}`);
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
       }
       
-      // Vérifier que c'est une réponse valide (sans erreur)
-      const successData = data as ApiResponse;
-      if (successData.error) {
-        throw new Error(successData.error || successData.message || 'Erreur du serveur');
+      const data: ApiResponse = await response.json();
+      
+      // Vérifier le succès de l'API
+      if (!data.success || data.error) {
+        throw new Error(data.error || data.message || "Erreur inconnue");
       }
       
-      // Validation des données
-      if (!successData.student || !successData.attendance || !successData.stats) {
-        console.error('❌ Données manquantes:', successData);
-        throw new Error('Données incomplètes reçues du serveur');
+      // Vérifier si des étudiants sont associés
+      if (data.student.studentStatus === "non_associe") {
+        setError("Aucun étudiant associé à votre compte. Veuillez contacter l'administration.");
+        setIsLoading(false);
+        return;
+      }
+      
+      if (data.student.studentStatus === "non_trouve") {
+        setError("Aucun étudiant trouvé pour votre compte.");
+        setIsLoading(false);
+        return;
       }
       
       console.log('📊 Données reçues:', {
-        student: successData.student.studentName,
-        attendanceCount: successData.attendance.length,
-        stats: successData.stats
+        student: data.student.studentName,
+        attendanceCount: data.attendance.length,
+        stats: data.stats
       });
       
       // Mettre à jour l'état
-      setStudentData(successData.student);
-      setAttendanceData(successData.attendance);
-      setStats(successData.stats);
-      setFilters(successData.filters);
-      setSelectedVague(successData.student.vague);
+      setStudentData(data.student);
+      setAttendanceData(data.attendance);
+      setStats(data.stats);
+      setFilters(data.filters);
+      setSelectedVague(data.student.vague);
       
     } catch (error) {
       console.error("💥 Erreur lors du chargement des données:", error);
@@ -305,18 +299,12 @@ export default function ParentAttendancePage() {
     }
   });
 
+  // États de chargement et d'erreur
   if (!isLoaded || isLoading) {
     return (
       <div className="flex-1 flex flex-col min-h-0 bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
         <div className="flex-1 overflow-y-auto">
           <div className="p-6 max-w-6xl mx-auto">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
-              <div className="space-y-2">
-                <div className="h-8 w-48 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-4 w-64 bg-gray-200 rounded animate-pulse"></div>
-              </div>
-              <div className="h-6 w-32 bg-gray-200 rounded-full animate-pulse"></div>
-            </div>
             <AttendanceSkeleton />
           </div>
         </div>
@@ -343,7 +331,46 @@ export default function ParentAttendancePage() {
                   Réessayer
                 </button>
                 <button
-                  onClick={() => router.push('/parent')}
+                  onClick={() => router.push('/dashboard/parent')}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Retour au tableau de bord
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // États spécifiques des étudiants
+  if (studentData?.studentStatus === "non_associe" || studentData?.studentStatus === "non_trouve") {
+    return (
+      <div className="flex-1 flex flex-col min-h-0 bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 max-w-6xl mx-auto">
+            <div className="text-center py-12">
+              <FaExclamationTriangle className="text-5xl text-orange-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {studentData.studentStatus === "non_associe" 
+                  ? "Aucun étudiant associé" 
+                  : "Étudiant non trouvé"}
+              </h3>
+              <p className="text-gray-500 mb-4">
+                {studentData.studentStatus === "non_associe"
+                  ? "Aucun étudiant n'est actuellement associé à votre compte parent."
+                  : "Aucun étudiant correspondant n'a été trouvé."}
+              </p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => router.push('/dashboard/parent/associate-student')}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Associer un étudiant
+                </button>
+                <button
+                  onClick={() => router.push('/dashboard/parent')}
                   className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   Retour au tableau de bord

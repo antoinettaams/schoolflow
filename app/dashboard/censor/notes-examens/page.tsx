@@ -104,7 +104,7 @@ interface StudentData {
   modules: {
     module: string;
     moduleId: number;
-    moyenneGenerale: number;
+    moyenneGenerale: number; // Cette propriété existe déjà, c'est bon
     coefficient: number;
     semestre: string;
   }[];
@@ -247,30 +247,31 @@ export default function GestionNotesCenseur() {
           student.originalGrades.push(grade);
         });
         
-        // ⭐ CALCUL CORRIGÉ : Moyenne générale avec gestion des cas null
-        const transformedStudents = Array.from(studentsMap.values()).map(student => {
-          const modulesAvecNotes = student.modules.filter(module => module.moyenneGenerale > 0);
-          
-          if (modulesAvecNotes.length === 0) {
-            return {
-              ...student,
-              moyenneGenerale: 0
-            };
-          }
-          
-          const totalPoints = modulesAvecNotes.reduce((sum: number, module: any) => 
-            sum + (module.moyenneGenerale * module.coefficient), 0
-          );
-          const totalCoefficients = modulesAvecNotes.reduce((sum: number, module: any) => 
-            sum + module.coefficient, 0
-          );
-          
-          return {
-            ...student,
-            moyenneGenerale: totalCoefficients > 0 ? totalPoints / totalCoefficients : 0
-          };
-        });
-        
+const transformedStudents = Array.from(studentsMap.values()).map(student => {
+  // Utiliser le type StudentData['modules'][0] pour le module
+  const modulesAvecNotes = student.modules.filter((module: StudentData['modules'][0]) => 
+    module.moyenneGenerale > 0
+  );
+  
+  if (modulesAvecNotes.length === 0) {
+    return {
+      ...student,
+      moyenneGenerale: 0
+    };
+  }
+  
+  const totalPoints = modulesAvecNotes.reduce((sum: number, module: StudentData['modules'][0]) => 
+    sum + (module.moyenneGenerale * module.coefficient), 0
+  );
+  const totalCoefficients = modulesAvecNotes.reduce((sum: number, module: StudentData['modules'][0]) => 
+    sum + module.coefficient, 0
+  );
+  
+  return {
+    ...student,
+    moyenneGenerale: totalCoefficients > 0 ? totalPoints / totalCoefficients : 0
+  };
+});    
         console.log(`🎓 ${transformedStudents.length} étudiants chargés avec leurs notes`);
         setStudents(transformedStudents);
       } else {
@@ -665,23 +666,23 @@ export default function GestionNotesCenseur() {
           <CardTitle className="text-lg lg:text-xl font-semibold">
             Gestion des Notes — Censeur
           </CardTitle>
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => setShowExportModal(true)}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Exporter
-            </Button>
-            <Button 
-              onClick={saveChanges}
-              disabled={isSaving}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
-            </Button>
-          </div>
+          <div className="flex flex-col  sm:flex-row gap-2">
+  <Button 
+    onClick={() => setShowExportModal(true)}
+    className="bg-green-600 hover:bg-green-700 w-30 sm:w-auto"
+  >
+    <Download className="w-4 h-4 mr-2" />
+    Exporter
+  </Button>
+  <Button 
+    onClick={saveChanges}
+    disabled={isSaving}
+    className="bg-blue-600 hover:bg-blue-700 w-40 sm:w-auto"
+  >
+    <Save className="w-4 h-4 mr-2" />
+    {isSaving ? "Sauvegarde..." : "Sauvegarder"}
+  </Button>
+</div>
         </CardHeader>
 
         <CardContent className="space-y-4">

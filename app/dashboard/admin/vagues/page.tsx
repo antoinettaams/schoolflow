@@ -7,7 +7,6 @@ import {
   Check, 
   List,  
   Users, 
-  Eye,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "react-hot-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Interfaces
 interface Filiere {
@@ -52,6 +52,71 @@ interface VagueFormData {
   description: string;
   semestres: string[];
 }
+
+// Composant Skeleton pour les cartes de vagues
+const VagueCardSkeleton: React.FC = () => {
+  return (
+    <Card className="hover:shadow-md transition-shadow h-full flex flex-col">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <Skeleton className="h-6 w-32" />
+          <div className="flex flex-col items-end gap-2">
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-5 w-24" />
+          </div>
+        </div>
+      </CardHeader>
+ 
+      <CardContent className="pb-3 flex-grow">
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <div className="flex items-center gap-2">
+            <List className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-3/4" />
+          </div>
+        </div>
+      </CardContent>
+      
+      <CardFooter className="flex gap-2 pt-3">
+        <Skeleton className="h-9 flex-1" />
+      </CardFooter>
+    </Card>
+  );
+};
+
+// Composant Skeleton pour les statistiques
+const StatsSkeleton: React.FC = () => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {[...Array(4)].map((_, index) => (
+        <Card key={index}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-4 rounded" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-7 w-12" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
 
 // Composant Badge de Statut
 const StatusBadge: React.FC<{ status: Vague["status"] }> = ({ status }) => {
@@ -134,13 +199,6 @@ const VagueCard: React.FC<{
           )}
         </div>
       </CardContent>
-      
-      <CardFooter className="flex gap-2 pt-3">
-        <Button variant="outline" size="sm" className="flex-1" onClick={() => onViewDetails(vague)}>
-          <Eye className="h-4 w-4 mr-1" />
-          Détails
-        </Button>
-      </CardFooter>
     </Card>
   );
 };
@@ -434,10 +492,42 @@ export default function VaguesPageAdmin() {
     setShowViewForm(true);
   };
 
+  // État de chargement avec skeleton
   if (!isLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">Chargement des vagues...</div>
+      <div className="flex flex-col h-screen bg-background overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
+        <ScrollArea className="flex-1">
+          <div className="container mx-auto p-6 space-y-6 max-w-7xl">
+            {/* En-tête skeleton */}
+            <div className="flex justify-between items-center">
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+
+            {/* Statistiques skeleton */}
+            <StatsSkeleton />
+
+            {/* Filtres skeleton */}
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Skeleton className="h-10 w-[180px]" />
+                  <Skeleton className="h-10 w-[180px]" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Grille de cartes skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[...Array(6)].map((_, index) => (
+                    <VagueCardSkeleton key={index} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </ScrollArea>
       </div>
     );
   }

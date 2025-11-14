@@ -10,12 +10,6 @@ import {
   FaShieldAlt,
   FaPlus,
   FaSchool,
-  FaChartBar,
-  FaMoneyBillWave,
-  FaBell,
-  FaCalendarAlt,  
-  FaFileAlt,
-  FaClipboardList,
 } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -305,15 +299,6 @@ const AdminDashboard = () => {
     { title: "Classes", value: stats.totalClasses, icon: <FaSchool className="text-2xl text-orange-600" />, color: "bg-orange-50 border-orange-200", change: "0%", trend: "neutral" }
   ];
 
-  const quickActions = [
-    { title: "Statistiques Détaillées", description: "Analytiques complètes de l&apos;établissement", icon: <FaChartBar className="text-xl text-blue-600" />, href: "/dashboard/admin/analytics", count: "15 rapports" },
-    { title: "Gestion des Paiements", description: "Suivi des frais de scolarité et facturation", icon: <FaMoneyBillWave className="text-xl text-green-600" />, href: "/dashboard/admin/payments", count: `${stats.activePayments} en attente` },
-    { title: "Emplois du Temps", description: "Gestion des horaires et planning", icon: <FaCalendarAlt className="text-xl text-purple-600" />, href: "/dashboard/admin/schedules", count: "4 modifications" },
-    { title: "Système de Notes", description: "Configuration des calculs de moyennes", icon: <FaFileAlt className="text-xl text-red-600" />, href: "/dashboard/admin/grading", count: "3 classes" },
-    { title: "Bulletins et Rapports", description: "Génération des bulletins scolaires", icon: <FaClipboardList className="text-xl text-indigo-600" />, href: "/dashboard/admin/reports", count: "28 bulletins" },
-    { title: "Notifications", description: "Envoi d&apos;alertes et communications", icon: <FaBell className="text-xl text-yellow-600" />, href: "/dashboard/admin/notifications", count: "5 non lues" }
-  ];
-
   return (
     <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       <div className="bg-white min-h-screen">
@@ -408,33 +393,6 @@ const AdminDashboard = () => {
                           </Card>
                         ))}
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Quick Actions */}
-                  <Card className="bg-white">
-                    <CardHeader>
-                      <CardTitle className="text-lg sm:text-xl">Actions Rapides</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ScrollArea className="h-64 sm:h-80 pr-2">
-                        <div className="space-y-3 sm:space-y-4">
-                          {quickActions.map((action, index) => (
-                            <Link
-                              key={index}
-                              href={action.href}
-                              className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all hover:shadow-sm group bg-white"
-                            >
-                              <div className="p-2 sm:p-3 bg-gray-100 rounded-lg group-hover:bg-white transition-colors border">{action.icon}</div>
-                              <div className="flex-1">
-                                <div className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors text-sm sm:text-base">{action.title}</div>
-                                <div className="text-xs sm:text-sm text-gray-500">{action.description}</div>
-                              </div>
-                              <Badge variant="secondary" className="text-xs sm:text-sm font-semibold bg-gray-100">{action.count}</Badge>
-                            </Link>
-                          ))}
-                        </div>
-                      </ScrollArea>
                     </CardContent>
                   </Card>
                 </div>

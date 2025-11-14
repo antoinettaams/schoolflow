@@ -190,15 +190,15 @@ const SecretaryDashboard = () => {
       title: "Nouvelle Inscription",
       description: "Inscrire un nouvel étudiant",
       icon: <FaUserGraduate className="text-xl sm:text-2xl text-blue-600" />,
-      href: "/dashboard/secretaire/inscriptions/nouveau",
+      href: "/auth/signup",
       color: "bg-blue-50 border-blue-200",
       buttonColor: "bg-blue-600 hover:bg-blue-700"
     },
     {
-      title: "Générer une carte", 
-      description: "Créer et imprimer des cartes étudiantes",
+      title: "Générer un dossier", 
+      description: "Créer des dossiers étudiants",
       icon: <FaIdCard className="text-xl sm:text-2xl text-green-600" />,
-      href: "/dashboard/secretaire/cartes",
+      href: "/dashboard/secretaire/dossiers",
       color: "bg-green-50 border-green-200",
       buttonColor: "bg-green-600 hover:bg-green-700"
     }

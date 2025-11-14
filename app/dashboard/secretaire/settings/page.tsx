@@ -21,8 +21,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -167,9 +165,6 @@ const SecretaireSettingsPage = () => {
   const { signOut, openSignIn, session } = useClerk();
   const router = useRouter();
 
-  const [darkMode, setDarkMode] = useState(false);
-  const [language, setLanguage] = useState("fr");
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [showOldPassword, setShowOldPassword] = useState(false);
@@ -188,32 +183,7 @@ const SecretaireSettingsPage = () => {
     newPassword: "",
   });
 
-  // 🔒 Vérification accès secrétaire
-  useEffect(() => {
-    if (isLoaded && !user) {
-      router.push("/sign-in");
-    } else if (isLoaded && user) {
-      const role = user.publicMetadata?.role || "inconnu";
-      if (role !== "secretaire") {
-        toast.error("Accès réservé aux secrétaires uniquement !");
-        router.push("/dashboard");
-      } else {
-        // Pré-remplir les infos du profil Clerk
-        setFormData({
-          firstName: user.firstName || "",
-          lastName: user.lastName || "",
-          username: user.username || "",
-          email: user.primaryEmailAddress?.emailAddress || "",
-          currentPassword: "",
-          newPassword: "",
-        });
-        
-        // Simuler un chargement pour voir les skeletons
-        setTimeout(() => setPageLoading(false), 1000);
-      }
-    }
-  }, [user, isLoaded, router]);
-
+ 
   // Vérifie si la session est récente (moins de 5 min)
   const isSessionRecent = () => {
     if (!session?.lastActiveAt) return false;

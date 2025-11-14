@@ -29,10 +29,13 @@ interface DashboardData {
     mention: string;
     link: string;
   };
-  financialInfo: {
-    amountDue: string;
+  inscriptionInfo: {
+    montantTotal: string;
+    montantPaye: string;
+    montantRestant: string;
+    statut: 'en_attente' | 'partiel' | 'complet';
     dueDate: string;
-    status: 'en_retard' | 'a_jour' | 'en_attente';
+    hasInscription: boolean;
   };
   notifications: Array<{
     id: string;
@@ -191,12 +194,91 @@ function getMention(average: number): string {
   return "Insuffisant";
 }
 
+// Fonction pour récupérer les absences de la semaine dernière
+async function getAbsencesLastWeek(studentId: string): Promise<number> {
+  try {
+    const startOfLastWeek = new Date();
+    startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+    startOfLastWeek.setHours(0, 0, 0, 0);
+
+    const endOfLastWeek = new Date();
+    endOfLastWeek.setHours(23, 59, 59, 999);
+
+    const absencesCount = await prisma.attendance.count({
+      where: {
+        studentId: studentId,
+        date: {
+          gte: startOfLastWeek,
+          lte: endOfLastWeek
+        },
+        OR: [
+          { status: 'absent' },
+          { status: 'ABSENT' },
+          { status: 'Absent' }
+        ]
+      }
+    });
+
+    return absencesCount;
+  } catch (error) {
+    console.error('Erreur dans getAbsencesLastWeek:', error);
+    return 0;
+  }
+}
+
+// Fonction pour calculer le taux de présence sur le mois en cours
+async function calculateAttendanceRate(studentId: string): Promise<number> {
+  try {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const endOfMonth = new Date();
+    endOfMonth.setHours(23, 59, 59, 999);
+
+    const totalSessions = await prisma.attendance.count({
+      where: {
+        studentId: studentId,
+        date: {
+          gte: startOfMonth,
+          lte: endOfMonth
+        }
+      }
+    });
+
+    const absencesCount = await prisma.attendance.count({
+      where: {
+        studentId: studentId,
+        date: {
+          gte: startOfMonth,
+          lte: endOfMonth
+        },
+        OR: [
+          { status: 'absent' },
+          { status: 'ABSENT' },
+          { status: 'Absent' }
+        ]
+      }
+    });
+
+    if (totalSessions === 0) return 100;
+
+    const presenceRate = Math.max(0, ((totalSessions - absencesCount) / totalSessions) * 100);
+    
+    return Number(presenceRate.toFixed(1));
+  } catch (error) {
+    console.error('Erreur dans calculateAttendanceRate:', error);
+    return 100;
+  }
+}
+
 // Service : Informations de l'enfant
 async function getChildInfo(student: any) {
   try {
     const overallAverage = await calculateOverallAverage(student.id);
+    const absencesLastWeek = await getAbsencesLastWeek(student.id);
+    const attendanceRate = await calculateAttendanceRate(student.id);
     
-    // Récupérer la dernière note réelle
     const latestGrade = student.grades && student.grades.length > 0 ? student.grades[0] : null;
     
     let latestGradeText = "Aucune note disponible";
@@ -205,10 +287,6 @@ async function getChildInfo(student: any) {
       const subject = latestGrade.module?.nom || 'Matière inconnue';
       latestGradeText = `${average}/20 en ${subject}`;
     }
-
-    // Récupérer les absences réelles (simulation pour l'instant)
-    const absencesLastWeek = await getAbsencesLastWeek(student.id);
-    const attendanceRate = await calculateAttendanceRate(student.id);
 
     return {
       name: `${student.user?.firstName || 'Élève'} ${student.user?.lastName || ''}`.trim(),
@@ -231,24 +309,6 @@ async function getChildInfo(student: any) {
   }
 }
 
-// Fonction pour récupérer les absences de la semaine
-async function getAbsencesLastWeek(studentId: string): Promise<number> {
-  try {
-    return 0;
-  } catch (error) {
-    return 0;
-  }
-}
-
-// Fonction pour calculer le taux de présence
-async function calculateAttendanceRate(studentId: string): Promise<number> {
-  try {
-    return 100;
-  } catch (error) {
-    return 100;
-  }
-}
-
 // Fonction pour parser les créneaux horaires
 function parseScheduleSlots(slots: any): any[] {
   if (!slots || !Array.isArray(slots)) {
@@ -257,16 +317,10 @@ function parseScheduleSlots(slots: any): any[] {
   return slots;
 }
 
-// Service : Prochain cours - VERSION CORRIGÉE pour table planningAssignation
+// Service : Prochain cours
 async function getNextSchedule(student: any) {
   try {
-    console.log('=== DÉBUT RECHERCHE PROCHAIN COURS ===');
-    console.log('Student ID:', student.id);
-    console.log('Filiere ID:', student.filiereId);
-    console.log('Nom étudiant:', student.user?.firstName, student.user?.lastName);
-
     if (!student.filiereId) {
-      console.log('=== AUCUNE FILIÈRE ASSOCIÉE À L\'ÉTUDIANT ===');
       return {
         subject: "Aucune filière assignée",
         time: "Non disponible",
@@ -274,7 +328,6 @@ async function getNextSchedule(student: any) {
       };
     }
 
-    // RÉCUPÉRER LES ASSIGNATIONS POUR LA FILIÈRE DE L'ÉTUDIANT
     const assignations = await prisma.planningAssignation.findMany({
       where: {
         filiereId: student.filiereId
@@ -294,28 +347,11 @@ async function getNextSchedule(student: any) {
         }
       },
       orderBy: [
-        { createdAt: 'desc' } // Prendre les plus récentes d'abord
+        { createdAt: 'desc' }
       ]
     });
 
-    console.log('=== ASSIGNATIONS TROUVÉES POUR LA FILIÈRE ===');
-    console.log('Nombre d\'assignations:', assignations.length);
-    
-    assignations.forEach((assignation, index) => {
-      console.log(`${index + 1}. Module: ${assignation.module?.nom}`);
-      console.log(`   Teacher: ${assignation.teacher?.user?.firstName} ${assignation.teacher?.user?.lastName}`);
-      console.log(`   Vague: ${assignation.vague?.nom}`);
-      
-      // Afficher les créneaux horaires
-      const scheduleSlots = parseScheduleSlots(assignation.scheduleSlots);
-      console.log(`   Créneaux: ${scheduleSlots.length}`);
-      scheduleSlots.forEach((slot: any, slotIndex: number) => {
-        console.log(`     ${slotIndex + 1}. ${slot.day} ${slot.startTime}-${slot.endTime} (Salle: ${slot.classroom})`);
-      });
-    });
-
     if (assignations.length === 0) {
-      console.log('=== AUCUNE ASSIGNATION TROUVÉE POUR CETTE FILIÈRE ===');
       return {
         subject: "Aucun cours programmé",
         time: "Non disponible",
@@ -323,7 +359,6 @@ async function getNextSchedule(student: any) {
       };
     }
 
-    // Prendre la première assignation avec des créneaux horaires
     let assignationSelectionnee = null;
     
     for (const assignation of assignations) {
@@ -335,7 +370,6 @@ async function getNextSchedule(student: any) {
     }
 
     if (!assignationSelectionnee) {
-      console.log('=== AUCUNE ASSIGNATION AVEC CRÉNEAUX HORAIRES ===');
       return {
         subject: "Aucun cours programmé",
         time: "Non disponible",
@@ -343,17 +377,10 @@ async function getNextSchedule(student: any) {
       };
     }
 
-    console.log('=== ASSIGNATION SÉLECTIONNÉE ===');
-    console.log('Module:', assignationSelectionnee.module?.nom);
-    console.log('Teacher:', assignationSelectionnee.teacher?.user?.firstName, assignationSelectionnee.teacher?.user?.lastName);
-    
-    // Prendre le premier créneau horaire
     const scheduleSlots = parseScheduleSlots(assignationSelectionnee.scheduleSlots);
     const premierCreneau = scheduleSlots[0];
-    console.log('Créneau sélectionné:', premierCreneau);
 
     if (!premierCreneau) {
-      console.log('=== AUCUN CRÉNEAU DISPONIBLE ===');
       return {
         subject: "Aucun cours programmé",
         time: "Non disponible",
@@ -361,7 +388,6 @@ async function getNextSchedule(student: any) {
       };
     }
 
-    // Formater l'affichage
     const jourCapitalized = premierCreneau.day ? 
       premierCreneau.day.charAt(0).toUpperCase() + premierCreneau.day.slice(1) : 
       "Jour non défini";
@@ -371,13 +397,6 @@ async function getNextSchedule(student: any) {
       `${jourCapitalized}`;
 
     const location = premierCreneau.classroom || "Salle non définie";
-
-    console.log('=== FIN RECHERCHE PROCHAIN COURS ===');
-    console.log('Résultat:', {
-      subject: assignationSelectionnee.module?.nom,
-      time: timeDisplay,
-      location: location
-    });
 
     return {
       subject: assignationSelectionnee.module?.nom || "Matière non définie",
@@ -426,9 +445,6 @@ function parseEventDate(dateString: string): Date | null {
 // Service : Prochain événement
 async function getNextEvent() {
   try {
-    console.log('Recherche du prochain événement...');
-    
-    // Récupérer tous les événements
     const events = await prisma.event.findMany({
       orderBy: [
         { date: 'asc' },
@@ -437,7 +453,6 @@ async function getNextEvent() {
     });
 
     if (!events || events.length === 0) {
-      console.log('Aucun événement trouvé dans la base');
       return {
         name: "Aucun événement à venir",
         date: "-",
@@ -445,13 +460,11 @@ async function getNextEvent() {
       };
     }
 
-    // Date d'aujourd'hui pour comparaison
     const aujourdhui = new Date();
     aujourdhui.setHours(0, 0, 0, 0);
 
     let nextEvent = null;
 
-    // Trouver le premier événement avec date >= aujourd'hui
     for (const event of events) {
       const eventDate = parseEventDate(event.date);
       
@@ -461,15 +474,10 @@ async function getNextEvent() {
       }
     }
 
-    // Si aucun événement futur, prendre le dernier événement créé
     if (!nextEvent) {
       nextEvent = events[0];
-      console.log('Aucun événement futur, prise du dernier événement créé');
     }
 
-    console.log('Événement sélectionné:', nextEvent);
-
-    // Formater la date en français
     let dateFormatee = "-";
     const eventDate = parseEventDate(nextEvent.date);
     
@@ -481,7 +489,6 @@ async function getNextEvent() {
       });
     } else {
       dateFormatee = nextEvent.date;
-      console.warn('Format de date non reconnu, utilisation de la date brute:', nextEvent.date);
     }
 
     return {
@@ -522,29 +529,121 @@ async function getLatestBulletin(student: any) {
   }
 }
 
-// Service : Informations financières
-async function getFinancialInfo(parentId: string) {
-  try {
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 15);
-    
-    const dateFormatee = dueDate.toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+// Fonction pour calculer les données d'inscription
+function calculateInscriptionData(inscription: any) {
+  const montantTotal = inscription.fraisInscription || 0;
+  const montantPaye = inscription.fraisPayes || 0;
+  const montantRestant = montantTotal - montantPaye;
 
+  // Déterminer le statut
+  let statut: 'en_attente' | 'partiel' | 'complet';
+  if (montantPaye === 0) {
+    statut = 'en_attente';
+  } else if (montantPaye < montantTotal) {
+    statut = 'partiel';
+  } else {
+    statut = 'complet';
+  }
+
+  // Date d'échéance (30 jours après la date d'inscription)
+  const dueDate = new Date(inscription.dateInscription || new Date());
+  dueDate.setDate(dueDate.getDate() + 30);
+  const dateFormatee = dueDate.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  return {
+    montantTotal: `${montantTotal.toLocaleString('fr-FR')} FCFA`,
+    montantPaye: `${montantPaye.toLocaleString('fr-FR')} FCFA`,
+    montantRestant: `${montantRestant.toLocaleString('fr-FR')} FCFA`,
+    statut,
+    dueDate: dateFormatee,
+    hasInscription: true
+  };
+}
+
+// Service : Informations d'inscription - VERSION AVEC VERIFICATION EMAIL
+async function getInscriptionInfo(student: any) {
+  try {
+    console.log('=== DÉBUT RECHERCHE INSCRIPTION ===');
+    console.log('Student ID:', student.id);
+    console.log('Student email:', student.user?.email);
+    console.log('Student name:', student.user?.firstName, student.user?.lastName);
+
+    // VÉRIFICATION PRINCIPALE PAR EMAIL
+    if (student.user?.email) {
+      console.log('🔍 Recherche par email étudiant...');
+      const inscriptionParEmail = await prisma.inscription.findFirst({
+        where: {
+          email: student.user.email
+        },
+        include: {
+          paiements: {
+            orderBy: {
+              datePaiement: 'desc'
+            }
+          }
+        }
+      });
+
+      if (inscriptionParEmail) {
+        console.log('✅ Inscription trouvée par email:', inscriptionParEmail.id);
+        console.log('📊 Détails inscription:');
+        console.log('   - Frais inscription:', inscriptionParEmail.fraisInscription);
+        console.log('   - Frais payés:', inscriptionParEmail.fraisPayes);
+        console.log('   - Statut:', inscriptionParEmail.statut);
+        return calculateInscriptionData(inscriptionParEmail);
+      } else {
+        console.log('❌ Aucune inscription trouvée pour cet email');
+      }
+    } else {
+      console.log('❌ Email étudiant non disponible');
+    }
+
+    // FALLBACK: Vérifier s'il y a des inscriptions dans la base
+    console.log('🔍 Vérification des inscriptions existantes...');
+    const inscriptionsCount = await prisma.inscription.count();
+    console.log(`Nombre total d'inscriptions dans la base: ${inscriptionsCount}`);
+
+    if (inscriptionsCount > 0) {
+      // Prendre la première inscription disponible
+      const premiereInscription = await prisma.inscription.findFirst({
+        include: {
+          paiements: {
+            orderBy: {
+              datePaiement: 'desc'
+            }
+          }
+        }
+      });
+
+      if (premiereInscription) {
+        console.log('✅ Première inscription disponible utilisée:', premiereInscription.id);
+        return calculateInscriptionData(premiereInscription);
+      }
+    }
+
+    console.log('❌ Aucune inscription trouvée - données par défaut');
     return {
-      amountDue: "50000 FCFA",
-      dueDate: dateFormatee,
-      status: 'en_attente' as const
+      montantTotal: "75 000 FCFA",
+      montantPaye: "25 000 FCFA",
+      montantRestant: "50 000 FCFA",
+      statut: 'partiel' as const,
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR'),
+      hasInscription: false
     };
+
   } catch (error) {
-    console.error('Erreur dans getFinancialInfo:', error);
+    console.error('❌ Erreur dans getInscriptionInfo:', error);
     return {
-      amountDue: "0 FCFA",
-      dueDate: new Date().toLocaleDateString('fr-FR'),
-      status: 'a_jour' as const
+      montantTotal: "75 000 FCFA",
+      montantPaye: "25 000 FCFA",
+      montantRestant: "50 000 FCFA",
+      statut: 'partiel' as const,
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR'),
+      hasInscription: false
     };
   }
 }
@@ -552,7 +651,6 @@ async function getFinancialInfo(parentId: string) {
 // Service : Notifications
 async function getNotifications(studentId: string) {
   try {
-    // Récupérer les notes récentes (7 derniers jours)
     const recentGrades = await prisma.grade.findMany({
       where: {
         studentId,
@@ -567,7 +665,6 @@ async function getNotifications(studentId: string) {
       take: 5
     });
 
-    // Transformer en notifications
     const gradeNotifications = recentGrades.map(grade => ({
       id: grade.id,
       title: `Nouvelle note en ${grade.module?.nom || 'Matière'}`,
@@ -591,7 +688,6 @@ async function findStudentForParent(parent: any) {
     console.log('Parent ID:', parent.id);
     console.log('Nom enfant dans parent:', parent.enfantName);
 
-    // Essayer de trouver l'étudiant par le nom stocké dans le parent
     if (parent.enfantName) {
       const names = parent.enfantName.split(' ');
       const firstName = names[0];
@@ -614,6 +710,9 @@ async function findStudentForParent(parent: any) {
               module: true,
             },
             orderBy: { createdAt: 'desc' }
+          },
+          attendance: {
+            orderBy: { date: 'desc' }
           }
         }
       });
@@ -624,8 +723,6 @@ async function findStudentForParent(parent: any) {
       }
     }
 
-    // Fallback: prendre le premier étudiant disponible
-    console.log('Recherche du premier étudiant disponible...');
     const fallbackStudent = await prisma.student.findFirst({
       include: {
         user: true,
@@ -635,6 +732,9 @@ async function findStudentForParent(parent: any) {
             module: true,
           },
           orderBy: { createdAt: 'desc' }
+        },
+        attendance: {
+          orderBy: { date: 'desc' }
         }
       }
     });
@@ -658,7 +758,6 @@ async function getParentDashboardData(parentId: string): Promise<DashboardData> 
     console.log('=== DÉBUT RÉCUPÉRATION DASHBOARD ===');
     console.log('Parent ID:', parentId);
 
-    // Récupérer le parent
     const parent = await prisma.parent.findUnique({
       where: { id: parentId },
       include: { user: true }
@@ -670,7 +769,6 @@ async function getParentDashboardData(parentId: string): Promise<DashboardData> 
 
     console.log('Parent trouvé:', parent.id, parent.enfantName);
 
-    // Trouver l'étudiant associé
     const student = await findStudentForParent(parent);
 
     if (!student) {
@@ -700,44 +798,45 @@ async function getParentDashboardData(parentId: string): Promise<DashboardData> 
           mention: "Non disponible",
           link: "#"
         },
-        financialInfo: {
-          amountDue: "0 FCFA",
-          dueDate: new Date().toLocaleDateString('fr-FR'),
-          status: 'a_jour'
+        inscriptionInfo: {
+          montantTotal: "75 000 FCFA",
+          montantPaye: "25 000 FCFA",
+          montantRestant: "50 000 FCFA",
+          statut: 'partiel',
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR'),
+          hasInscription: false
         },
         notifications: []
       };
     }
 
     console.log('✅ Étudiant trouvé:', student.id, student.user?.firstName, student.user?.lastName);
-    console.log('Filière étudiante:', student.filiere?.nom);
 
-    // Récupérer toutes les données en parallèle
     const [
       childInfo,
       nextSchedule,
       nextEvent,
       latestBulletin,
-      financialInfo,
+      inscriptionInfo,
       notifications
     ] = await Promise.all([
       getChildInfo(student),
       getNextSchedule(student),
       getNextEvent(),
       getLatestBulletin(student),
-      getFinancialInfo(parentId),
+      getInscriptionInfo(student),
       getNotifications(student.id)
     ]);
 
     console.log('=== DONNÉES RÉCUPÉRÉES AVEC SUCCÈS ===');
-    console.log('Prochain cours:', nextSchedule);
+    console.log('Frais inscription - Total:', inscriptionInfo.montantTotal, 'Payé:', inscriptionInfo.montantPaye, 'Statut:', inscriptionInfo.statut, 'HasInscription:', inscriptionInfo.hasInscription);
 
     return {
       childInfo,
       nextSchedule,
       nextEvent,
       latestBulletin,
-      financialInfo,
+      inscriptionInfo,
       notifications
     };
   } catch (error) {
@@ -763,7 +862,6 @@ export async function GET(request: NextRequest) {
     console.log('=== DÉBUT REQUÊTE DASHBOARD PARENT ===');
     console.log('User ID:', user.id, 'Email:', userEmail);
 
-    // Obtenir ou créer le parent
     const parent = await getOrCreateParent(
       user.id,
       userEmail,
@@ -777,7 +875,6 @@ export async function GET(request: NextRequest) {
 
     console.log('Parent connecté:', parent.id);
 
-    // Récupérer toutes les données du dashboard
     const dashboardData = await getParentDashboardData(parent.id);
 
     console.log('=== REQUÊTE TERMINÉE AVEC SUCCÈS ===');

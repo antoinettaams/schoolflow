@@ -544,7 +544,7 @@ export default function PlanningAssignationsPage() {
                 
                 return (
                   <div key={assignment.id} className="border p-4 rounded-lg">
-                    <div className="flex justify-between mb-3">
+                    <div className="flex flex-col justify-between mb-3">
                       <div>
                         <p className="font-semibold text-lg">{moduleItem?.name || 'Module inconnu'}</p>
                         <p className="text-sm text-gray-500">
@@ -555,22 +555,22 @@ export default function PlanningAssignationsPage() {
                           {teacher ? getTeacherDisplayName(teacher) : `Formateur ID: ${assignment.teacherId}`}
                         </p>
                       </div>
-                      <div className="flex gap-2 self-start">
-                        <button 
-                          onClick={() => ouvrirModification(assignment)} 
-                          className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
-                          title="Modifier cette assignation"
-                        >
-                          <FaEdit size={12} /> Modifier
-                        </button>
-                        <button 
-                          onClick={() => ouvrirSuppression(assignment)} 
-                          className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
-                          title="Supprimer cette assignation"
-                        >
-                          <FaTrash size={12} /> Supprimer
-                        </button>
-                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2 self-start">
+  <button 
+    onClick={() => ouvrirModification(assignment)} 
+    className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+    title="Modifier cette assignation"
+  >
+    <FaEdit size={12} /> Modifier
+  </button>
+  <button 
+    onClick={() => ouvrirSuppression(assignment)} 
+    className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+    title="Supprimer cette assignation"
+  >
+    <FaTrash size={12} /> Supprimer
+  </button>
+</div>
                     </div>
                     
                     <div className="border-t pt-3">

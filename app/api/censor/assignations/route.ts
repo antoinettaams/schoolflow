@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 interface ScheduleSlot {
   id: string;
   day: string; 
-  startTime: string;
+  startTime: string; 
   endTime: string;
   classroom: string;
   salleId?: string;

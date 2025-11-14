@@ -59,6 +59,8 @@ model Student {
   vagueNumber   Int?
   
   // Relations
+  parentId      String?
+  parent        Parent?  @relation(fields: [parentId], references: [id])
   filiere       Filiere? @relation(fields: [filiereId], references: [id])
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   vague         Vague?   @relation("VagueStudents", fields: [vagueId], references: [id])
@@ -98,7 +100,7 @@ model Parent {
   relation   String
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  students   Student[]
   @@map("parents")
 }
 

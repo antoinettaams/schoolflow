@@ -280,10 +280,6 @@ const VagueCard: React.FC<{
       </CardContent>
       
       <CardFooter className="flex gap-2 pt-3">
-        <Button variant="outline" size="sm" className="flex-1" onClick={() => onViewDetails(vague)}>
-          <Eye className="h-4 w-4 mr-1" />
-          Détails
-        </Button>
         <Button 
           variant="outline" 
           size="sm" 
@@ -884,6 +880,7 @@ export default function VaguesPageDirecteur() {
                       <SelectValue placeholder="Tous les semestres" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="all">Toutes les semestres</SelectItem>
                       {availableSemestres.map(semestre => (
                         <SelectItem key={semestre} value={semestre}>
                           {semestre}

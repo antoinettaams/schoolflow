@@ -482,61 +482,6 @@ const TeacherSettingsPage = () => {
             </CardContent>
           </Card>
 
-          {/* Section Informations Professionnelles */}
-          <Card className="border-0 shadow-lg overflow-hidden">
-            <CardHeader className="pb-4 sm:pb-6">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2 bg-green-50 rounded-lg flex-shrink-0">
-                  <School className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 break-words">
-                    Informations Professionnelles
-                  </CardTitle>
-                  <CardDescription className="text-sm sm:text-base text-gray-500 break-words">
-                    Vos informations d&apos;enseignement (consultation seule)
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                  {/* Matière enseignée */}
-                  <div className="flex items-center p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200 min-w-0">
-                    <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mr-3 flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-gray-500 uppercase break-words">Matière</p>
-                      <p className="text-gray-800 font-semibold text-sm sm:text-base break-words">
-                        {teacherMetadata.subject}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Filière */}
-                  <div className="flex items-center p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200 min-w-0">
-                    <School className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mr-3 flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-gray-500 uppercase break-words">Filière</p>
-                      <p className="text-gray-800 font-semibold text-sm sm:text-base break-words">
-                        {teacherMetadata.filiere}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Message d'information */}
-                <Alert className="bg-blue-50 border-blue-200">
-                  <Bell className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <AlertDescription className="text-blue-800 text-sm break-words">
-                    Les modifications des informations professionnelles (matière, classes, filière) 
-                    doivent être demandées à l&apos;administration.
-                  </AlertDescription>
-                </Alert>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Section Sécurité */}
           <Card className="border-0 shadow-lg overflow-hidden">
             <CardHeader className="pb-4 sm:pb-6">
@@ -654,9 +599,9 @@ const TeacherSettingsPage = () => {
                             type="submit"
                             disabled={isLoading}
                             variant="destructive"
-                            className="text-sm sm:text-base min-w-0"
+                            className="text-sm bg-red-500 sm:text-base  min-w-0"
                           >
-                            <Key className="w-4 h-4 mr-2 flex-shrink-0" />
+                            <Key className="w-4 h-4 mr-2 text-white flex-shrink-0" />
                             <span className="truncate">
                               {isLoading ? "Changement..." : "Mettre à jour"}
                             </span>

@@ -657,41 +657,31 @@ export default function CensorAttendancePage() {
                   <FaFilter />
                   Filtres {showFilters ? "▲" : "▼"}
                 </Button>
-
-                <Button
-                  onClick={fetchAttendanceData}
-                  disabled={isLoading}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <FaSync className={isLoading ? "animate-spin" : ""} />
-                  Actualiser
-                </Button>
               </div>
 
-              <div className="flex items-center gap-3">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <FaDownload />
-                      Exporter
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-white" align="end">
-                    <DropdownMenuItem onClick={exportToExcel} className="flex items-center gap-2 cursor-pointer">
-                      <FaFileExcel className="text-green-600" />
-                      Excel (.xlsx)
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={exportToPDF} className="flex items-center gap-2 cursor-pointer">
-                      <FaFileExcel className="text-red-600" />
-                      PDF (.pdf)
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <div className="text-sm text-gray-500">
-                  {filteredRecords.length} enregistrements
-                </div>
-              </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button variant="outline" className="flex items-center gap-2 w-full sm:w-auto justify-center">
+        <FaDownload />
+        Exporter
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent className="bg-white" align="end">
+      <DropdownMenuItem onClick={exportToExcel} className="flex items-center gap-2 cursor-pointer">
+        <FaFileExcel className="text-green-600" />
+        Excel (.xlsx)
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={exportToPDF} className="flex items-center gap-2 cursor-pointer">
+        
+        PDF (.pdf)
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
+  <div className="flex items-center justify-center sm:justify-start text-sm text-gray-500 py-2 sm:py-0">
+    {filteredRecords.length} enregistrements
+  </div>
+</div>
             </div>
 
             {/* Filtres avancés */}
@@ -864,11 +854,7 @@ export default function CensorAttendancePage() {
                     key={record.id}
                     className="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors gap-4"
                   >
-                    <div className="flex-shrink-0">
-                      <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <FaIdCard className="text-blue-600" />
-                      </div>
-                    </div>
+                    
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">

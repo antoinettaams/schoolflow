@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     switch (user.role) {
       case 'PARENT':
         return await handleParentFinance(user);
-      case 'STUDENT':
+      case 'ETUDIANT':
         return await handleStudentFinance(user);
       case 'ADMIN':
       case 'COMPTABLE':
@@ -199,20 +199,8 @@ async function handleStudentFinance(user: any) {
           orderBy: {
             createdAt: 'desc'
           }
-        },
-        inscription: {
-          include: {
-            paiements: {
-              include: {
-                facture: {
-                  include: {
-                    items: true
-                  }
-                }
-              }
-            }
-          }
         }
+        // Supprimer la partie 'inscription' qui cause l'erreur
       }
     });
 

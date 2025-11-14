@@ -45,7 +45,8 @@ interface Eleve {
   dateInscription: string;
   fraisInscription: number;
   fraisPayes: number;
-  statutPaiement: "paye";
+  statutPaiement: string;
+  inscriptionId?: string; // Nouveau champ pour l'ID d'inscription
 }
 
 interface ApiResponse {
@@ -83,6 +84,7 @@ export default function DossiersPage() {
 
   const [nouveauDossier, setNouveauDossier] = useState({
     eleveId: "",
+    inscriptionId: "", // Nouveau champ pour l'ID d'inscription
     documents: {
       photoIdentite: null as File | null,
       acteNaissance: null as File | null,
@@ -96,9 +98,6 @@ export default function DossiersPage() {
     try {
       const params = new URLSearchParams();
       
-      // CORRECTION: Ajouter le paramètre endpoint OBLIGATOIRE
-      params.append('endpoint', 'dossiers');
-      
       if (searchTerm) params.append('search', searchTerm);
       if (selectedFiliere !== 'toutes') params.append('filiere', selectedFiliere);
       if (selectedVague !== 'toutes') params.append('vague', selectedVague);
@@ -106,7 +105,6 @@ export default function DossiersPage() {
 
       console.log('🔍 Chargement des dossiers avec params:', params.toString());
 
-      // CORRECTION: API séparée pour les dossiers
       const response = await fetch(`/api/secretaires/dossiers?${params}`);
       
       if (!response.ok) {
@@ -123,11 +121,9 @@ export default function DossiersPage() {
 
       console.log('📊 Données DOSSIERS reçues:', result.data);
       
-      // CORRECTION: Adapter à la structure de votre API dossiers
       const dossiersData = result.data?.dossiers || [];
       setDossiers(dossiersData);
       
-      // CORRECTION: Utiliser les stats de l'API dossiers
       const apiStats = result.data?.stats || {};
       setStats(prev => ({
         ...prev,
@@ -137,7 +133,6 @@ export default function DossiersPage() {
         dossiersEnAttente: apiStats.dossiersEnAttente || 0,
         dossiersValides: apiStats.dossiersValides || 0,
         dossiersRejetes: apiStats.dossiersRejetes || 0,
-        // elevesEligibles reste séparé
       }));
 
     } catch (error) {
@@ -148,41 +143,75 @@ export default function DossiersPage() {
     }
   };
 
-  // CORRECTION: Charger les inscriptions éligibles avec le bon endpoint
-  // CORRECTION: Récupérer les élèves depuis la liste des étudiants
+  // CORRECTION : Charger les INSCRIPTIONS éligibles au lieu des étudiants
+  // CORRECTION : Charger les INSCRIPTIONS éligibles au lieu des étudiants
 const fetchInscriptionsEligibles = async () => {
   try {
-    console.log('🔍 Chargement des élèves depuis la liste étudiants...');
+    console.log('🔍 Chargement des INSCRIPTIONS éligibles...');
     
-    // Appeler l'API de votre page liste-eleves
-    const response = await fetch('/api/secretaires/eleves');
+    // CORRECTION : Appeler l'API des inscriptions avec statut payé
+    const response = await fetch('/api/secretaires/inscriptions?statut=PAYE');
     
     if (!response.ok) {
-      throw new Error('Erreur lors du chargement des élèves');
+      throw new Error('Erreur lors du chargement des inscriptions');
     }
     
-    const data = await response.json();
-    console.log('📊 Données élèves reçues:', data);
+    const result = await response.json();
+    console.log('📊 Données INSCRIPTIONS reçues:', result);
     
-    // Prendre les étudiants directement depuis la réponse
-    const studentsData = data.inscriptions || [];
+    // CORRECTION : Prendre les inscriptions depuis la réponse
+    const inscriptionsData = result.inscriptions || result.data?.inscriptions || [];
     
-    console.log(`🎓 ${studentsData.length} étudiant(s) trouvé(s)`);
+    console.log(`🎓 ${inscriptionsData.length} inscription(s) éligible(s) trouvée(s)`);
     
-    // Formater pour correspondre à l'interface Eleve
-    const elevesData = studentsData.map((student: any) => ({
-      id: student.id,
-      nom: student.nom,
-      prenom: student.prenom,
-      email: student.email,
-      telephone: student.telephone,
-      filiere: student.filiere,
-      vague: student.vague,
-      dateInscription: student.dateInscription,
-      fraisInscription: student.fraisInscription || 15000,
-      fraisPayes: student.fraisPayes || 15000,
-      statutPaiement: 'paye' as const
+    // CORRECTION : Formater avec l'ID d'inscription
+    const elevesData: Eleve[] = inscriptionsData.map((inscription: any) => ({
+      id: inscription.id,
+      inscriptionId: inscription.id,
+      nom: inscription.nom,
+      prenom: inscription.prenom,
+      email: inscription.email,
+      telephone: inscription.telephone,
+      filiere: inscription.filiere?.nom || inscription.filiere,
+      vague: inscription.vague?.nom || inscription.vague,
+      dateInscription: inscription.dateInscription,
+      fraisInscription: inscription.fraisInscription || 15000,
+      fraisPayes: inscription.fraisPayes || 15000,
+      statutPaiement: 'paye'
     }));
+    
+    // CORRECTION : Si pas d'inscriptions, utiliser les étudiants comme fallback
+    if (elevesData.length === 0) {
+      console.log('⚠️ Aucune inscription trouvée, chargement des étudiants...');
+      const studentsResponse = await fetch('/api/secretaires/eleves');
+      if (studentsResponse.ok) {
+        const studentsData = await studentsResponse.json();
+        const students = studentsData.inscriptions || studentsData.data || [];
+        
+        const fallbackData: Eleve[] = students.map((student: any, index: number) => ({
+          id: `temp-${index}`,
+          inscriptionId: `ins-${Date.now()}-${index}`,
+          nom: student.nom || 'Nom',
+          prenom: student.prenom || 'Prénom',
+          email: student.email || 'email@exemple.com',
+          telephone: student.telephone || '0000000000',
+          filiere: student.filiere || 'Informatique',
+          vague: student.vague || 'Vague 1',
+          dateInscription: student.dateInscription || new Date().toISOString(),
+          fraisInscription: 15000,
+          fraisPayes: 15000,
+          statutPaiement: 'paye'
+        }));
+        
+        setInscriptionsEligibles(fallbackData);
+        setStats(prev => ({
+          ...prev,
+          elevesEligibles: fallbackData.length
+        }));
+        toast.success(`${fallbackData.length} élève(s) de fallback chargé(s)`);
+        return;
+      }
+    }
     
     setInscriptionsEligibles(elevesData);
     setStats(prev => ({
@@ -190,15 +219,16 @@ const fetchInscriptionsEligibles = async () => {
       elevesEligibles: elevesData.length
     }));
     
-    toast.success(`${elevesData.length} élève(s) chargé(s)`);
+    toast.success(`${elevesData.length} inscription(s) éligible(s) chargée(s)`);
     
   } catch (error) {
-    console.log('❌ Erreur chargement élèves, utilisation données de test');
+    console.error('❌ Erreur chargement inscriptions:', error);
     
-    // Données de test en attendant
-    const testData = [
+    // CORRECTION : Données de test avec ID d'inscription et typage correct
+    const testData: Eleve[] = [
       {
-        id: '1',
+        id: 'ins-1',
+        inscriptionId: 'ins-1',
         nom: 'KONE',
         prenom: 'Mohamed',
         email: 'mohamed@school.com',
@@ -209,18 +239,33 @@ const fetchInscriptionsEligibles = async () => {
         fraisInscription: 15000,
         fraisPayes: 15000,
         statutPaiement: 'paye'
+      },
+      {
+        id: 'ins-2', 
+        inscriptionId: 'ins-2',
+        nom: 'DUPONT',
+        prenom: 'Marie',
+        email: 'marie@school.com',
+        telephone: '0123456790',
+        filiere: 'Design',
+        vague: 'Vague 2',
+        dateInscription: new Date().toISOString(),
+        fraisInscription: 15000,
+        fraisPayes: 15000,
+        statutPaiement: 'paye'
       }
     ];
     
     setInscriptionsEligibles(testData);
     setStats(prev => ({
       ...prev,
-      elevesEligibles: 1
+      elevesEligibles: testData.length
     }));
     
-    toast.success('1 élève de test chargé');
+    toast.success(`${testData.length} inscription(s) de test chargée(s)`);
   }
 };
+
   // Charger les données initiales
   useEffect(() => {
     const loadInitialData = async () => {
@@ -301,84 +346,131 @@ const fetchInscriptionsEligibles = async () => {
     });
   };
 
-  // Créer un dossier
-  // Dans votre composant frontend - remplacez la fonction handleNouveauDossier
-const handleNouveauDossier = async () => {
-  if (!nouveauDossier.eleveId || !tousDocumentsUploades) {
-    toast.error('Veuillez sélectionner un élève et uploader tous les documents');
-    return;
-  }
-
-  setIsActionLoading(true);
-  try {
-    const formData = new FormData();
-    formData.append('inscriptionId', nouveauDossier.eleveId);
+  // CORRECTION COMPLÈTE : Créer un dossier avec inscriptionId
+  const handleNouveauDossier = async () => {
+    // CORRECTION : Vérification détaillée
+    const eleveSelectionne = inscriptionsEligibles.find(e => e.id === nouveauDossier.eleveId);
     
-    // CORRECTION: Upload des fichiers séparément après création du dossier
-    if (nouveauDossier.documents.photoIdentite) {
-      formData.append('photoIdentite', nouveauDossier.documents.photoIdentite);
-    }
-    if (nouveauDossier.documents.acteNaissance) {
-      formData.append('acteNaissance', nouveauDossier.documents.acteNaissance);
-    }
-    if (nouveauDossier.documents.relevesNotes) {
-      formData.append('relevesNotes', nouveauDossier.documents.relevesNotes);
+    if (!eleveSelectionne) {
+      toast.error('Élève non trouvé dans la liste');
+      return;
     }
 
-    console.log('📤 Création dossier avec inscriptionId:', nouveauDossier.eleveId);
-
-    // CORRECTION: Utiliser POST directement sans paramètre d'action
-    const response = await fetch('/api/secretaires/dossiers', {
-      method: 'POST',
-      body: formData
-    });
-
-    // CORRECTION: Vérifier si la réponse est vide
-    const responseText = await response.text();
-    console.log('📥 Réponse brute:', responseText);
-
-    if (!responseText) {
-      throw new Error('Réponse vide du serveur');
+    if (!tousDocumentsUploades) {
+      toast.error('Veuillez uploader tous les documents requis');
+      return;
     }
 
-    const result: ApiResponse = JSON.parse(responseText);
+    console.log('🔍 DEBUG - Données de création:');
+    console.log('Élève sélectionné:', eleveSelectionne);
+    console.log('ID à envoyer:', eleveSelectionne.inscriptionId || eleveSelectionne.id);
+    console.log('Documents:', nouveauDossier.documents);
 
-    if (!result.success) {
-      throw new Error(result.error || 'Erreur lors de la création');
-    }
+    setIsActionLoading(true);
+    try {
+      const formData = new FormData();
+      
+      // CORRECTION : Utiliser l'ID d'inscription
+      const inscriptionId = eleveSelectionne.inscriptionId || eleveSelectionne.id;
+      formData.append('inscriptionId', inscriptionId);
+      
+      console.log('📤 Envoi avec inscriptionId:', inscriptionId);
 
-    toast.success(result.message || 'Dossier créé avec succès');
-    
-    setIsDialogOpen(false);
-    setNouveauDossier({
-      eleveId: "",
-      documents: {
-        photoIdentite: null,
-        acteNaissance: null,
-        relevesNotes: null
+      // Ajouter les fichiers
+      if (nouveauDossier.documents.photoIdentite) {
+        formData.append('photoIdentite', nouveauDossier.documents.photoIdentite);
       }
-    });
+      if (nouveauDossier.documents.acteNaissance) {
+        formData.append('acteNaissance', nouveauDossier.documents.acteNaissance);
+      }
+      if (nouveauDossier.documents.relevesNotes) {
+        formData.append('relevesNotes', nouveauDossier.documents.relevesNotes);
+      }
 
-    // Recharger les données
-    await fetchData();
-    await fetchInscriptionsEligibles();
+      const response = await fetch('/api/secretaires/dossiers', {
+        method: 'POST',
+        body: formData
+      });
 
-  } catch (error) {
-    console.error('❌ Erreur création dossier:', error);
-    
-    // CORRECTION: Message d'erreur plus explicite
-    let errorMessage = 'Erreur lors de la création du dossier';
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    } else if (typeof error === 'string') {
-      errorMessage = error;
+      // Gestion robuste des erreurs
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Erreur HTTP:', response.status, errorText);
+        
+        let errorMessage = `Erreur ${response.status}: `;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage += errorData.error || errorData.message || 'Erreur inconnue';
+          
+          // CORRECTION : Gestion spécifique des dossiers existants
+          if (errorData.error?.includes('existe déjà') || errorData.message?.includes('existe déjà')) {
+            errorMessage = `❌ Un dossier existe déjà pour cet élève. Veuillez sélectionner un autre élève.`;
+            if (errorData.existingDossierId) {
+              errorMessage += ` (ID: ${errorData.existingDossierId})`;
+            }
+          }
+        } catch {
+          errorMessage += errorText || 'Erreur réseau';
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const responseText = await response.text();
+      console.log('📥 Réponse brute:', responseText);
+
+      if (!responseText) {
+        throw new Error('Réponse vide du serveur');
+      }
+
+      const result: ApiResponse = JSON.parse(responseText);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Erreur lors de la création');
+      }
+
+      toast.success(result.message || 'Dossier créé avec succès');
+      
+      // Réinitialiser le formulaire
+      setNouveauDossier({
+        eleveId: "",
+        inscriptionId: "",
+        documents: {
+          photoIdentite: null,
+          acteNaissance: null,
+          relevesNotes: null
+        }
+      });
+      
+      setIsDialogOpen(false);
+
+      // Recharger les données
+      await fetchData();
+      await fetchInscriptionsEligibles();
+
+    } catch (error) {
+      console.error('❌ Erreur création dossier:', error);
+      
+      let errorMessage = 'Erreur lors de la création du dossier';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setIsActionLoading(false);
     }
-    
-    toast.error(errorMessage);
-  } finally {
-    setIsActionLoading(false);
-  }
-};
+  };
+
+  // CORRECTION : Mettre à jour l'inscriptionId quand l'élève est sélectionné
+  const handleEleveSelection = (eleveId: string) => {
+    const eleveSelectionne = inscriptionsEligibles.find(e => e.id === eleveId);
+    setNouveauDossier({
+      ...nouveauDossier,
+      eleveId: eleveId,
+      inscriptionId: eleveSelectionne?.inscriptionId || eleveId
+    });
+  };
 
   // Ouvrir la modal de suppression
   const openDeleteDialog = (dossier: Dossier) => {
@@ -394,14 +486,14 @@ const handleNouveauDossier = async () => {
     try {
       console.log('🗑️ Suppression dossier:', dossierToDelete.id);
 
-      // CORRECTION: Utiliser l'API dossiers pour la suppression
-      const response = await fetch('/api/secretaires/dossiers?action=supprimer-dossier', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: dossierToDelete.id })
+      const response = await fetch(`/api/secretaires/dossiers?id=${dossierToDelete.id}`, {
+        method: 'DELETE'
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erreur ${response.status}: ${errorText}`);
+      }
 
       const result: ApiResponse = await response.json();
 
@@ -427,14 +519,18 @@ const handleNouveauDossier = async () => {
     try {
       console.log('✏️ Modification statut:', dossierId, nouveauStatut);
 
-      // CORRECTION: Utiliser l'API dossiers pour la modification
-      const response = await fetch('/api/secretaires/dossiers?action=modifier-statut-dossier', {
-        method: 'POST',
+      const response = await fetch(`/api/secretaires/dossiers?action=modifier-statut`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ id: dossierId, statut: nouveauStatut })
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erreur ${response.status}: ${errorText}`);
+      }
 
       const result: ApiResponse = await response.json();
 
@@ -477,131 +573,150 @@ const handleNouveauDossier = async () => {
           </p>
         </div>
         
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={fetchData} disabled={isLoading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Actualiser
-          </Button>
-           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-principal hover:bg-principal/90">
-                <Plus className="w-4 h-4 mr-2" />
-                Nouveau Dossier
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-white max-w-2xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Nouveau Dossier</DialogTitle>
-                <DialogDescription>
-                  Sélectionnez un élève et téléversez les documents requis
-                </DialogDescription>
-              </DialogHeader>
+       <div className="flex flex-col sm:flex-row gap-3">
+  <Button 
+    variant="outline" 
+    onClick={fetchData} 
+    disabled={isLoading}
+    className="w-40 sm:w-auto justify-center"
+  >
+    <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+    Actualiser
+  </Button>
+   
+  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+    <DialogTrigger asChild>
+      <Button className="bg-principal hover:bg-principal/90 w-45 sm:w-auto justify-center">
+        <Plus className="w-4 h-4 mr-2" />
+        Nouveau Dossier
+      </Button>
+    </DialogTrigger>
+    <DialogContent className="bg-white max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>Nouveau Dossier</DialogTitle>
+        <DialogDescription>
+          Sélectionnez un élève et téléversez les documents requis
+        </DialogDescription>
+      </DialogHeader>
 
-              <div className="space-y-6 py-4">
-                {/* Sélection de l'élève */}
-                <div className="space-y-2">
-                  <Label htmlFor="eleve">Élève *</Label>
-                  <Select
-                    value={nouveauDossier.eleveId}
-                    onValueChange={(value) => setNouveauDossier({ ...nouveauDossier, eleveId: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez un élève" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {inscriptionsEligibles.map((eleve) => (
-                        <SelectItem key={eleve.id} value={eleve.id}>
-                          {eleve.prenom} {eleve.nom} - {eleve.filiere}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-gray-500">
-                    {inscriptionsEligibles.length} élève(s) éligible(s)
-                  </p>
-                </div>
-
-                {/* Upload des documents */}
-                <div className="space-y-4">
-                  <Label>Documents requis *</Label>
-                  
-                  {['photoIdentite', 'acteNaissance', 'relevesNotes'].map((docType) => (
-                    <div key={docType} className="space-y-2">
-                      <Label htmlFor={docType} className="text-sm font-medium capitalize">
-                        {docType.replace(/([A-Z])/g, ' $1').replace('Identite', 'd\'identité').replace('Naissance', 'de naissance').replace('Notes', 'de notes')}
-                      </Label>
-                      {!nouveauDossier.documents[docType as keyof typeof nouveauDossier.documents] ? (
-                        <Input
-                          id={docType}
-                          type="file"
-                          accept=".jpg,.jpeg,.png,.pdf"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleFileUpload(docType as keyof typeof nouveauDossier.documents, file);
-                          }}
-                        />
-                      ) : (
-                        <div className="flex items-center justify-between p-3 border border-green-200 bg-green-50 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-green-600" />
-                            <span className="text-sm text-green-800">
-                              {nouveauDossier.documents[docType as keyof typeof nouveauDossier.documents]?.name}
-                            </span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeFile(docType as keyof typeof nouveauDossier.documents)}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Récapitulatif */}
-                {nouveauDossier.eleveId && (
-                  <Card className="bg-blue-50 border-blue-200">
-                    <CardHeader>
-                      <CardTitle className="text-blue-900 text-lg">Récapitulatif</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-blue-800">Documents uploadés:</span>
-                        <Badge variant={tousDocumentsUploades ? "default" : "outline"}>
-                          {Object.values(nouveauDossier.documents).filter(Boolean).length}/3
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-blue-800">Statut du dossier:</span>
-                        <Badge variant={tousDocumentsUploades ? "default" : "destructive"}>
-                          {tousDocumentsUploades ? "Complet" : "Incomplet"}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Annuler
-                </Button>
-                <Button 
-                  onClick={handleNouveauDossier}
-                  disabled={!nouveauDossier.eleveId || !tousDocumentsUploades || isActionLoading}
-                  className="bg-principal hover:bg-principal/90"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  {isActionLoading ? "Création..." : "Créer le dossier"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+      <div className="space-y-6 py-4">
+        {/* Sélection de l'élève */}
+        <div className="space-y-2">
+          <Label htmlFor="eleve">Élève *</Label>
+          <Select
+            value={nouveauDossier.eleveId}
+            onValueChange={handleEleveSelection}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionnez un élève" />
+            </SelectTrigger>
+            <SelectContent>
+              {inscriptionsEligibles.map((eleve) => (
+                <SelectItem key={eleve.id} value={eleve.id}>
+                  <div className="flex flex-col">
+                    <span>{eleve.prenom} {eleve.nom}</span>
+                    <span className="text-xs text-gray-500">
+                      {eleve.filiere} - {eleve.vague}
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-gray-500">
+            {inscriptionsEligibles.length} élève(s) éligible(s) - Paiement validé
+          </p>
         </div>
+
+        {/* Upload des documents */}
+        <div className="space-y-4">
+          <Label>Documents requis *</Label>
+          
+          {[
+            { key: 'photoIdentite', label: "Photo d'identité" },
+            { key: 'acteNaissance', label: "Acte de naissance" }, 
+            { key: 'relevesNotes', label: "Relevés de notes" }
+          ].map(({ key, label }) => (
+            <div key={key} className="space-y-2">
+              <Label htmlFor={key} className="text-sm font-medium">
+                {label}
+              </Label>
+              {!nouveauDossier.documents[key as keyof typeof nouveauDossier.documents] ? (
+                <Input
+                  id={key}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(key as keyof typeof nouveauDossier.documents, file);
+                  }}
+                />
+              ) : (
+                <div className="flex items-center justify-between p-3 border border-green-200 bg-green-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-green-600" />
+                    <span className="text-sm text-green-800">
+                      {nouveauDossier.documents[key as keyof typeof nouveauDossier.documents]?.name}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeFile(key as keyof typeof nouveauDossier.documents)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Récapitulatif */}
+        {nouveauDossier.eleveId && (
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-blue-900 text-lg">Récapitulatif</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-blue-800">Documents uploadés:</span>
+                <Badge variant={tousDocumentsUploades ? "default" : "outline"}>
+                  {Object.values(nouveauDossier.documents).filter(Boolean).length}/3
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-blue-800">Statut du dossier:</span>
+                <Badge variant={tousDocumentsUploades ? "default" : "destructive"}>
+                  {tousDocumentsUploades ? "Prêt à créer" : "Documents manquants"}
+                </Badge>
+              </div>
+              {inscriptionsEligibles.find(e => e.id === nouveauDossier.eleveId) && (
+                <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                  <strong>Élève sélectionné:</strong> {inscriptionsEligibles.find(e => e.id === nouveauDossier.eleveId)?.prenom} {inscriptionsEligibles.find(e => e.id === nouveauDossier.eleveId)?.nom}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <div className="flex justify-end gap-3 pt-4 border-t">
+        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+          Annuler
+        </Button>
+        <Button 
+          onClick={handleNouveauDossier}
+          disabled={!nouveauDossier.eleveId || !tousDocumentsUploades || isActionLoading}
+          className="bg-principal hover:bg-principal/90"
+        >
+          <Upload className="w-4 h-4 mr-2" />
+          {isActionLoading ? "Création..." : "Créer le dossier"}
+        </Button>
+      </div>
+    </DialogContent>
+  </Dialog>
+</div>
       </div>
 
       {/* Statistiques */}
@@ -753,7 +868,6 @@ const handleNouveauDossier = async () => {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  // Skeleton pour le chargement
                   Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
                       <TableCell>
@@ -917,7 +1031,7 @@ const handleNouveauDossier = async () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de suppression personnalisée */}
+      {/* Modal de suppression */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="bg-white max-w-md">
           <DialogHeader>

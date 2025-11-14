@@ -9,10 +9,11 @@ import {
   MapPin, 
   User, 
   Calendar,
-  Filter,
+  Filter, 
   RefreshCw,
   Eye
 } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 
 // Interfaces CORRIGÉES
 interface ScheduleSlot {
@@ -96,6 +97,86 @@ const JOURS_SEMAINE = [
   { id: 'friday', label: 'Vendredi' },
   { id: 'saturday', label: 'Samedi' }
 ];
+
+// Composant Skeleton pour les cartes d'emploi du temps
+const ScheduleCardSkeleton = () => {
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {/* En-tête Skeleton */}
+      <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <Skeleton className="h-5 w-5 rounded" />
+              <Skeleton className="h-6 w-48" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-24 rounded-full" />
+              <Skeleton className="h-5 w-32 rounded" />
+            </div>
+          </div>
+          <Skeleton className="h-4 w-32" />
+        </div>
+      </div>
+
+      {/* Créneaux horaires Skeleton */}
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        
+        <div className="grid gap-3">
+          {[...Array(3)].map((_, index) => (
+            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-6">
+                <Skeleton className="h-6 w-24 rounded-full" />
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              </div>
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Composant Skeleton pour les statistiques
+const StatsSkeleton = () => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      {[...Array(4)].map((_, index) => (
+        <div key={index} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <Skeleton className="h-8 w-12 mb-2" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Composant Skeleton pour les filtres
+const FiltersSkeleton = () => {
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Skeleton className="h-5 w-5 rounded" />
+        <Skeleton className="h-5 w-20" />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Skeleton className="h-10 md:col-span-2" />
+        <Skeleton className="h-10" />
+        <Skeleton className="h-10" />
+      </div>
+    </div>
+  );
+};
 
 export default function EmploiDuTempsPage() {
   const { user, isLoaded } = useUser()
@@ -220,12 +301,35 @@ export default function EmploiDuTempsPage() {
     return time.slice(0, 5)
   }
 
-  if (!isLoaded) {
+  // État de chargement avec skeleton
+  if (!isLoaded || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement...</p>
+      <div className="min-h-screen overflow-y-auto bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+        <div className="max-w-7xl mx-auto p-6">
+          {/* En-tête Skeleton */}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-8 w-8 rounded" />
+                <Skeleton className="h-8 w-64" />
+              </div>
+              <Skeleton className="h-4 w-96" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+
+          {/* Filtres Skeleton */}
+          <FiltersSkeleton />
+
+          {/* Statistiques Skeleton */}
+          <StatsSkeleton />
+
+          {/* Cartes d'emploi du temps Skeleton */}
+          <div className="space-y-6">
+            {[...Array(3)].map((_, index) => (
+              <ScheduleCardSkeleton key={index} />
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -243,7 +347,7 @@ export default function EmploiDuTempsPage() {
   }
 
   return (
-    <div className="min-h-screen overflow-y-auto bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+    <div className="min-h-screen overflow-x-auto bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
       <div className="max-w-7xl mx-auto p-6">
         {/* En-tête avec actions */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
@@ -357,12 +461,7 @@ export default function EmploiDuTempsPage() {
         </div>
 
         {/* Liste des emplois du temps */}
-        {isLoading ? (
-          <div className="bg-white p-12 rounded-lg shadow-sm border border-gray-200 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Chargement des emplois du temps...</p>
-          </div>
-        ) : filteredSchedules.length === 0 ? (
+        {filteredSchedules.length === 0 ? (
           <div className="bg-white p-12 rounded-lg shadow-sm border border-gray-200 text-center">
             <div className="text-gray-400 mb-4">
               <Clock className="h-12 w-12 mx-auto" />
@@ -414,7 +513,6 @@ function ScheduleCard({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <Eye className="h-5 w-5 text-blue-600" />
               <h3 className="text-lg font-semibold text-gray-900">
                 {schedule.module.nom}
               </h3>

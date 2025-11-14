@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Types basés sur votre schéma Prisma
 interface Teacher {
@@ -71,6 +72,75 @@ interface ApiResponse {
     totalVagues: number;
   };
 }
+
+// Composant Skeleton pour les statistiques
+const StatsSkeleton: React.FC = () => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {[...Array(4)].map((_, index) => (
+        <Card key={index}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-4 rounded" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-7 w-12 mb-1" />
+            <Skeleton className="h-3 w-16" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+// Composant Skeleton pour les lignes du tableau
+const TableRowSkeleton: React.FC = () => {
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="flex items-center space-x-3">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-wrap gap-1">
+          <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-5 w-20 rounded-full" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-wrap gap-1">
+          <Skeleton className="h-5 w-20 rounded-full" />
+          <Skeleton className="h-5 w-24 rounded-full" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-wrap gap-1">
+          <Skeleton className="h-5 w-16 rounded-full" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-6 w-16 rounded-full" />
+      </TableCell>
+      <TableCell>
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-8 rounded" />
+          <Skeleton className="h-8 w-8 rounded" />
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+};
 
 const TeachersManagement = () => {
   const { user, isLoaded, isSignedIn } = useUser();
@@ -214,12 +284,54 @@ const TeachersManagement = () => {
     }
   };
 
+  // État de chargement avec skeleton
   if (!isLoaded || isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-          Chargement des professeurs...
+      <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+        <div className="p-6 space-y-6 h-full overflow-y-auto">
+          {/* HEADER SKELETON */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <div className="flex gap-3">
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-40" />
+            </div>
+          </div>
+
+          {/* BARRE DE RECHERCHE SKELETON */}
+          <Skeleton className="h-10 w-96 max-w-md" />
+
+          {/* STATISTIQUES SKELETON */}
+          <StatsSkeleton />
+
+          {/* TABLEAU SKELETON */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {[...Array(7)].map((_, index) => (
+                      <TableHead key={index}>
+                        <Skeleton className="h-4 w-20" />
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, index) => (
+                    <TableRowSkeleton key={index} />
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -278,13 +390,13 @@ const TeachersManagement = () => {
               {stats.totalTeachers} professeur(s) - Gestion des comptes enseignants
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex sm:flex flex-col gap-3">
             <Button onClick={loadTeachers} variant="outline">
               <FaSync className="mr-2" />
               Actualiser
             </Button>
             <Link href="/auth/signup">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button className="bg-blue-600  hover:bg-blue-700 text-white">
                 <FaPlus className="mr-2 h-4 w-4" />
                 Ajouter un Élève
               </Button>

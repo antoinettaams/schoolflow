@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import { 
   FaFileInvoice, 
   FaSort, 
-  FaSortUp, 
+  FaSortUp,  
   FaSortDown, 
   FaDownload, 
   FaCreditCard, 
@@ -31,7 +31,7 @@ import { toast } from "sonner";
 
 // Interfaces TypeScript basées sur l'API
 interface Fee { 
-  id: number;
+  id: string;
   description: string;
   amount: number;
   dueDate: string;
@@ -68,6 +68,8 @@ interface FinanceData {
 interface ApiResponse {
   success: boolean;
   data: FinanceData;
+  error?: string;
+  message?: string;
   metadata?: {
     userRole: string;
     studentName: string;
@@ -198,18 +200,19 @@ export default function ParentFinancePage() {
         setIsLoading(true);
         setError(null);
         
-        const response = await fetch('/api/finances');
-        const result: ApiResponse = await response.json();
-
+        const response = await fetch('/api/parents/finances');
+        
         if (!response.ok) {
-          throw new Error(result.error || 'Erreur lors du chargement des données');
+          throw new Error(`Erreur HTTP: ${response.status}`);
         }
+
+        const result: ApiResponse = await response.json();
 
         if (result.success && result.data) {
           setFinanceData(result.data);
           toast.success('Données financières chargées avec succès');
         } else {
-          throw new Error('Données non disponibles');
+          throw new Error(result.error || result.message || 'Données non disponibles');
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';

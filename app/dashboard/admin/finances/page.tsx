@@ -293,7 +293,7 @@ export default function FinancesPage() {
     <div className="flex flex-col min-h-screen bg-background lg:pl-5 pt-20 lg:pt-6">
       
       {/* Header fixe */}
-      <header className="border-b p-4 sm:p-6 sticky top-0 z-[100] shadow-sm bg-background">
+      <header className="border-b p-4 sm:p-6 sticky top-0 z-[500] shadow-sm bg-background">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-foreground truncate">

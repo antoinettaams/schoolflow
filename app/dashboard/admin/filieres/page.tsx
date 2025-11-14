@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Types CORRIGÉS
 interface Module {
@@ -36,7 +37,7 @@ interface Filiere {
   id: string;
   name: string;
   description: string;
-  duration: string; // CORRIGÉ: string au lieu de number
+  duration: string;
   totalModules: number;
   status: "active" | "inactive";
   modules: Module[];
@@ -70,9 +71,105 @@ interface StatsResponse {
     totalModules: number;
     totalEtudiantsActifs: number;
     totalFormateurs: number;
-    dureeLaPlusCourante: string; // CORRIGÉ: string au lieu de number
+    dureeLaPlusCourante: string;
   };
 }
+
+// Composant Skeleton pour les statistiques
+const StatsSkeleton = () => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {[...Array(3)].map((_, index) => (
+        <Card key={index}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-4 rounded" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-7 w-12 mb-1" />
+            <Skeleton className="h-3 w-24" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+// Composant Skeleton pour les statistiques supplémentaires
+const AdditionalStatsSkeleton = () => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {[...Array(2)].map((_, index) => (
+        <Card key={index}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-4 rounded" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-7 w-12 mb-1" />
+            <Skeleton className="h-3 w-32" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+// Composant Skeleton pour les filtres
+const FiltersSkeleton = () => {
+  return (
+    <Card>
+      <CardHeader>
+        <Skeleton className="h-6 w-40" />
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Skeleton className="h-10 md:col-span-2" />
+          <Skeleton className="h-10" />
+          <Skeleton className="h-10" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Composant Skeleton pour les lignes du tableau
+const TableRowSkeleton = () => {
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-3 w-40" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex justify-center">
+          <Skeleton className="h-6 w-10 rounded-full" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex justify-center">
+          <Skeleton className="h-4 w-16" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex justify-center">
+          <Skeleton className="h-6 w-16 rounded-full" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-8 w-8 rounded" />
+      </TableCell>
+    </TableRow>
+  );
+};
 
 const AdminFilieresPage = () => {
   const { user, isLoaded, isSignedIn } = useUser();
@@ -94,7 +191,7 @@ const AdminFilieresPage = () => {
     totalModules: 0,
     totalEtudiants: 0,
     totalFormateurs: 0,
-    dureeLaPlusCourante: "3 ans", // CORRIGÉ: string au lieu de number
+    dureeLaPlusCourante: "3 ans",
   });
 
   // Modal "Voir" état
@@ -169,7 +266,7 @@ const AdminFilieresPage = () => {
             totalModules: statsData.general.totalModules || 0,
             totalEtudiants: statsData.general.totalEtudiantsActifs || 0,
             totalFormateurs: statsData.general.totalFormateurs || 0,
-            dureeLaPlusCourante: statsData.general.dureeLaPlusCourante || "3 ans" // CORRIGÉ
+            dureeLaPlusCourante: statsData.general.dureeLaPlusCourante || "3 ans"
           });
         }
       }
@@ -182,7 +279,7 @@ const AdminFilieresPage = () => {
         totalModules: 0,
         totalEtudiants: 0,
         totalFormateurs: 0,
-        dureeLaPlusCourante: "3 ans" // CORRIGÉ
+        dureeLaPlusCourante: "3 ans"
       });
     }
   };
@@ -260,10 +357,54 @@ const AdminFilieresPage = () => {
     return ["Toutes les vagues", ...vaguesDisponibles];
   };
 
+  // État de chargement avec skeleton
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Chargement de vos informations...</div>
+      <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
+        <div className="p-6 space-y-6 h-full overflow-y-auto">
+          {/* Header Skeleton */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-96" />
+            </div>
+          </div>
+
+          {/* Statistiques Skeleton */}
+          <StatsSkeleton />
+
+          {/* Statistiques supplémentaires Skeleton */}
+          <AdditionalStatsSkeleton />
+
+          {/* Filtres Skeleton */}
+          <FiltersSkeleton />
+
+          {/* Tableau Skeleton */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {[...Array(6)].map((_, index) => (
+                      <TableHead key={index}>
+                        <Skeleton className="h-4 w-20" />
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, index) => (
+                    <TableRowSkeleton key={index} />
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -294,7 +435,7 @@ const AdminFilieresPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 lg:pl-5 pt-20 lg:pt-6">
-      <div className="p-6 space-y-6 h-full overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
+      <div className="p-6 space-y-6 h-full overflow-y-auto">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>

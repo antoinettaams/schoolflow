@@ -3,12 +3,26 @@
 
 import { useState, useEffect } from 'react';
 import Link from "next/link";
-import { FaCalendarAlt, FaRegChartBar, FaClipboardList, FaGraduationCap, FaArrowRight, FaClock, FaFileAlt, FaExclamationTriangle } from "react-icons/fa";
+import { 
+  FaCalendarAlt, 
+  FaRegChartBar, 
+  FaClipboardList, 
+  FaGraduationCap, 
+  FaArrowRight, 
+  FaClock, 
+  FaFileAlt, 
+  FaExclamationTriangle,
+  FaMoneyBillWave,
+  FaCheckCircle,
+  FaClock as FaClockIcon,
+  FaExclamationCircle
+} from "react-icons/fa";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
-// Types pour les données
+// Types pour les données - CORRIGÉ
 interface DashboardData {
   childInfo: {
     name: string;
@@ -34,10 +48,13 @@ interface DashboardData {
     mention: string;
     link: string;
   };
-  financialInfo: {
-    amountDue: string;
+  inscriptionInfo: { // CORRECTION: financialInfo → inscriptionInfo
+    montantTotal: string;
+    montantPaye: string;
+    montantRestant: string;
+    statut: 'en_attente' | 'partiel' | 'complet';
     dueDate: string;
-    status: 'en_retard' | 'a_jour' | 'en_attente';
+    hasInscription: boolean;
   };
   notifications: Array<{
     id: string;
@@ -79,6 +96,48 @@ const ParentDashboard = () => {
     }
   };
 
+  // Fonction pour obtenir la couleur du statut des frais
+  const getStatusColor = (statut: string) => {
+    switch (statut) {
+      case 'complet':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'partiel':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'en_attente':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  // Fonction pour obtenir l'icône du statut
+  const getStatusIcon = (statut: string) => {
+    switch (statut) {
+      case 'complet':
+        return <FaCheckCircle className="h-4 w-4" />;
+      case 'partiel':
+        return <FaClockIcon className="h-4 w-4" />;
+      case 'en_attente':
+        return <FaExclamationCircle className="h-4 w-4" />;
+      default:
+        return <FaMoneyBillWave className="h-4 w-4" />;
+    }
+  };
+
+  // Fonction pour obtenir le libellé du statut
+  const getStatusLabel = (statut: string) => {
+    switch (statut) {
+      case 'complet':
+        return 'Complètement payé';
+      case 'partiel':
+        return 'Paiement partiel';
+      case 'en_attente':
+        return 'En attente de paiement';
+      default:
+        return statut;
+    }
+  };
+
   if (loading) {
     return <DashboardSkeleton />;
   }
@@ -106,7 +165,22 @@ const ParentDashboard = () => {
     );
   }
 
-  const { childInfo, nextSchedule, nextEvent, latestBulletin, financialInfo } = dashboardData;
+  // CORRECTION: Utiliser inscriptionInfo au lieu de financialInfo
+  const { childInfo, nextSchedule, nextEvent, latestBulletin, inscriptionInfo } = dashboardData;
+
+  // Fonction pour déterminer la couleur en fonction du taux d'absence
+  const getAbsenceColor = (absences: number) => {
+    if (absences === 0) return 'text-green-600';
+    if (absences <= 2) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  // Fonction pour déterminer la couleur du taux de présence
+  const getAttendanceColor = (rate: number) => {
+    if (rate >= 95) return 'text-green-600';
+    if (rate >= 85) return 'text-yellow-600';
+    return 'text-red-600';
+  };
 
   return (
     <div className="p-6 space-y-6 h-full bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
@@ -154,13 +228,15 @@ const ParentDashboard = () => {
             <FaClipboardList className="text-principal h-5 w-5" />
           </CardHeader>
           <CardContent className="pt-2 space-y-1">
-            <div className={`text-3xl font-bold ${childInfo.absencesLastWeek > 0 ? 'text-red-600' : 'text-green-600'}`}>
+            <div className={`text-3xl font-bold ${getAbsenceColor(childInfo.absencesLastWeek)}`}>
               {childInfo.absencesLastWeek}
             </div>
             <p className="text-xs text-gray-700">
-              {childInfo.absencesLastWeek <= 1 ? "Absence signalée" : "Absences signalées"}
+              {childInfo.absencesLastWeek === 0 ? "Aucune absence" : 
+               childInfo.absencesLastWeek === 1 ? "Absence signalée" : 
+               "Absences signalées"}
             </p>
-            <p className="text-xs text-gray-500">
+            <p className={`text-xs font-medium ${getAttendanceColor(childInfo.attendanceRate)}`}>
               Taux de présence: {childInfo.attendanceRate}%
             </p>
             <Link href="/dashboard/parent/attendance" className="mt-1 inline-block">
@@ -191,7 +267,7 @@ const ParentDashboard = () => {
         </Card>
       </div>
 
-      {/* GRID BAS: Évènement, Bulletins, Frais Scolaires */}
+      {/* GRID BAS: Évènement, Bulletins, Frais d'Inscription */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
         {/* Évènement à Venir */}
@@ -211,23 +287,90 @@ const ParentDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Frais Scolaires */}
+        {/* Bulletin */}
+        <Card className="hover:shadow-lg transition">
+          <CardHeader className="flex justify-between items-center pb-2">
+            <CardTitle className="text-sm font-medium font-title">Dernier Bulletin</CardTitle>
+            <FaFileAlt className="text-principal h-5 w-5" />
+          </CardHeader>
+          <CardContent className="pt-2 space-y-1">
+            <div className="text-xl font-bold text-gray-900">{latestBulletin.trimester}</div>
+            <p className="text-sm text-gray-700">Moyenne: {latestBulletin.average}</p>
+            <p className="text-xs text-gray-600">Mention: {latestBulletin.mention}</p>
+            <Link href="/parent/exams" className="mt-1 inline-block">
+              <Button variant="link" className="font-link p-0 text-principal text-xs">
+                Voir les notes <FaArrowRight className="ml-1 h-3 w-3" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Frais d'Inscription - CORRIGÉ */}
         <Card className="hover:shadow-lg transition">
           <CardHeader>
-            <CardTitle className="font-title text-lg font-bold text-gray-800">Frais Scolaires</CardTitle>
-            <CardDescription>Facture en attente ou prochaine échéance</CardDescription>
+            <CardTitle className="font-title text-lg font-bold text-gray-800 flex items-center gap-2">
+              <FaMoneyBillWave className="text-principal" />
+              Frais d'Inscription
+            </CardTitle>
+            <CardDescription>
+              {inscriptionInfo.hasInscription ? "État des paiements d'inscription" : "Aucune inscription trouvée - Montant par défaut"}
+            </CardDescription>
           </CardHeader>
-          <CardContent className="pt-2 space-y-2">
-            <div className="text-3xl font-bold text-red-500">{financialInfo.amountDue}</div>
-            <p className="text-sm text-gray-700">Échéance : {financialInfo.dueDate}</p>
-            <p className={`text-xs font-medium ${
-              financialInfo.status === 'en_retard' ? 'text-red-600' :
-              financialInfo.status === 'a_jour' ? 'text-green-600' : 'text-yellow-600'
-            }`}>
-              Statut: {financialInfo.status.replace('_', ' ')}
-            </p>
-            <Link href="/dashboard/parent/finance" className="mt-2 block">
-              <Button className="w-full font-link bg-red-500 hover:bg-red-600">Payer Maintenant</Button>
+          <CardContent className="pt-2 space-y-3">
+            {/* Badge de statut */}
+            <div className="flex justify-between items-center">
+              <Badge variant="outline" className={`${getStatusColor(inscriptionInfo.statut)} flex items-center gap-1`}>
+                {getStatusIcon(inscriptionInfo.statut)}
+                {getStatusLabel(inscriptionInfo.statut)}
+              </Badge>
+              {!inscriptionInfo.hasInscription && (
+                <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200">
+                  Données par défaut
+                </Badge>
+              )}
+            </div>
+
+            {/* Montants */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Total à payer:</span>
+                <span className="font-semibold text-gray-900">{inscriptionInfo.montantTotal}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Déjà payé:</span>
+                <span className={`font-semibold ${
+                  inscriptionInfo.montantPaye === "0 FCFA" ? 'text-gray-600' : 'text-green-600'
+                }`}>
+                  {inscriptionInfo.montantPaye}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-t pt-2">
+                <span className="text-sm font-medium text-gray-700">Reste à payer:</span>
+                <span className={`font-bold ${
+                  inscriptionInfo.statut === 'en_attente' ? 'text-red-600' : 
+                  inscriptionInfo.statut === 'partiel' ? 'text-yellow-600' : 
+                  'text-green-600'
+                }`}>
+                  {inscriptionInfo.montantRestant}
+                </span>
+              </div>
+            </div>
+
+            {/* Date d'échéance */}
+            <div className="text-xs text-gray-500 border-t pt-2">
+              Échéance: {inscriptionInfo.dueDate}
+            </div>
+
+            {/* Bouton d'action */}
+            <Link href="/dashboard/parent/paiements" className="text-white block mt-3">
+              <Button className={`w-full font-link ${
+                inscriptionInfo.statut === 'complet' ? 
+                'bg-green-600 hover:bg-green-700' : 
+                'bg-blue-600 hover:bg-blue-700'
+              
+              }`}>
+                {inscriptionInfo.statut === 'complet' ? 'Consulter' : 'Consulter maintenant'}
+              </Button>
             </Link>
           </CardContent>
         </Card>

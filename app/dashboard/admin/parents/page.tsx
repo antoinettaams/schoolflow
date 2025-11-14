@@ -14,7 +14,7 @@ import {
   FaLayerGroup,
   FaPlus,
   FaPhone,
-  FaEnvelope,
+  FaEnvelope, 
   FaUserGraduate,
   FaSchool,
   FaCalendarAlt,
@@ -73,6 +73,143 @@ interface Filters {
   vague: string;
   filiere: string;
 }
+
+// Composant Skeleton pour le chargement
+const SkeletonLoader = () => {
+  return (
+    <div className="min-h-screen bg-gray-50 overflow-y-auto lg:pl-5 pt-20 lg:pt-6">
+      <div className="p-6 space-y-6">
+        
+        {/* Header Skeleton */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <div className="h-8 w-64 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          <div className="flex gap-2">
+            <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-10 w-40 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Statistiques Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
+                <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Filtres Skeleton */}
+        <Card>
+          <CardHeader>
+            <div className="h-6 w-32 bg-gray-200 rounded animate-pulse mb-2"></div>
+            <div className="h-4 w-64 bg-gray-200 rounded animate-pulse"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tableau Skeleton */}
+        <Card>
+          <CardHeader>
+            <div className="h-6 w-40 bg-gray-200 rounded animate-pulse mb-2"></div>
+            <div className="h-4 w-56 bg-gray-200 rounded animate-pulse"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* En-tête du tableau */}
+              <div className="grid grid-cols-7 gap-4">
+                {[...Array(7)].map((_, i) => (
+                  <div key={i} className="h-6 bg-gray-200 rounded animate-pulse"></div>
+                ))}
+              </div>
+              
+              {/* Lignes du tableau */}
+              {[...Array(5)].map((_, rowIndex) => (
+                <div key={rowIndex} className="grid grid-cols-7 gap-4">
+                  {[...Array(7)].map((_, colIndex) => (
+                    <div 
+                      key={colIndex} 
+                      className={`h-12 bg-gray-200 rounded animate-pulse ${
+                        colIndex === 6 ? 'w-20' : ''
+                      }`}
+                    ></div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+// Composant Skeleton pour les lignes du tableau
+const TableRowSkeleton = () => {
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="flex items-center space-x-3">
+          <div className="h-10 w-10 bg-gray-200 rounded-full animate-pulse"></div>
+          <div className="space-y-2">
+            <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="space-y-2">
+          <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="space-y-2">
+          <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex gap-1">
+          <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-6 w-20 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex gap-1">
+          <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="h-6 w-16 bg-gray-200 rounded animate-pulse mx-auto"></div>
+      </TableCell>
+      <TableCell>
+        <div className="flex gap-2 justify-center">
+          <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+};
 
 const AdminParentsPage = () => {
   const { user, isLoaded, isSignedIn } = useUser();
@@ -270,12 +407,9 @@ const AdminParentsPage = () => {
       return 0;
     });
 
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Chargement de vos informations...</div>
-      </div>
-    );
+  // Afficher le skeleton pendant le chargement initial
+  if (!isLoaded || loading) {
+    return <SkeletonLoader />;
   }
 
   if (!isSignedIn) {
@@ -321,7 +455,7 @@ const AdminParentsPage = () => {
               {loading ? "Chargement..." : `${stats.total || 0} parent(s) trouvé(s)`}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex sm:flex flex-col gap-2">
             <Button 
               variant="outline" 
               onClick={fetchParents}
@@ -331,7 +465,7 @@ const AdminParentsPage = () => {
               Actualiser
             </Button>
             <Link href="/auth/signup">
-              <Button className="bg-principal hover:bg-principal/90">
+              <Button className="bg-principal text-white hover:bg-principal/90">
                 <FaPlus className="mr-2 h-4 w-4" />
                 Ajouter un Parent
               </Button>
@@ -542,9 +676,10 @@ const AdminParentsPage = () => {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-gray-600">Chargement des parents...</p>
+              <div className="space-y-4">
+                {[...Array(5)].map((_, index) => (
+                  <TableRowSkeleton key={index} />
+                ))}
               </div>
             ) : filteredParents.length === 0 ? (
               <div className="text-center py-8">

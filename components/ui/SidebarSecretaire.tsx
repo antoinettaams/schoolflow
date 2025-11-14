@@ -16,8 +16,6 @@ import {
   FaUser,
   FaChevronDown,
   FaFileArchive,
-  FaChartLine,
-  FaIdCard,
   FaCog,
   FaExclamationTriangle,
   FaCreditCard,
@@ -98,7 +96,6 @@ const SidebarSecretaire = () => {
     { label: "Inscriptions", href: "/dashboard/secretaire/inscriptions", icon: <FaUserGraduate />, category: "ÉLÈVES" },
     { label: "Liste des Élèves", href: "/dashboard/secretaire/liste-eleves", icon: <FaListAlt />, category: "ÉLÈVES" },
     { label: "Dossiers Étudiants", href: "/dashboard/secretaire/dossiers", icon: <FaFileArchive />, category: "ÉLÈVES" },
-    { label: "Cartes Étudiantes", href: "/dashboard/secretaire/cartes", icon: <FaIdCard />, category: "ÉLÈVES" },
     
     // === PAIEMENTS ===
     { label: "Paiements Scolarité", href: "/dashboard/comptable/paiements", icon: <FaCreditCard />, category: "FINANCES" },
@@ -342,21 +339,21 @@ const SidebarSecretaire = () => {
                 Êtes-vous sûr de vouloir vous déconnecter de votre compte ?
               </p>
               
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleCancelLogout}
-                  className="flex-1 border-gray-300 hover:bg-gray-50"
-                >
-                  Annuler
-                </Button>
-                <Button
-                  onClick={handleConfirmLogout}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                >
-                  Se déconnecter
-                </Button>
-              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+  <Button 
+    variant="outline" 
+    onClick={handleCancelLogout} 
+    className="flex-1 border-gray-300 hover:bg-gray-50"
+  >
+    Annuler
+  </Button>
+  <Button 
+    onClick={handleConfirmLogout} 
+    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+  >
+    Se déconnecter
+  </Button>
+</div>
             </div>
           </div>
         </>

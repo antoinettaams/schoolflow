@@ -621,9 +621,9 @@ const StudentSettingsPage = () => {
                             type="submit"
                             disabled={isLoading}
                             variant="destructive"
-                            className="text-sm sm:text-base min-w-0"
+                            className="bg-red-500 text-sm sm:text-base min-w-0"
                           >
-                            <Key className="w-4 h-4 mr-2 flex-shrink-0" />
+                            <Key className="text-white w-4 h-4 mr-2 flex-shrink-0" />
                             <span className="truncate">
                               {isLoading ? "Changement..." : "Mettre à jour"}
                             </span>

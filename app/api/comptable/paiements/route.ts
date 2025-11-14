@@ -91,6 +91,83 @@ async function getComptableUserId(): Promise<string> {
   }
 }
 
+// FONCTION CORRIGÉE : Mettre à jour le statut de l'inscription et les frais payés
+async function updateInscriptionStatus(inscriptionId: string) {
+  try {
+    console.log(`🔄 Mise à jour statut inscription: ${inscriptionId}`);
+    
+    const inscription = await prisma.inscription.findUnique({
+      where: { id: inscriptionId },
+      include: {
+        paiements: {
+          where: {
+            reference: {
+              contains: 'APP' // Seulement les paiements approuvés
+            }
+          }
+        },
+        filiere: true,
+        vague: true
+      }
+    });
+
+    if (!inscription) {
+      console.log('❌ Inscription non trouvée:', inscriptionId);
+      return;
+    }
+
+    // Récupérer les frais réels
+    const fraisConfig = await getFraisConfiguration(inscription.filiereId, inscription.vagueId);
+    const fraisInscription = fraisConfig.fraisInscription;
+    const fraisScolarite = fraisConfig.fraisScolarite;
+    const totalFrais = fraisInscription + fraisScolarite;
+
+    // Calculer le total payé (seulement les paiements approuvés)
+    const totalPaye = inscription.paiements.reduce((sum, p) => sum + p.montant, 0);
+
+    console.log(`💰 Calcul frais pour ${inscription.prenom} ${inscription.nom}:`);
+    console.log(`   - Frais inscription: ${fraisInscription} FCFA`);
+    console.log(`   - Frais scolarité: ${fraisScolarite} FCFA`);
+    console.log(`   - Total frais: ${totalFrais} FCFA`);
+    console.log(`   - Total payé (approuvé): ${totalPaye} FCFA`);
+
+    // Déterminer le nouveau statut
+    let nouveauStatut = inscription.statut;
+
+    if (totalPaye >= totalFrais) {
+      nouveauStatut = 'PAYE_COMPLET';
+      console.log(`   → Statut: PAYE_COMPLET (total payé >= total frais)`);
+    } else if (totalPaye > 0) {
+      nouveauStatut = 'PAYE_PARTIEL';
+      console.log(`   → Statut: PAYE_PARTIEL (payé > 0 mais pas complet)`);
+    } else {
+      nouveauStatut = 'APPROUVE';
+      console.log(`   → Statut: APPROUVE (aucun paiement)`);
+    }
+
+    // Mettre à jour l'inscription avec les NOUVELLES valeurs
+    const updatedInscription = await prisma.inscription.update({
+      where: { id: inscriptionId },
+      data: {
+        statut: nouveauStatut,
+        fraisPayes: totalPaye, // METTRE À JOUR les frais payés
+        fraisInscription: fraisInscription // S'assurer que les frais sont à jour
+      }
+    });
+
+    console.log(`✅ Inscription ${inscriptionId} mise à jour:`);
+    console.log(`   - Nouveau statut: ${nouveauStatut}`);
+    console.log(`   - Frais payés: ${totalPaye} FCFA`);
+    console.log(`   - Frais inscription: ${fraisInscription} FCFA`);
+
+    return updatedInscription;
+
+  } catch (error) {
+    console.error('❌ Erreur mise à jour statut inscription:', error);
+    throw error;
+  }
+}
+
 // GET - Récupérer tous les paiements avec filtres
 export async function GET(request: Request) {
   try {
@@ -240,7 +317,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST - Créer un nouveau paiement (saisie manuelle)
+// POST - Créer un nouveau paiement (saisie manuelle) - CORRIGÉ
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -278,7 +355,13 @@ export async function POST(request: Request) {
       include: {
         filiere: true,
         vague: true,
-        paiements: true
+        paiements: {
+          where: {
+            reference: {
+              contains: 'APP' // Seulement les paiements approuvés
+            }
+          }
+        }
       }
     });
 
@@ -292,13 +375,12 @@ export async function POST(request: Request) {
     }
 
     console.log('✅ Élève trouvé:', `${inscription.prenom} ${inscription.nom}`);
+    console.log(`💰 Situation actuelle: ${inscription.fraisPayes} FCFA payés sur ${inscription.fraisInscription} FCFA`);
 
     // VÉRIFICATION: Si l'étudiant a déjà payé l'inscription, empêcher un nouveau paiement
     if (type === 'inscription') {
-      const hasAlreadyPaidInscription = inscription.paiements.some(payment => {
-        const paymentType = mapPaymentType(payment.modePaiement);
-        return paymentType === 'inscription' && payment.reference?.includes('APP');
-      });
+      const fraisConfig = await getFraisConfiguration(inscription.filiereId, inscription.vagueId);
+      const hasAlreadyPaidInscription = inscription.fraisPayes >= fraisConfig.fraisInscription;
 
       if (hasAlreadyPaidInscription) {
         return NextResponse.json({
@@ -369,7 +451,9 @@ export async function POST(request: Request) {
         'Système'
     };
 
-    // Mettre à jour le statut de l'inscription si nécessaire
+    console.log('✅ Paiement créé, mise à jour du statut de l\'inscription...');
+
+    // METTRE À JOUR le statut de l'inscription IMMÉDIATEMENT
     await updateInscriptionStatus(inscription.id);
 
     return NextResponse.json({
@@ -404,7 +488,7 @@ export async function POST(request: Request) {
   }
 }
 
-// PUT - Mettre à jour un paiement (approbation/rejet)
+// PUT - Mettre à jour un paiement (approbation/rejet) - CORRIGÉ
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
@@ -470,8 +554,12 @@ export async function PUT(request: Request) {
       }
     });
 
-    // Mettre à jour le statut de l'inscription
-    await updateInscriptionStatus(updatedPayment.inscriptionId);
+    console.log(`✅ Paiement ${action === 'approve' ? 'approuvé' : 'rejeté'}, mise à jour statut inscription...`);
+
+    // METTRE À JOUR le statut de l'inscription APRÈS approbation/rejet
+    if (action === 'approve' || action === 'reject') {
+      await updateInscriptionStatus(updatedPayment.inscriptionId);
+    }
 
     // Formater la réponse
     const formattedPayment = {
@@ -509,7 +597,7 @@ export async function PUT(request: Request) {
   }
 }
 
-// PATCH - Récupérer les inscriptions (étudiants)
+// PATCH - Récupérer les inscriptions (étudiants) - CORRIGÉ
 export async function PATCH(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -524,7 +612,13 @@ export async function PATCH(request: Request) {
         include: {
           filiere: true,
           vague: true,
-          paiements: true
+          paiements: {
+            where: {
+              reference: {
+                contains: 'APP' // Seulement les paiements approuvés
+              }
+            }
+          }
         }
       });
 
@@ -554,7 +648,13 @@ export async function PATCH(request: Request) {
         include: {
           filiere: true,
           vague: true,
-          paiements: true
+          paiements: {
+            where: {
+              reference: {
+                contains: 'APP' // Seulement les paiements approuvés
+              }
+            }
+          }
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -593,57 +693,7 @@ export async function PATCH(request: Request) {
   }
 }
 
-// Fonction pour mettre à jour le statut de l'inscription
-async function updateInscriptionStatus(inscriptionId: string) {
-  try {
-    const inscription = await prisma.inscription.findUnique({
-      where: { id: inscriptionId },
-      include: {
-        paiements: true,
-        filiere: true,
-        vague: true
-      }
-    });
-
-    if (!inscription) return;
-
-    // Récupérer les frais réels
-    const fraisConfig = await getFraisConfiguration(inscription.filiereId, inscription.vagueId);
-    const totalFrais = fraisConfig.fraisInscription + fraisConfig.fraisScolarite;
-
-    // Calculer le total payé
-    const totalPaye = inscription.paiements
-      .filter(p => p.reference?.includes('APP')) // Seulement les paiements approuvés
-      .reduce((sum, p) => sum + p.montant, 0);
-
-    // Déterminer le nouveau statut
-    let nouveauStatut = inscription.statut;
-
-    if (totalPaye >= totalFrais) {
-      nouveauStatut = 'PAYE_COMPLET';
-    } else if (totalPaye > 0) {
-      nouveauStatut = 'PAYE_PARTIEL';
-    } else {
-      nouveauStatut = 'APPROUVE';
-    }
-
-    // Mettre à jour l'inscription
-    await prisma.inscription.update({
-      where: { id: inscriptionId },
-      data: {
-        statut: nouveauStatut,
-        fraisPayes: totalPaye
-      }
-    });
-
-    console.log(`✅ Statut inscription ${inscriptionId} mis à jour: ${nouveauStatut}`);
-
-  } catch (error) {
-    console.error('❌ Erreur mise à jour statut inscription:', error);
-  }
-}
-
-// Fonction pour le résumé d'inscription
+// Fonction pour le résumé d'inscription - CORRIGÉE
 async function getInscriptionPaymentSummary(inscription: any): Promise<StudentPaymentSummary> {
   try {
     // Récupérer les frais RÉELS pour cette filière et vague
@@ -654,10 +704,8 @@ async function getInscriptionPaymentSummary(inscription: any): Promise<StudentPa
     // Total des frais
     const totalFrais = fraisInscription + fraisScolarite;
 
-    // Calculer le total payé (seulement les paiements approuvés)
-    const totalPaye = inscription.paiements
-      .filter((p: any) => p.reference?.includes('APP'))
-      .reduce((sum: number, p: any) => sum + p.montant, 0);
+    // Utiliser les frais payés DIRECTEMENT depuis l'inscription (qui sont maintenant mis à jour)
+    const totalPaye = inscription.fraisPayes || 0;
 
     // Calcul des semestres payés
     const semestres = ['Semestre 1', 'Semestre 2', 'Semestre 3'];
@@ -696,7 +744,7 @@ async function getInscriptionPaymentSummary(inscription: any): Promise<StudentPa
       parentName: inscription.nom,
       registrationFee: fraisInscription,
       tuitionFee: fraisScolarite,
-      paidAmount: totalPaye,
+      paidAmount: totalPaye, // Utilise les frais payés de l'inscription
       remainingAmount: remainingAmount,
       totalSchoolFees: totalFrais,
       paidSemesters,
@@ -714,7 +762,7 @@ async function getInscriptionPaymentSummary(inscription: any): Promise<StudentPa
       parentName: inscription.nom,
       registrationFee: 50000,
       tuitionFee: 885000,
-      paidAmount: inscription.fraisPayes || 0,
+      paidAmount: inscription.fraisPayes || 0, // Toujours utiliser fraisPayes
       remainingAmount: 935000 - (inscription.fraisPayes || 0),
       totalSchoolFees: 935000,
       paidSemesters: [],

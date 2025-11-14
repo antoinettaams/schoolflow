@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'Non autorisé' },
-        { status: 401 }
+        { status: 401 } 
       );
     }
 
@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
 
     console.log('📋 Filtres dossiers:', { searchTerm, filiere, vague, statut });
 
+    // CORRECTION: Construction robuste du WHERE
     const where: any = {};
 
     // Filtre par recherche
@@ -48,20 +49,20 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Filtre par filière
+    // CORRECTION: Gestion correcte des filtres imbriqués
+    const inscriptionWhere: any = {};
+    
     if (filiere !== 'toutes') {
-      where.inscription = {
-        ...where.inscription,
-        filiereId: filiere
-      };
+      inscriptionWhere.filiereId = filiere;
+    }
+    
+    if (vague !== 'toutes') {
+      inscriptionWhere.vagueId = vague;
     }
 
-    // Filtre par vague
-    if (vague !== 'toutes') {
-      where.inscription = {
-        ...where.inscription,
-        vagueId: vague
-      };
+    // Si on a des filtres sur l'inscription, on les ajoute
+    if (Object.keys(inscriptionWhere).length > 0) {
+      where.inscription = inscriptionWhere;
     }
 
     // Filtre par statut
@@ -69,8 +70,14 @@ export async function GET(request: NextRequest) {
       where.statut = statut.toUpperCase();
     }
 
-    console.log('🔍 Where clause:', JSON.stringify(where, null, 2));
+    console.log('🔍 Where clause FINAL:', JSON.stringify(where, null, 2));
 
+    // CORRECTION: Test de débogage
+    console.log('🧪 TEST: Compter tous les dossiers sans filtre...');
+    const totalCount = await prisma.dossier.count();
+    console.log(`🧪 Total dossiers en base: ${totalCount}`);
+
+    // Récupérer les dossiers
     const dossiers = await prisma.dossier.findMany({
       where,
       include: {
@@ -111,7 +118,19 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    console.log(`📊 ${dossiers.length} dossier(s) trouvé(s)`);
+    console.log(`📊 ${dossiers.length} dossier(s) trouvé(s) avec les filtres`);
+
+    // Log détaillé pour debug
+    dossiers.forEach((dossier, index) => {
+      console.log(`📄 Dossier ${index + 1}:`, {
+        id: dossier.id,
+        inscriptionId: dossier.inscriptionId,
+        eleve: `${dossier.inscription.prenom} ${dossier.inscription.nom}`,
+        statut: dossier.statut,
+        filiere: dossier.inscription.filiere?.nom,
+        vague: dossier.inscription.vague?.nom
+      });
+    });
 
     // FORMATAGE DES DONNÉES POUR LE FRONTEND
     const dossiersFormates = dossiers.map(dossier => {
@@ -151,6 +170,7 @@ export async function GET(request: NextRequest) {
         stats: statsDossiers,
         metadata: {
           total: dossiers.length,
+          totalInBase: totalCount, // Pour debug
           filtres: { searchTerm, filiere, vague, statut }
         }
       }
@@ -191,6 +211,8 @@ export async function POST(request: NextRequest) {
       select: { role: true, id: true }
     });
 
+    console.log('👤 User DB trouvé:', dbUser);
+
     if (!dbUser || !['ADMIN', 'SECRETAIRE', 'CENSEUR'].includes(dbUser.role)) {
       return NextResponse.json(
         { success: false, error: 'Accès non autorisé' },
@@ -205,11 +227,9 @@ export async function POST(request: NextRequest) {
     let fichiers: { [key: string]: File } = {};
 
     if (contentType.includes('multipart/form-data')) {
-      // Requête avec fichiers
       const formData = await request.formData();
       inscriptionId = formData.get('inscriptionId') as string;
       
-      // Récupérer les fichiers
       const photoIdentite = formData.get('photoIdentite') as File;
       const acteNaissance = formData.get('acteNaissance') as File;
       const relevesNotes = formData.get('relevesNotes') as File;
@@ -219,12 +239,11 @@ export async function POST(request: NextRequest) {
       if (relevesNotes && relevesNotes.size > 0) fichiers.relevesNotes = relevesNotes;
 
     } else {
-      // Requête JSON simple
       const body = await request.json();
       inscriptionId = body.inscriptionId;
     }
 
-    console.log('📝 Création dossier pour inscription:', inscriptionId);
+    console.log('🎯 Inscription ID reçu:', inscriptionId);
 
     if (!inscriptionId) {
       return NextResponse.json(
@@ -233,28 +252,66 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier si l'inscription existe
+    // CORRECTION: Vérification robuste de l'existence
+    console.log('🔍 Vérification existence dossier pour:', inscriptionId);
+    
+    const dossierExistant = await prisma.dossier.findUnique({
+      where: { inscriptionId: inscriptionId }
+    });
+
+    console.log('📁 Résultat vérification dossier:', {
+      existe: !!dossierExistant,
+      dossierId: dossierExistant?.id,
+      inscriptionId: inscriptionId
+    });
+
+    if (dossierExistant) {
+      console.log('❌ CONFLIT: Dossier existe déjà - ID:', dossierExistant.id);
+      
+      // CORRECTION: Vérifier pourquoi il n'apparaît pas dans GET
+      const dossierAvecRelations = await prisma.dossier.findUnique({
+        where: { id: dossierExistant.id },
+        include: {
+          inscription: {
+            include: {
+              filiere: true,
+              vague: true
+            }
+          }
+        }
+      });
+      
+      console.log('🔍 Dossier complet pour debug:', dossierAvecRelations);
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Un dossier existe déjà pour cette inscription',
+          existingDossierId: dossierExistant.id,
+          debug: {
+            dossierStatut: dossierExistant.statut,
+            eleve: dossierAvecRelations ? `${dossierAvecRelations.inscription.prenom} ${dossierAvecRelations.inscription.nom}` : 'Inconnu'
+          }
+        },
+        { status: 400 }
+      );
+    }
+
+    // Vérifier que l'inscription existe
     const inscription = await prisma.inscription.findUnique({
       where: { id: inscriptionId },
       include: {
-        dossier: true,
         filiere: true,
         vague: true
       }
     });
 
+    console.log('📝 Inscription trouvée:', inscription);
+
     if (!inscription) {
       return NextResponse.json(
         { success: false, error: 'Inscription non trouvée' },
         { status: 404 }
-      );
-    }
-
-    // Vérifier si un dossier existe déjà
-    if (inscription.dossier) {
-      return NextResponse.json(
-        { success: false, error: 'Un dossier existe déjà pour cette inscription' },
-        { status: 400 }
       );
     }
 
@@ -271,23 +328,19 @@ export async function POST(request: NextRequest) {
     if (Object.keys(fichiers).length > 0) {
       console.log('📎 Fichiers à uploader:', Object.keys(fichiers));
       
-      // Ici vous pouvez uploader les fichiers vers votre service de stockage
-      // Pour l'instant, on simule l'upload en stockant les noms de fichiers
       for (const [docType, file] of Object.entries(fichiers)) {
-        // Simuler l'upload - en production, utilisez AWS S3, Cloudinary, etc.
         const fileName = `doc_${inscriptionId}_${docType}_${Date.now()}_${file.name}`;
-        dossierData[docType] = fileName; // Stocker le nom du fichier
-        
+        dossierData[docType] = fileName;
         console.log(`✅ Fichier ${docType} traité:`, fileName);
       }
 
-      // Si tous les documents sont fournis, marquer comme COMPLET
       if (fichiers.photoIdentite && fichiers.acteNaissance && fichiers.relevesNotes) {
         dossierData.statut = 'COMPLET';
       }
     }
 
     // Créer le dossier
+    console.log('✅ Création du dossier...');
     const nouveauDossier = await prisma.dossier.create({
       data: dossierData,
       include: {
@@ -308,7 +361,6 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Dossier créé avec succès:', nouveauDossier.id);
 
-    // Formater la réponse
     const responseData = {
       id: nouveauDossier.id,
       statut: nouveauDossier.statut,
@@ -378,7 +430,6 @@ export async function PUT(request: NextRequest) {
         );
       }
 
-      // Vérifier que le dossier existe
       const dossierExistant = await prisma.dossier.findUnique({
         where: { id }
       });
@@ -390,7 +441,6 @@ export async function PUT(request: NextRequest) {
         );
       }
 
-      // Mettre à jour le statut
       const dossierModifie = await prisma.dossier.update({
         where: { id },
         data: {
@@ -473,7 +523,6 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Vérifier que le dossier existe
     const dossierExistant = await prisma.dossier.findUnique({
       where: { id },
       include: {
@@ -493,7 +542,6 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Supprimer le dossier
     await prisma.dossier.delete({
       where: { id }
     });

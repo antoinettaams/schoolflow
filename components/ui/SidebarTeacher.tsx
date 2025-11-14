@@ -340,21 +340,21 @@ const SidebarTeacher = () => {
               </p>
               
               {/* Boutons d'action */}
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleCancelLogout}
-                  className="flex-1 border-gray-300 hover:bg-gray-50"
-                >
-                  Annuler
-                </Button>
-                <Button
-                  onClick={handleConfirmLogout}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                >
-                  Se déconnecter
-                </Button>
-              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+  <Button 
+    variant="outline" 
+    onClick={handleCancelLogout} 
+    className="flex-1 border-gray-300 hover:bg-gray-50"
+  >
+    Annuler
+  </Button>
+  <Button 
+    onClick={handleConfirmLogout} 
+    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+  >
+    Se déconnecter
+  </Button>
+</div>
             </div>
           </div>
         </>

@@ -1693,28 +1693,6 @@ export default function PaiementsComptablePage() {
               </div>
             </div>
 
-            {/* Résumé de l'élève sélectionné */}
-            {manualPaymentForm.studentId && (
-              <Card className="mt-4">
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Total payé:</span>
-                      <p className="font-semibold text-green-600">
-                        {formatFCFA(students.find(s => s.id === manualPaymentForm.studentId)?.paidAmount || 0)}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Reste à payer:</span>
-                      <p className="font-semibold text-orange-600">
-                        {formatFCFA(students.find(s => s.id === manualPaymentForm.studentId)?.remainingAmount || 0)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             <DialogFooter className="bg-white">
               <Button variant="outline" onClick={() => setIsManualPaymentModalOpen(false)}>
                 Annuler

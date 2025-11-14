@@ -666,20 +666,34 @@ export default function JournalOperationsPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Journal des Opérations</h1>
             <p className="text-gray-600 mt-1">Opérations comptables liées aux inscriptions et scolarités</p>
           </div>
-          <div className="flex gap-3 mt-4 sm:mt-0 flex-wrap">
-            <Button variant="outline" onClick={openExportDialog} disabled={loading || exportLoading}>
-              <Download className="h-4 w-4 mr-2" />
-              Exporter
-            </Button>
-            <Button variant="outline" onClick={handleSync} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Synchroniser
-            </Button>
-            <Button onClick={loadOperations} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Actualiser
-            </Button>
-          </div>
+         <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-0">
+  <Button 
+    variant="outline" 
+    onClick={openExportDialog} 
+    disabled={loading || exportLoading}
+    className="w-full sm:w-auto justify-center"
+  >
+    <Download className="h-4 w-4 mr-2" />
+    Exporter
+  </Button>
+  <Button 
+    variant="outline" 
+    onClick={handleSync} 
+    disabled={loading}
+    className="w-full sm:w-auto justify-center"
+  >
+    <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+    Synchroniser
+  </Button>
+  <Button 
+    onClick={loadOperations} 
+    disabled={loading}
+    className="w-full sm:w-auto justify-center"
+  >
+    <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+    Actualiser
+  </Button>
+</div>
         </div>
       </div>
 

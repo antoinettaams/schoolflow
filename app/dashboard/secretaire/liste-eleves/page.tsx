@@ -262,40 +262,41 @@ export default function ListeElevesPage() {
             Consultez et gérez les apprenants inscrits
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={fetchData}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Actualiser
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                <FileDown className="w-4 h-4" />
-                Exporter
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-white w-48">
-              <DropdownMenuItem 
-                onClick={exportToPDF}
-                className="flex items-center cursor-pointer"
-              >
-                <FileDown className="w-4 h-4 mr-2 text-red-500" />
-                <span>Export PDF</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={exportToExcel}
-                className="flex items-center cursor-pointer"
-              >
-                <FileDown className="w-4 h-4 mr-2 text-green-500" />
-                <span>Export Excel</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+  <Button 
+    variant="outline" 
+    onClick={fetchData}
+    disabled={isLoading}
+    className="w-full sm:w-auto justify-center"
+  >
+    <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+    Actualiser
+  </Button>
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button variant="outline" className="flex items-center gap-2 w-full sm:w-auto justify-center">
+        <FileDown className="w-4 h-4" />
+        Exporter
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end" className="bg-white w-48">
+      <DropdownMenuItem 
+        onClick={exportToPDF}
+        className="flex items-center cursor-pointer"
+      >
+        <FileDown className="w-4 h-4 mr-2 text-red-500" />
+        <span>Export PDF</span>
+      </DropdownMenuItem>
+      <DropdownMenuItem 
+        onClick={exportToExcel}
+        className="flex items-center cursor-pointer"
+      >
+        <FileDown className="w-4 h-4 mr-2 text-green-500" />
+        <span>Export Excel</span>
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
+</div>
       </div>
 
       {/* Statistiques */}
